@@ -1,0 +1,34 @@
+<p class="recon-summary">This extension provides some mechanisms for handling any user-provided search phrase and translating it to a sensible query condition, insofar as the software (MediaWiki, Semantic MediaWiki) allows it.</p>
+
+;Features
+* Changing the matching position
+* Case folding
+* Accent folding
+* SMW: exact phrase matching with double quotes ("...")
+
+== Substring patterns ==
+Throughout the documentation, frequent reference is made to substring patterns. What this means is that the API modules (through <code>&substrpattern=</code>) and [[Special:ReconciliationAPI/profiles|JSON profiles]] (<code>substringPattern</code>) allow you to use different matching positions:
+
+:(1) <code>stringprefix</code> <!-- al. startswith -->- match at the beginning of the full string if possible. It is not supported by SMW with either Full Text Search or Elasticsearch and will therefore default to <code>tokenprefix</code>. It is supported by standard SQL behaviour using LIKE (see below). The <code>recon-suggest-propvalue</code> module does support <code>stringprefix</code> precisely because it uses standard SQL.
+:(2) <code>tokenprefix</code> <!-- al. prefix -->- match at the beginning of a token, if tokenisation is enabled (FTS or ElasticStore) and the appropriate criteria, such as minimum token length, are met.
+:(3) <code>allchars</code> (al. <code>contains</code>) - match anywhere. May not be universally supported.
+
+== MediaWiki core ==
+When MediaWiki core is used to query data, without the assistance of specialised software like Semantic MediaWiki, it runs LIKE queries on the SQL database. 
+
+== Semantic MediaWiki ==
+[https://www.semantic-mediawiki.org Semantic MediaWiki (SMW)], offers four different search engines or search engine configurations:
+
+# SQL with the standard setup of SQLStore
+# SQL with Full-Text Search (FTS) enabled for the SQLStore. Officially, it is still considered experimental but has been around for some time and may be a great alternative if you cannot, or do not want to, run Elasticsearch on your server.
+# Elasticsearch with ElasticStore - ''not yet supported by this extension''
+# (SPARQL / SPARQLStore but ignored below)
+
+While SMW has taken efforts to make its query syntax as system-agnostic as possible, there are still many differences in behavioural outcome and in the range of features available. 
+
+A particular challenge with Full-Text Search is that it works only conditionally. If conditions are not met, it falls back on regular SQL (LIKE) behaviour. Another is the risk of a Runtime Exception in certain matching conditions. This extension attempts to handle both situations.
+
+== See also ==
+* https://www.semantic-mediawiki.org/wiki/Help:Search_operators
+* https://www.semantic-mediawiki.org/wiki/Help:Full-text_search/Searching
+

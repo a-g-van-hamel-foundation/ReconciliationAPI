@@ -1,0 +1,29 @@
+<p class="recon-summary">{{int:apihelp-recon-summary}}</p>
+
+== Parameters ==
+[https://{{SERVERNAME}}/api.php?action=help&modules=recon API documentation]
+
+<div class="recon-data-item">
+<div><code>source</code></div>
+<div>{{int:apihelp-recon-param-source}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>substrpattern</code></div>
+<div>{{int:apihelp-recon-param-substrpattern}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>displaytitle</code></div>
+<div>{{int:apihelp-recon-param-displaytitle}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>profile</code></div>
+<div>{{int:apihelp-recon-param-profile}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>queries</code></div>
+<div>{{int:apihelp-recon-param-queries}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>extend</code></div>
+<div>{{int:apihelp-recon-param-extend}}</div>
+</div>

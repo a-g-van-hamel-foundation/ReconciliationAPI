@@ -1,0 +1,36 @@
+<p class="recon-summary">The extension comes with a parser function (<code>#recon-search</code>) for adding an API-driven typeahead search widget to any wiki page.</p>
+
+<pre>
+{{#recon-search:
+|apiurl=
+|apiurlparams=
+|targeturl=
+|footerurl=
+|placeholder=
+}}
+</pre>
+
+== Parameters ==
+
+<div class="recon-data-item">
+<div><code>apiurl</code></div>
+<div>Base URL of the API from which to fetch the data.</div>
+</div>
+<div class="recon-data-item">
+<div><code>apiurlparams</code></div>
+<div>URL query parameters to add to the base URL. This is a convenience method: put each URL parameter, e.g. action=recon-suggest-entity, on a new line. The URL encoding and ampersands are taken care of for you. Use the final parameter for the user-provided substring.</div>
+</div>
+<div class="recon-data-item">
+<div><code>targeturl</code></div>
+<div>Optional if the wiki being queried is local. If this option is not set, the URL of each search result in the menu offers a direct link to the associated wiki page. It is possible, however, that the page is not necessarily available to the user. You can use this option to instead send the user to an intermediate page, a kind of web proxy, that handles the request, performs some checks and redirects to an appropriate destination. [...]
+The extension comes with a special page designed for that purpose. See Special:ReconDirect. </div>
+</div>
+<div class="recon-data-item">
+<div><code>footerurl</code></div>
+<div>Optional if the wiki being queried is local. The bottom item in the menu, or footer, is reserved for a link to a query page with the provided phrase. When nothing is set, it is assumed that you are happy to send users to MediaWiki’s general full-text search page (<code>Special:Search</code>, .../Special:Search?fulltext=1). Set it to a different URL of your choice as long as as the final parameter is used to take the phrase provided.</div>
+</div>
+
+== Define your target URLs ==
+The widget should work out of the box if it is used to suggest pages that are directly accessible at their URLs. If you find yourself in the situation where this isn't necessarily the case, you could consider [[Special:ReconciliationAPI/special-redirect|using an intermediate special page that runs a couple of checks]].
+
+

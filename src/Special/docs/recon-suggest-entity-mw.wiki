@@ -1,0 +1,3 @@
+<div class="recon-summary">{{int:apihelp-recon-suggest-entity-summary}} </div>
+
+You can restrict your search by namespace, by category, or by a combination of category and namespace. 

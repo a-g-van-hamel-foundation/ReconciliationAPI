@@ -1,0 +1,38 @@
+<div class="recon-summary">{{int:apihelp-recon-propose-property-summary}}</div>
+
+== Parameters ==
+[https://{{SERVERNAME}}/api.php?action=help&modules=recon-propose-property API documentation]
+
+<div class="recon-data-item">
+<div><code>source</code></div>
+<div>{{int:apihelp-recon-propose-property-param-source}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>type</code></div>
+<div>{{int:apihelp-recon-propose-property-param-type}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>limit</code></div>
+<div>{{int:apihelp-recon-propose-property-param-limit}}</div>
+</div>
+
+== Additional setup for SMW ==
+This module can only work if you have registered all the properties that may be used with a ''type'', such as a page class or MW Category. Because doing so is not common practice, there is no generally accepted approach we can follow, but the following procedure should be fairly easy to adopt.
+
+For each class, use SMW itself to keep track of the properties that you want to expose to the API. You can leave out any property you feel has no use for API purposes. 
+
+* Decide on your preferred approach:
+** Approach 1 (recommended): let a ''type'' record all of its properties. Requires that a ''type'' is represented by an editable wiki page (things not strings).
+** Approach 2: use another wiki page to record a ''type'''s properties. This alternative may be useful if for instance, your classes are strings rather than entities, or if you prefer using a single page for the entire wiki.
+* In your configuration, name the property that will be used for registering your properties:
+:<pre>$wgReconAPISMWClassPropertiesSchema["propertiesProp"] = "Allows for property";</pre>
+
+;Approach 1
+* For each ''type'', edit its page, or associated template, to record the properties of this ''type'' with the property you specified in the previous step. For instance
+:<pre>{{#set: Allows for property=Has name,Has description |+sep=, }}</pre>
+
+;Approach 2
+* Approach 2 is nearly identical except that a second property is needed to link to the intended ''type''. Specify this property in your config settings:
+:<pre>$wgReconAPISMWClassPropertiesSchema["targetClassProp"] = "For target class";</pre>
+* Now you can create the appropriate annotations using <code>#set</code> or <code>#subobject</code>, e.g.
+:<pre>{{#subobject:For target class=Recipe |Allows for property=Has name,Has description|+sep=, }}</pre>

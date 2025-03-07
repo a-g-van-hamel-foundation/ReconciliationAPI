@@ -1,0 +1,25 @@
+<div class="recon-summary">{{int:apihelp-recon-suggest-property-summary}}</div>
+
+== Parameters ==
+[https://{{SERVERNAME}}/api.php?action=help&modules=recon-suggest-property API documentation]
+
+<div class="recon-data-item">
+<div><code>source</code></div>
+<div>{{int:apihelp-recon-suggest-property-param-source}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>profile</code></div>
+<div>{{int:apihelp-recon-suggest-property-param-profile}}<br>Not yet implemented.</div>
+</div>
+<div class="recon-data-item">
+<div><code>substr</code></div>
+<div>{{int:apihelp-recon-suggest-property-param-substr}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>offset</code></div>
+<div>{{int:apihelp-recon-suggest-property-param-offset}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>limit</code></div>
+<div>{{int:apihelp-recon-suggest-property-param-limit}}</div>
+</div>

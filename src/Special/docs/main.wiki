@@ -1,0 +1,48 @@
+<p class="recon-summary">The ReconciliationAPI extension enables API modules that can be used and finetuned for entity reconciliation as well as word completion. Its current focus is on making either Semantic MediaWiki or MediaWiki core expose data to the API.</p>
+
+;Entity reconciliation
+The extension follows the specifications of the [https://www.w3.org/community/reconciliation/ W3C Entity Reconciliation Community Group] (v2). Reconciliation usually means matching a dataset you are working on with another from an external source. It is a key feature of [https://openrefine.org/ OpenRefine], which when coupled with the right tools, plugins or otherwise, allows you to look for and align or ‘reconcile’ data with authority records in other databases, such as Wikidata, Library of Congress, or your own instance of Wikibase. To enable a Reconciliation API means to open up data on your wiki via a reconciliation service to which tools like OpenRefine can connect.
+
+;Word completion
+Word completion, also known as autocomplete or predictive search, is an essential and ubiquitous feature of user interfaces in which a user starts typing and in response, is presented with a list of candidate entities/values for selection or confirmation based on a given set of criteria. This extension provides Autocomplete APIs
+# for the Reconciliation API
+# for internal use in search bars, forms and other UI/UX features that have need of the functionality. For an example, see [[Special:ReconciliationAPI/typeahead|the typehead widget]]
+
+This extension attempts to make some allowance for fact that real-world wikis use different strategies in setting up their data structures. This flexibility is largely offered on two levels:
+* by way of [[Special:ReconciliationAPI/localsettings|configuration settings]], providing site-wide defaults, such as the preferred property to use for descriptions.
+* by way of [[Special:ReconciliationAPI/profiles|'profiles']], JSON schemas that users can set up on their wiki to shape the behaviour of a given API module. Profiles override configuration settings.
+<!-- plain parameters?-->
+
+== Terminology ==
+Terms specific to MediaWiki and Semantic MediaWiki, the more abstract terms specific to the Reconciliation Service API and general descriptive terms can be difficult to disentangle. In the documentation that follows, here's how those terms are distinguished to let you know that something specific is intended:
+* Terms specific to the Reconciliation Service API are usually italicized, e.g. ''type'', ''property'', ''entity''. 
+* Where necessary, terms specific to MediaWiki and Semantic MediaWiki may be clarified with a MW/SMW prefix or capitalisation of the first letter, e.g. MW Category, SMW Concept. 'Semantic properties' may be used to distinguish them from ''properties'' in the abstract. 
+
+Some terms require clarification in the absence of generally accepted alternatives:
+* '''class page''' is here used to refer to a wiki page that is used to represent a particular 'class' or ''type'' of an ''entity''. In SMW, wiki pages that represent such an ''entity'' should be annotated with a dedicated semantic property, which is to be specified in <code>$wgReconAPIClassProp</code>. 
+* '''page class''' refers to the class/''type'' of which the ''entity'' represented by a wiki page is an instance. Ideally, a page class is represented by a class page rather than a text string.
+* '''substring pattern''' - [[Special:ReconciliationAPI/matching|see here]]
+
+== API modules ==
+The following modules are available from MediaWiki’s Action API. See the menu for further details. Most of these modules have separate implementations for MediaWiki core and Semantic MediaWiki.
+
+:[[Special:ReconciliationAPI/recon|<code>recon</code>]] <br>{{int:apihelp-recon-summary}}
+:[[Special:ReconciliationAPI/recon-suggest-entity|<code>recon-suggest-entity</code>]] <br>{{int:apihelp-recon-suggest-entity-summary}}
+:[[Special:ReconciliationAPI/recon-suggest-type|<code>recon-suggest-type</code>]] <br>{{int:apihelp-recon-suggest-type-summary}}
+:[[Special:ReconciliationAPI/recon-suggest-property|<code>recon-suggest-property</code>]] <br>{{int:apihelp-recon-suggest-property-summary}}
+:[[Special:ReconciliationAPI/recon-suggest-propvalue|<code>recon-suggest-propvalue</code>]] <br>{{int:apihelp-recon-suggest-propvalue-summary}}
+:[[Special:ReconciliationAPI/recon-propose-property|<code>recon-propose-property</code>]] <br>{{int:apihelp-recon-propose-property-summary}}
+
+== Other extensions ==
+* This extension was specifically written to support [https://www.semantic-mediawiki.org/wiki/Semantic_MediaWiki Semantic MediaWiki] (SMW). It has been tested with [https://www.semantic-mediawiki.org/wiki/Help:SQLStore regular SQL search] as well as [https://www.semantic-mediawiki.org/wiki/Help:Full-text_search Full-Text Search]. Support for [https://www.semantic-mediawiki.org/wiki/Help:ElasticStore ElasticStore/Elasticsearch], however, is forthcoming.
+* Support for [https://www.mediawiki.org/wiki/Extension:Cargo Cargo] or Wikibase is not presently implemented.
+* [https://www.mediawiki.org/wiki/Extension:PageImages PageImages] is an extension which attempts to select the most suitable image for a page. If you installed this extension, ReconcilationAPI can use the preferred image as an associated thumbnail.
+
+== Future ==
+
+* Support Elasticstore.
+* Improve support for internationalisation/localisation, e.g. semantic properties of type 'Monolingual Text'. The content language should be leading. Cf. [https://github.com/reconciliation-api/specs/issues/52 this ongoing discussion].
+* Customise how an empty string for the substring/prefix should be treated: no results?
+* Improvements to sorting results, e.g. sorting by score'
+* Perhaps improvements to 'score', i.e. how well a candidate matches the query.
+* Further tips and tricks

@@ -1,0 +1,319 @@
+Development notes, including tasks on the to do list or on the list for later consideration.
+
+Implementation notes may require a separate page.
+
+== For consideration ==
+
+=== Preprocessing ===
+* What about preemptively stripping away some characters from the string being typed.
+** On the @todo list: if the user prepends a boolean +/- but what follows is not of the expected token size, we should have it removed at preprocessing time.
+* Better handling of double quotes so we can support something like:
+<pre>[[Display title of::~+"Dublin, Trinity College" +131* ]]</pre>
+where the user would type: <kbd>"Dublin, Trinity College" 131</kbd>
+:maybe use <code>preg_match_all( '/"([^"]+)"/', $str, $matches )</code>, or use preg_replace to remove those sections first.
+* Any benefits or disadvantages from using an array of values containing searchable strings?
+* Profiles now offer an option (<code>preprocessSubstring</code>) to 'flatten' a user-provided substring before being sent to the query. For instance, the user types 'TÁIN', but 'tain' is what ends up being used to initiate the query.
+
+=== Image thumbnails ===
+;Reconciliation API
+''Partly implemented''
+
+The ability to associate a result with an image thumbnail is not part of any schema recommended by the Reconciliation API, but it is optionally provided by the HTML preview service. That service supports both a generic and profile-based mode. 
+* If SMW is used, it uses a Property to query for the image. To retrieve the Property, the generic mode looks for the default set in LocalSettings.php; the profile-based mode looks for possible settings in the profile and defaults to file settings. 
+
+;Other
+For internal purposes, it seems it would be quite useful if each page in the query result can be shown with an appropriate image from the wiki, such as one that is representative of the article or if that is infeasible, of the general category to which it belongs.
+
+Options:
+* Using a SMW Property (priority) that holds the name of the image file. The data type of this Property can be either Text or Page.
+* ''Not yet implemented'': using Extension:PageImages if it is installed. 
+* ''Not yet implemented'': if the result is for a file page, it makes sense that we use the associated image.
+
+Example: https://codecs.vanhamel.nl/api.php?action=recon-suggest-entity&origin=%2A&source=smw&profile=69915&format=json&substr=m
+
+=== Alternate identifiers ===
+* What about Wikidata-style "Also known as"
+** Search by alternate title is already supported by SMW. 
+** But Wikidata is also able to show alternate titles alongside the targeted item when there is a match on the alternate title. Interestingly, MediaWiki's REST API has a 'matched_title' (based on redirects? On Wikidata?).
+* Support for redirect pages:
+** MWSuggestEntity can fetch redirect pages. We need to support two use cases: the general user, who would be interested in the target page (as envisaged nor now by MWSuggestEntityFormatter), and the technical user who might be interested in the redirect page as well as the target page. 
+** The name of the redirect page, with or without display title(?), potentially serves as an alternate title.
+
+=== Display options ===
+* Currently, prefixes are hidden (source=mw, no displaytitle). Add an option to reveal them.
+
+=== Documentation ===
+* i18n: in progress
+* Some of the 'metadata', at least the descriptions, that comes with the API should make use of the i18n messages.
+* Link to the documentation available from the API: e.g. /api.php?action=help&modules=recon-suggest-entity
+
+=== Other ===
+* What about multilinguality? What about Monolingual Text?
+* As with MW's search input, consider if checks on user status are required for internal searches using source=mw. If the user does not have access, should we ignore it. 
+
+== Demo using ReconciliationFront ==
+
+Profile 69723:
+
+{{#recon-search:
+|apiurl=https://codecs.vanhamel.nl/api.php
+|apiurlparams=action=recon-suggest-entity
+origin=*
+profile=69723
+substr=
+|targeturl=https://codecs.vanhamel.nl/Show:Search?phrase=
+}}
+
+== Test cases (@dev) ==
+
+=== recon-suggest-entity with profile ===
+* https://codecs.vanhamel.nl/api.php?action=recon-suggest-entity&origin=%2A&profile=69723&substr=
+* 
+
+=== recon-suggest-entity with smw + concept ===
+* https://codecs.vanhamel.nl/api.php?action=recon-suggest-entity&source=smw&concept=All%20manuscripts&substrpattern=tokenprefix&substr=Peniarth 
+* https://codecs.vanhamel.nl/api.php?action=recon-suggest-entity&source=smw&concept=All%20manuscripts&substrpattern=tokenprefix&displaytitle=0&substr=Cam%20Trin (displaytitle=0)
+
+=== recon-suggest-entity with smw + property ===
+
+=== recon-suggest-entity with mw (MediaWiki)===
+* https://codecs.vanhamel.nl/api.php?action=recon-suggest-entity&source=mw&substrpattern=allchars&substr=Elf
+* https://codecs.vanhamel.nl/api.php?action=recon-suggest-entity&source=mw&substrpattern=tokenprefix&substr=activ
+* https://codecs.vanhamel.nl/api.php?action=recon-suggest-entity&source=mw&substrpattern=stringprefix&substr=Diarmait
+* https://codecs.vanhamel.nl/api.php?action=recon-suggest-entity&source=mw&substrpattern=stringprefix&displaytitle=0&substr=Tain (match on page name not display title)
+
+{{#recon-search:
+|apiurl=https://codecs.vanhamel.nl/api.php
+|apiurlparams=action=recon-suggest-entity
+origin=*
+source=mw
+substrpattern=stringprefix
+substr=
+|targeturl=https://codecs.vanhamel.nl/Special:Search?search=
+|dev=true
+}}
+
+=== recon-suggest-entity with mw + cat (category) ===
+
+=== recon-suggest-entity with mw + ns (namespace) ===
+* [{{SERVER}}/api.php?action=recon-suggest-entity&source=mw&ns=Main,Help&substr=D Search Main and Help namespaces, substring=D]
+
+=== recon-suggest-property ===
+* https://codecs.vanhamel.nl/api.php?action=recon-suggest-property&substr=Has
+
+=== recon-suggest-propvalue ===
+* https://codecs.vanhamel.nl/api.php?action=recon-suggest-propvalue&source=smw&property=Class&offset=0&limit=5&substr=
+
+=== recon-suggest-type ===
+[...]
+
+=== recon-manifest ===
+Humble start only:
+* https://codecs.vanhamel.nl/api.php?action=recon-manifest
+
+== MediaWiki API==
+=== REST API ===
+According to https://www.mediawiki.org/wiki/API:REST_API/Reference, "[y]ou can use the API to build apps and scripts that search wiki pages and explore page history." A simple example from Wikipedia is: https://en.wikipedia.org/w/rest.php/v1/search/title?q=hello&limit=10&
+
+The REST API, considering the kind of information we want to include in our query results, is quite limited on its own, but it is open to expansion through extensions. 
+
+The search REST API:
+* 'id', i.e. the page ID, provided by default.
+* 'key', i.e. page name in URL-friendly format, e.g. with underscores: provided by default
+* 'title': same as key, but using spaces rather than underscores
+* 'excerpt': maybe CirrusSearch? 
+* 'matched_title': since 2022(?) used for redirected pages. Defaults to null
+* 'description': can be added and made available through https://www.mediawiki.org/wiki/Extension:ShortDescription
+* 'thumbnail': array including 
+** 'mimetype': e.g. 'image/jpeg'
+** 'width'
+** 'height'
+** 'duration': usually null
+** 'url': e.g. '//upload.wikimedia.org/wikipedia/commons/thumb/b/b3/TelephoneHelloNellie.jpg/60px-TelephoneHelloNellie.jpg'
+
+Does not include:
+* 'display', i.e. display title: not included as such, though the summary version of the API has it.
+** can be added through https://www.mediawiki.org/wiki/Extension:DisplayTitle
+* 'uri', i.e. full url of the page.
+* 'namespaceid'
+
+* 'thumbnail': maybe https://www.mediawiki.org/wiki/Extension:PageImages ?
+
+** P. S. Extension:TextExtracts adds an extract from the beginning of an article to the Action API, not the REST API.
+* Cf. https://www.mediawiki.org/wiki/ExtensionExtension:Wikibase_Client
+
+== Profiles ==
+=== Tests ===
+* https://codecs.vanhamel.nl/Recon:Manuscripts
+* https://codecs.vanhamel.nl/Recon:Texts
+* https://codecs.vanhamel.nl/Recon:Agents
+* https://codecs.vanhamel.nl/Recon:Bibliography
+
+== Modules ==
+=== recon ===
+Examples from CODECS:
+*  https://codecs.vanhamel.nl/api.php?action=recon
+*  https://codecs.vanhamel.nl/api.php?action=recon&profile=697489
+
+=== recon-suggest-entity (mw) ===
+Examples
+
+To get pages from a MediaWiki category or namespace:
+
+<pre>api.php?action=recon-suggest-entity&source=mw&ns=...&substr=...
+api.php?action=recon-suggest-entity&source=mw&cat=...&substr=...</pre>
+
+;namespace = Subject
+
+{{#recon-search:
+|apiurl=https://codecs.vanhamel.nl/api.php
+|apiurlparams=action=recon-suggest-entity
+origin=*
+source=mw
+ns=Subject
+substr=
+|targeturl=https://codecs.vanhamel.nl/Special:Search?search=
+|dev=true
+}}
+
+;category = Mabinogion
+Shows the issue when using display title, formatted with italics (em or i), to search text.
+
+{{#recon-search:
+|apiurl=https://codecs.vanhamel.nl/api.php
+|apiurlparams=action=recon-suggest-entity
+origin=*
+source=mw
+cat=Mabinogion
+substrpattern=allchars
+substr=
+|targeturl=https://codecs.vanhamel.nl/Special:Search?search=
+|dev=true
+}}
+
+=== recon-suggest-entity: notes ===
+: ''@todo: maybe drop additional source param (mw or smw, which is implicit from other params or data). ''
+<!-- /api.php?action=help&modules=recon-suggest-entity-->
+
+To get pages from a MediaWiki category or namespace:
+
+<pre>api.php?action=recon-suggest-entity&source=mw&ns=...&substr=...
+api.php?action=recon-suggest-entity&source=mw&cat=...&substr=...</pre>
+
+=== recon-suggest-property ===
+* Does not currently support profiles.
+
+==== Examples ====
+<pre>api.php?action=recon-suggest-property&format=json&source=smw&substr=...</pre>
+
+From CODECS:
+*  https://codecs.vanhamel.nl/api.php?action=recon-suggest-property&substr=Has
+*  https://codecs.vanhamel.nl/api.php?action=recon-suggest-property&substr=Refers
+
+{{#recon-search:
+|apiurl=https://codecs.vanhamel.nl/api.php
+|apiurlparams=action=recon-suggest-property
+origin=*
+substr=
+|targeturl=https://codecs.vanhamel.nl/Special:Search?search=
+|dev=true
+}}
+
+==== Not or not yet supported ====
+* Cargo
+* multilinguality and display titles
+* A profile-specific category of properties
+* case/accent folding. The default behaviour, without profile, makes use of SMW’s native services to return any properties registered as being in use, regardless whether or not a wiki page has been created for them. Two 'string conditions' (COND_PRE and COND_MID) are currently used. To support case/accent folding, the use of 'extra conditions' (<code>addExtraCondition()</code>) would be the way to go.
+
+==== Examples from CODECS ====
+* https://codecs.vanhamel.nl/api.php?action=recon-suggest-propvalue&source=smw&property=Textplain&substr=Sea&format=json
+* https://codecs.vanhamel.nl/api.php?action=recon-suggest-propvalue&source=smw&property=Display%20title%20of&substr=Mac
+* https://codecs.vanhamel.nl/api.php?action=recon-suggest-propvalue&source=smw&property=Belongs%20to&substr=
+
+Not intended for typeahead search but we can use it here to demonstrate the API:
+
+{{#recon-search:
+|apiurl=https://codecs.vanhamel.nl/api.php
+|apiurlparams=action=recon-suggest-propvalue
+origin=*
+source=smw
+property=Has keyword
+substr=
+|targeturl=https://codecs.vanhamel.nl/Show:Search?phrase=
+|dev=true
+}}
+
+==== Notes ====
+* At least For properties of data type 'Text', <code>id</code> and <code>name</code> are identical. For properties of data type 'Page', there may be an option in the future to work with labels such as display titles.
+
+=== recon-suggest-type ===
+
+<h3>with source=mw</h3>
+When this module is used with <code>source=mw</code>, the ''type'' suggested is a MediaWiki Category. It also means that the internal mechanics of MediaWiki itself are used for retrieving Categories and their subcategories. It is currently untested if extensions like Semantic MediaWiki could provide a better alternative. 
+
+;Search for any Category
+
+{{#recon-search:
+|apiurl=https://codecs.vanhamel.nl/api.php
+|apiurlparams=action=recon-suggest-type
+origin=*
+source=mw
+substrpattern=stringprefix
+substr=
+|targeturl=https://codecs.vanhamel.nl/Special:Search?search=
+|dev=true
+}}
+
+;Search for Subcategories of 'Irish texts'
+
+{{#recon-search:
+|apiurl=https://codecs.vanhamel.nl/api.php
+|apiurlparams=action=recon-suggest-type
+origin=*
+source=mw
+cat=Irish texts
+substrpattern=allchars
+substr=
+|targeturl=https://codecs.vanhamel.nl/Special:Search?search=
+|dev=true
+}}
+
+;Examples from CODECS
+
+* https://codecs.vanhamel.nl/api.php?action=recon-suggest-type&origin=*&source=mw&substrpattern=stringprefix&substr=sub (without parent category)
+* https://codecs.vanhamel.nl/api.php?action=recon-suggest-type&source=mw&cat=Irish%20texts&substrpattern=allchars&substr=sc&offset=0 (with parent category)
+
+<h4>with source=smw</h4>
+Concepts, categories, etc.
+
+{{#recon-search:
+|apiurl=https://codecs.vanhamel.nl/api.php?origin=*
+|apiurlparams=action=recon-suggest-type
+format=json
+source=smw
+substrpattern=allchars
+substr=
+|targeturl=https://codecs.vanhamel.nl/Special:Search?search=
+|dev=true
+}}
+
+https://codecs.vanhamel.nl/api.php?action=recon-suggest-type&source=smw&format=jsonfm&substr=A
+
+<h4>with source=smw: 'class pages'</h4>
+
+https://codecs.vanhamel.nl/api.php?action=recon-suggest-type&source=smw&format=jsonfm&substr=A
+
+...
+
+== Special:ReconDirect ==
+Examples:
+* https://codecs.vanhamel.nl/Special:ReconRedirect/69727?q=Annals%20of%20Clonmacnoise
+* https://codecs.vanhamel.nl/Special:ReconRedirect/69727?q=annals
+
+* https://codecs.vanhamel.nl/Special:ReconRedirect/Special:Search?search=Home
+* https://codecs.vanhamel.nl/Special:ReconRedirect/Special:Search?search=Somethingthatdoesnotexist
+
+;Using config setting
+* https://codecs.vanhamel.nl/Special:ReconRedirect?search=Home
+* https://codecs.vanhamel.nl/Special:ReconRedirect?search=Somethingthatdoesnotexist
+

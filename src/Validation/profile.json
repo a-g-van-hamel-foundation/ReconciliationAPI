@@ -1,0 +1,154 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://json-schema.org/draft/2020-12/schema",
+	"title": "Reconciliaion API profile validation",
+	"description": "An attempt (work in progress) at a schema that can be used to validate a profile.",
+	"type": [ "object" ],
+	"properties": {
+		"type": {
+			"type": "string",
+			"description": "To be set to 'Profile'."
+		},
+		"name": {
+			"type": "string",
+			"description": "Name of the profile."
+		},
+		"source": {
+			"type": "string",
+			"description": "mw (MediaWiki or smw (Semantic MediaWiki)."
+		},
+		"suggestEntity": {
+			"type": [ "object", "null" ],
+			"description": "Configuration options for the Suggest Entity service.",
+			"properties": {
+				"mwquery": {
+					"type": [ "object", "null" ],
+					"properties": {
+						"namespaces": {
+							"type": [ "array", "null" ]
+						},
+						"categories": {
+							"type": [ "array", "null" ]
+						},
+						"substringPattern": {
+							"type": "string"
+						}
+					}
+				},
+				"smwquery": {
+					"type": [ "object", "null" ],
+					"description": "...",
+					"properties": {
+						"statement": {
+							"type": [ "array", "null" ],
+							"minItems": 0,
+							"items": {
+								"type": [ "object", "null" ],
+								"properties": {
+									"from": {
+										"type": "string"
+									},
+									"where": {
+										"type": "string"
+									},
+									"substringPattern": {
+										"type": "string"
+									},
+									"preprocessSubstring": {
+										"type": "array",
+										"description": "SMW only. Only `flatten` is currently allowed."
+									}
+								}
+							}
+						}
+					},
+					"output": {
+						"type": [ "object", "null" ],
+						"properties": {
+							"name": {
+								"type": [ "object", "null" ],
+								"properties": {
+									"smwproperty": {
+										"type": "string"
+									},
+									"mwproperty": {
+										"type": "string"
+									},
+									"hideNamespacePrefix": {
+										"type": "boolean"
+									},
+									"useDisplayTitle": {
+										"type": "boolean",
+										"description": "MW core."
+									}
+								}
+							},
+							"description": {
+								"type": "string",
+								"properties": {
+									"smwproperty": {
+										"type": "string"
+									}
+								}
+							},
+							"image": {
+								"type": [ "object", "null" ],
+								"properties": {
+									"smwproperty": {
+										"type": "string"
+									}
+								},
+								"extension": {
+									"type": "string",
+									"description": "May be set to `PageImages` to fetch the image thumbnail through the PageImages extension"
+								}
+							},
+							"public": {
+								"type": [ "object", "null" ],
+								"properties": {
+									"smwproperty": {},
+									"smwtype": {}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"defaultTypes": {
+			"type": [ "array", "null" ],
+			"description": "An array of types that are considered 'good generic choices for reconciliation'."
+		},
+		"redirect": {
+			"type": [ "object", "null" ],
+			"properties": {
+				"queryPage": {
+					"type": "string",
+					"description": "Name of the query page to which users should be sent if no direct match was found."
+				},
+				"query": {
+					"type": [ "object", "null" ],
+					"description": "Parameters of the URL query string. The final parameter should be the one holding the query phrase, without an empty string."
+				},
+				"smwcondition": {
+					"type": [ "object", "null" ],
+					"properties": {
+						"smwproperty": {
+							"type": "string",
+							"description": "Name of the semantic property that indicates whether or not the page is and should be accessible."
+						},
+						"pass": {
+							"type": "array",
+							"description": "Values that indicate a page is accessible."
+						},
+						"fail": {
+							"type": "array",
+							"description": "Values that indicate a page is inaccessible."
+						}
+					}
+				}
+			}
+		}
+	}
+	
+}

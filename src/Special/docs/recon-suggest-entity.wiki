@@ -1,0 +1,60 @@
+<div class="recon-summary">{{int:apihelp-recon-suggest-entity-summary}}</div>
+
+== Parameters ==
+[https://{{SERVERNAME}}/api.php?action=help&modules=recon-suggest-entity API documentation]
+
+Get pages based on a configuration profile:
+<pre>api.php?action=recon-suggest-entity&profile=...&substr=...</pre>
+
+<div class="recon-data-item">
+<div>'''Parameter name'''</div>
+<div>'''Description'''</div>
+</div>
+<div class="recon-data-item">
+<div><code>source</code></div>
+<div>{{int:apihelp-recon-suggest-entity-param-source}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>profile</code></div>
+<div>{{int:apihelp-recon-suggest-entity-param-profile}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>concept</code></div>
+<div>{{int:apihelp-recon-suggest-entity-param-concept}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>property</code></div>
+<div>{{int:apihelp-recon-suggest-entity-param-property}} </div>
+</div>
+<div class="recon-data-item">
+<div><code>substr</code></div>
+<div>{{int:apihelp-recon-suggest-entity-param-substr}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>substrpattern</code></div>
+<div>{{int:apihelp-recon-suggest-entity-param-substrpattern}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>cat</code></div>
+<div>{{int:apihelp-recon-suggest-entity-param-cat}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>ns</code></div>
+<div>{{int:apihelp-recon-suggest-entity-param-ns}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>displaytitle</code></div>
+<div>{{int:apihelp-recon-suggest-entity-param-displaytitle}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>pfautocomplete</code></div>
+<div>{{int:apihelp-recon-suggest-entity-param-pfautocomplete}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>offset</code></div>
+<div>{{int:apihelp-recon-suggest-entity-param-offset}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>limit</code></div>
+<div>{{int:apihelp-recon-suggest-entity-param-limit}}</div>
+</div>

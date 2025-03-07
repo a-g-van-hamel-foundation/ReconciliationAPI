@@ -1,0 +1,65 @@
+<p class="recon-summary">The extension enables an intermediary special page, <code>Special:ReconRedirect</code>, that can be used to redirect the user to either a page matching the requested phrase, given it exists, is accessible and meets other requirements, or else to a query page.</p>
+
+MediaWiki uses a similar special page, <code>Special:Search</code>, to serve as both a central search page as well as a redirect page if the search phrase in the URL string (<code>search</code>) matches an existing page and if that page offers read access to the user. It is used, for instance, by the main search box in the Vector skin. But what if instead you want to do either of the following, or both?
+
+* send the user to a custom search page on the wiki
+* check a semantic property (SMW) if the page should be visited directly
+
+This is where Special:ReconRedirect comes in. 
+
+The URL to the special page can be supplied to the TypeaheadSearch widget.
+
+== Methods ==
+
+=== Profile ===
+<pre>
+Special:ReconRedirect/23234?q=<phrase>
+</pre>
+
+To support those use cases, you can add a section to your profile page, for instance:
+
+<pre>
+"redirectPage": {
+	// Name of the page :
+	"queryPage": "MySearchPage",
+	// Elements of the URL query string :
+	// The search phrase will be automatically assigned to the final parameter.
+	"query": {
+		"foo": "bar",
+		"phrase": ""
+	},
+	// @todo check if it works with proper booleans
+	"smwcondition": [
+		{
+			// the semantic property to be checked
+			"smwproperty": "Is published",
+			// The values to be interpreted as true or false
+			"pass": [ "Yes", "true" ],
+			"fail": [ "No", "false" ]
+		}
+	]
+}
+</pre>
+
+Without the inline comments, of course. 
+
+=== Custom search page only ===
+You can do without a profile if all you need is a custom query page, with the regular checks in place but without the property-based check.
+
+;Approach 1
+* Add the query page as a subpage of <code>Special:ReconRedirect</code>.
+* Add the intended query string. As always, make sure the parameter for the search phrase comes at the end.
+
+Mock example:
+<pre>
+Special:ReconRedirect/MyCustomQueryPage?foo=bar&search=Táin<phrase>
+</pre>
+
+;Approach 2
+* Add a default query page to <code>$wgReconDefaultQueryPage</code>, which will be used if you leave out a subpage.
+* For the query string, see approach 1
+
+<pre>
+Special:ReconRedirect?foo=bar&search=Táin<phrase>
+</pre>
+

@@ -1,0 +1,203 @@
+<p class="recon-summary">Do you require dedicated API query profiles for different use cases? You can achieve this by creating and managing JSON schemas in the wiki. Profiles are stored as pages in the <code>Recon</code> namespace and they are used when referenced, by page ID, in the query string of API modules.</p>
+
+== In a nutshell ==
+;How a profile is managed:
+The user creates a JSON page in the <code>Recon:</code> namespace of the website and adds a profile following the guidelines ''soon to be provided below''. [{{SERVER}}/Special:PrefixIndex?prefix=&namespace=1240&stripprefix=1 A list of existing profiles, if any, is available here]. 
+
+;How a profile is read and used:
+The API module (<code>recon</code>, <code>recon-suggest-entity</code>, etc.) reads this profile if its page ID is provided to the <code>profile</code> parameter. 
+
+[[Special:ReconciliationAPI/localsettings|Defaults]] are assumed where the profile does not provide any details.
+
+== Structure ==
+
+=== Identifiers ===
+<pre>
+{
+	"type": "Profile",
+	"name": "Search plants and animals",
+	"source": "smw",
+	...
+}
+</pre>
+
+<div class="recon-data-item">
+	<div><code>type</code></div>
+	<div>Just 'Profile'.</div>
+</div>
+<div class="recon-data-item">
+	<div><code>name</code></div>
+	<div>An optional name for the API service. Will be used in the manifest.</div>
+</div>
+<div class="recon-data-item">
+	<div><code>source</code></div>
+	<div>Either <code>mw</code> (MediaWiki) or <code>smw</code> (Semantic MediaWiki).</div>
+</div>
+
+=== suggestEntity ===
+The '''suggestEntity''' section is used for both the main reconciliation module (<code>recon</code>) and the 'suggest entity' service (<code>recon-suggest-entity</code>). You can add two sections: 
+* (1) either <code>smwquery</code>, if Semantic MediaWiki is used, or <code>mwquery</code>, which sets up the scope and conditions of the query.
+* (2) <code>output</code>, which deals with the output of the query. 
+
+==== mwquery ====
+
+;Example
+<pre>
+{
+	...
+	"suggestEntity": {
+		"mwquery": {
+			"namespaces": [ "Main" ],
+			"categories": [ "Plantae", "Animalia" ],
+			"substringPattern": "stringprefix"			
+		}
+	}
+</pre>
+
+<div class="recon-data-item">
+	<div><code>namespaces</code></div>
+	<div>Optional. Array of namespaces to be searched. For the main namespace, write <code>Main</code>.</div>
+</div>
+<div class="recon-data-item">
+	<div><code>categories</code></div>
+	<div>Optional. Array of categories to be searched. </div>
+</div>
+<div class="recon-data-item">
+	<div><code>substringPattern</code></div>
+	<div>The desired type of matching pattern. See [[Special:ReconciliationAPI/matching|Pattern matching]].</div>
+</div>
+
+==== smwquery ====
+
+;Example
+<pre>
+{
+	...
+	"suggestEntity": {
+		"smwquery": {
+			"statement": [
+				{
+					"from": "[[Class::Animalia]]",
+					"where": "[[Display title of::~@@@]]",
+					"substringPattern": "allchars"
+				},
+				{
+					"from": "[[Class::Plantae]]",
+					"where": "[[Display title of::~@@@]]",
+					"substringPattern": "allchars"
+				}
+			]
+		},
+		"output": {
+			...
+		}
+	},
+	...
+}
+</pre>
+
+You are free to use multiple statements, which will be strung together with the <code>OR</code> operator.
+
+<div class="recon-data-item">
+	<div><code>from</code></div>
+	<div>The base query condition.</div>
+</div>
+<div class="recon-data-item">
+	<div><code>where</code></div>
+	<div>The pattern matching condition of the query. After the operator, a tilde (<code>~</code>) or <code>like:</code>, use <code>@@@</code> as a placeholder for the user provided substring. Do not add asterisk wildcards and +/- boolean operators: they will be automatically applied according to the substring pattern and search engine settings that you use.</div>
+</div>
+<div class="recon-data-item">
+	<div><code>substringPattern</code></div>
+	<div>The desired type of matching pattern, if possible, to be applied to the condition given in <code>where</code>. See [[Special:ReconciliationAPI/matching|Pattern matching]].</div>
+</div>
+<div class="recon-data-item">
+	<div><code>preprocessSubstring</code> (array)</div>
+	<div>Optional and available for SMW only. May be set to preprocess the substring. The array currently allows for one option only, 'flatten', which applies case and accent folding and removes punctuation. This can be helpful if you have similarly optimised a property for fuzzy phrase matching in LIKE statements and need to preprocess the substring to a 'dumbed down' version.</div>
+</div>
+
+Back to our example. If the substring provided is 'orchid', the above statement would resolve to :
+
+<code><nowiki>[[Class::Animalia]] [[Display title of::~*orchid*]] OR [[Class::Plantae]] [[Display title of::~*orchid*]]</nowiki></code>
+
+==== output (mw) ====
+A bare-bones installation of MediaWiki does not allow for many options to influence the display of query results. 
+
+* name: display title
+* image:
+
+<pre>
+{
+	...
+	"suggestEntity": {
+		"mwquery": {
+			...
+		},
+		"output": {
+			"name": {
+				"useDisplayTitle": true,
+				"hideNamespacePrefix": true
+			},
+			"image": {
+				"extension": "PageImages"
+			}
+		}
+</pre>
+
+<div class="recon-data-item">
+	<div><code>name</code></div>
+	<div>
+		<div><code>useDisplayTitle</code> (boolean; default: true) - whether to show the display title if available.</div>
+		<div><code>hideNamespacePrefix</code> (boolean; default: true) - in the absence of a display title, whether to hide the namespace prefix from the pagenames.</div>
+	</div>
+</div>
+<div class="recon-data-item">
+	<div><code>image</code></div>
+	<div><code>extension</code> - if set to 'PageImages', fetches the image selected by the PageImages extension and uses it as an associated thumbnail. </div>
+</div>
+
+==== output (smw) ====
+<pre>
+{
+	...
+	"suggestEntity": {
+		"smwquery": {
+			...
+		},
+		"output": {
+			"name": {
+				"smwproperty": "Display title of",
+				"hideNamespacePrefix": true
+			},
+			"description": {
+				"smwproperty": "Has description"
+			},
+			"image": {
+				"smwproperty": "Has lead image"
+			}
+		}
+	},
+	...
+}
+</pre>
+
+<div class="recon-data-item">
+	<div><code>name</code></div>
+	<div>Set <code>smwproperty</code> to the preferred property (without namespace prefix) to be used for providing the visible label of a query result. If omitted or set to null, the default property set in <code>$wgReconAPILabelProp</code> will be used. If no property value could be found, the pagename is returned instead. By default, the latter is given without its namespace prefix, but you can set <code>hideNamespacePrefix</code> to 'false' (boolean) to suppress this behaviour. If you want to enforce the exclusive use of pagenames rather than properties, set <code>smwproperty</code> to 'false' (bool).</div>
+</div>
+<div class="recon-data-item">
+	<div><code>description</code></div>
+	<div>Set <code>smwproperty</code> to the preferred property (again, without namespace prefix) to be used for providing the short description of a query result. If omitted, the default property set in <code>$wgReconAPIDescriptionProp</code> will be used. </div>
+</div>
+<div class="recon-data-item">
+	<div><code>image</code></div>
+	<div>Set <code>smwproperty</code> to the preferred property to be used for providing a thumbnail associated with the subject. If omitted, the default property set in <code>$wgReconAPIThumbnailProp</code> will be used. </div>
+</div>
+
+[...]
+
+=== suggestType ===
+[...]
+
+== Redirect service ==
+For the redirect service that can be configured through a profile, [[Special:ReconciliationAPI/special-redirect|see this page]].
+

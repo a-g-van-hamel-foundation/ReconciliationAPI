@@ -1,0 +1,55 @@
+<p class="recon-summary">FAQ (Frequently Anticipated Questions)</p>
+
+== General ==
+
+=== Can I test my API remotely? ===
+You can. A test bench for the Reconciliation API is available on https://reconciliation-api.github.io/testbench/#/client/ and if you installed [https://openrefine.org/ OpenRefine], you could add your wiki's reconciliation endpoint [https://openrefine.org/docs/manual/reconciling as a standard service] and try reconciling a data set against it.
+
+== Semantic MediaWiki ==
+=== How do you recommend I set up my semantic properties on my wiki? ===
+
+For each page that you want to expose to the API, it is recommended that you set up and use semantic properties for the following categories of data. They cover information to be displayed in search results as well as more functional data for making things tick. 
+
+;Preferred label
+<p>Set globally in <code>$wgReconAPILabelProp</code></p>
+<p>After all, a page title may not be the most informative or flexible choice. A natural option is to use the [https://www.semantic-mediawiki.org/wiki/Help:Special_property_Display_title_of special property "Display title of"]. If you require multilingual support, you could also consider creating a property with a Monolingual Text datatype.</p>
+
+;Alternative labels
+:Set globally in <code>$wgReconAPIAltLabelProp</code>
+<p>Alternative labels by which the subject may be known (cf. Wikidata's "Also known as"). Reserved for future use by this extension.</p>
+
+;Searchable labels (''reserved'')
+:Set globally in <code>$wgReconAPISearchableLabelProp</code>
+<p>Array of both preferred and alternative labels, and common spelling variants, optimised and to be used for search matching purposes, e.g. without HTML tags, maybe lowercase, stripped of diacritics. Reserved for future use by this extension.</p>
+
+;Short description
+:Set globally in <code>$wgReconAPIDescriptionProp</code>
+<p>Used to identify the subject, or article scope, more nearly and if necessary, to disambiguate between multiple items of the same name (cf. Wikidata). Preferably under 200 characters.
+</p>
+
+;Image thumbnail
+:Set globally in <code>$wgReconAPIThumbnailProp</code>
+<p>An appropriate image file to be associated with the subject so that search results can be accompanied by a relevant thumbnail.</p>
+
+;''type'' properties
+Only you can decide which properties may be used with any given ''type'', e.g. a page class or MW Category. See [[Special:ReconciliationAPI/recon-propose-properties|<code>recon-propose-properties</code>]].
+
+<!--
+;Publication status
+:Set globally in <code>$wgReconAPI...Prop</code>
+You may have pages on your wiki that use a property marking them as either public or non-public. This property can be useful if you use [[Special:ReconciliationAPI/special-redirect |<code>Special:ReconRedirect</code>]].
+
+;Preferred sortkey
+A string for improved sortability (@todo)
+-->
+
+=== What can I do if my SMW query returns pages that have not been created (yet)? ===
+This may be the outcome if you use [https://www.semantic-mediawiki.org/wiki/Help:Inverse_properties inverse queries]. It depends, of course, on what you want to do with the search results, but let's say the API is used to return suggestions for a traditional site search box. 
+
+If you DO NOT want those pages to be included, you should modify your query to exclude non-existing pages. An easy solution is to restrict your query to pages that have a property 'Modification date' (<code><nowiki>[[Modification date::+]]</nowiki></code>).
+
+If you DO want to include those pages, you need to decide where to send users when they select an existing or non-existing page from a list of results: 
+
+* MediaWiki’s built-in solution is to direct all requests to <code>Special:Search</code>, with the page name appended to the 'search' parameter. Special:Search is the page familiar to wiki users that allows for further site searches to be made. If the page exists (and the standard behaviour is not suppressed through <code>&fulltext=1</code> in the URL), the user is automatically redirected. Unfortunately, the usefulness of Special:Search may be limited.
+* Another solution is to set up a custom wiki page for search results and set it as a target page. For more information, see [[Special:ReconciliationAPI/special-redirect |<code>Special:ReconRedirect</code>]].
+

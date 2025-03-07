@@ -1,0 +1,38 @@
+<div class="recon-summary">{{int:apihelp-recon-suggest-type-summary }}</div>
+
+== Parameters ==
+[https://{{SERVERNAME}}/api.php?action=help&modules=recon-suggest-type API documentation]
+
+<div class="recon-data-item">
+<div>'''Parameter name'''</div>
+<div>'''Description'''</div>
+</div>
+<div class="recon-data-item">
+<div><code>source</code></div>
+<div>{{int:apihelp-recon-suggest-type-param-source}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>profile</code></div>
+<div>{{int:apihelp-recon-suggest-type-param-profile}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>cat</code></div>
+<div>{{int:apihelp-recon-suggest-type-param-cat}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>substrpattern</code></div>
+<div>{{int:apihelp-recon-suggest-type-param-substrpattern}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>substr</code></div>
+<div>{{int:apihelp-recon-suggest-type-param-substr}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>offset</code></div>
+<div>{{int:apihelp-recon-suggest-type-param-offset}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>limit</code></div>
+<div>{{int:apihelp-recon-suggest-type-param-limit}}</div>
+</div>
+

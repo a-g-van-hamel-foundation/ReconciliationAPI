@@ -1,0 +1,228 @@
+{
+	"name": "ReconciliationAPI",
+	"version": "0.1-beta",
+	"type": "api",
+	"author": [
+		"[https://codecs.vanhamel.nl Dennis Groenewegen (CODECS)]"
+	],
+	"descriptionmsg": "reconciliationapi-desc",
+	"url": "https://github.com/a-g-van-hamel-foundation/ReconciliationAPI",
+	"license-name": "GPL-2.0-or-later",
+	"requires": {
+		"MediaWiki": ">= 1.39.0"
+	},
+	"MessagesDirs": {
+		"Recon": [
+		  "i18n"
+		]
+	},
+	"ExtensionMessagesFiles": {
+		"ReconMagic": "Recon.i18n.php",
+		"ReconNamespaces": "Recon.i18n.namespaces.php",
+		"ReconAliases": "Recon.i18n.aliases.php"
+	},
+	"AutoloadNamespaces": {
+		"Recon\\": "src/",
+		"Recon\\MW": "src/MW/",
+		"Recon\\API": "src/API/",
+		"Recon\\SMW": "src/SMW/",
+		"Recon\\Config": "src/Config/",
+		"Recon\\Special": "src/Special/"
+	},
+	"AutoloadClasses": {
+		"ReconHooks": "Recon\\ReconHooks",
+		"ReconJsonContent": "Recon\\Config\\ReconJsonContent",
+		"ReconJsonContentHandler": "Recon\\Config\\ReconJsonContentHandler",
+		"ReconParserFunctions": "Recon\\ReconParserFunctions"
+	},
+	"callback": "Recon\\ReconHooks::registrationCallback",
+	"HookHandlers": {
+		"main": {
+			"class": "Recon\\ReconHooks"
+		}
+	},
+	"Hooks": {
+		"ParserFirstCallInit": "main",
+		"BeforePageDisplay": "main",
+		"ContentHandlerDefaultModelFor": "main",
+		"CodeEditorGetPageLanguage": "main",
+		"AdminLinks": "main"
+	},
+	"ResourceModules": {
+		"recon.general.styles": {
+			"localBasePath": "resources",
+			"remoteExtPath": "ReconciliationAPI/resources",
+			"styles": "recon.less"
+		},
+		"ext.recon.base": {
+			"localBasePath": "resources",
+			"remoteExtPath": "ReconciliationAPI/resources",
+			"packageFiles": [
+				"ext.recon.vue.js"
+			],
+			"styles": [
+				"ext.recon.vue.less"
+			],
+			"dependencies": [
+				"ext.recon.components",
+				"vue",
+				"mediawiki.api",
+				"mediawiki.ForeignApi"
+			]
+		},
+		"ext.recon.components": {
+			"localBasePath": "resources",
+			"remoteExtPath": "ReconciliationAPI/resources",
+			"dependencies": [
+				"mediawiki.language.names",
+				"@wikimedia/codex"
+			],
+			"messages": [
+				"reconciliationapi-typeahead-norecord"
+			],
+			"styles": [],			
+			"packageFiles": [
+				"components/index.js",
+				"components/Search.vue"
+			],
+			"codexComponents": [
+				"CdxButton",
+				"CdxCard",
+				"CdxDialog",
+				"CdxTypeaheadSearch",
+				"CdxSearchInput"
+			]
+		}
+	},
+	"ResourceFileModulePaths": {
+		"localBasePath": "resources",
+		"remoteExtPath": "ReconciliationAPI/resources"
+	},
+	"ResourceFileModules": {
+	},
+	"ContentHandlers": {
+		"reconjson": "Recon\\Config\\ReconJsonContentHandler"
+	},
+	"namespaces": [
+		{
+			"id": 1240,
+			"constant": "NS_RECON",
+			"name": "Recon",
+			"defaultcontentmodel": "reconjson",
+			"subpages": false,
+			"content": false
+		},
+		{
+			"id": 1241,
+			"constant": "NS_RECON_TALK",
+			"name": "Recon_talk",
+			"defaultcontentmodel": "wikitext",
+			"subpages": true,
+			"content": false
+		}
+	],
+	"APIModules": {
+		"recon": "Recon\\API\\APIService",
+		"recon-manifest": "Recon\\API\\APIService",
+		"recon-suggest-entity": "Recon\\API\\APISuggestEntity",
+		"recon-suggest-property": "Recon\\API\\APISuggestProperty",
+		"recon-suggest-propvalue": "Recon\\API\\APISuggestPropertyValue",
+		"recon-suggest-type": "Recon\\API\\APISuggestType",
+		"recon-propose-property": "Recon\\API\\APIExtendPropertyProposal",
+		"recon-query-request": "Recon\\API\\APIExtendQueryRequest"
+	},
+	"SpecialPages": {
+		"ReconciliationAPI": "Recon\\Special\\ReconSpecial",
+		"ReconPreview": "Recon\\Special\\ReconSpecialPreview",
+		"ReconRedirect": "Recon\\Special\\ReconSpecialRedirect"
+	},
+	"config_prefix": "wg",
+	"config": {
+		"ReconAPIMWUseDisplayTitle": {
+			"value": false,
+			"descriptionmsg": "reconciliationapi-config-reconapiusedisplaytitle"
+		},
+		"ReconAPILabelProp": {
+			"value": "Display title of",
+			"descriptionmsg": "reconciliationapi-config-reconapilabelprop",
+			"public": true
+		},
+		"ReconAPIAltLabelProp": {
+			"value": null,
+			"descriptionmsg": "reconciliationapi-config-reconapialtlabelprop"
+		},
+		"ReconAPISearchableLabelProp": {
+			"value": null,
+			"descriptionmsg": "reconciliationapi-config-reconapisearchablelabelprop"
+		},
+		"ReconAPIDescriptionProp": {
+			"value": "Has description",
+			"descriptionmsg": "reconciliationapi-config-reconapidescriptionprop"
+		},
+		"ReconAPIThumbnailProp": {
+			"value": "Has primary image",
+			"descriptionmsg": "reconciliationapi-config-reconapithumbnailprop"
+		},
+		"ReconAPIClassProp": {
+			"value": "Class",
+			"descriptionmsg": "reconciliationapi-config-reconapiclassprop"
+		},
+		"ReconAPIBroaderClassProp": {
+			"value": "Is subclass of",
+			"descriptionmsg": "reconciliationapi-config-reconapibroaderclassprop"
+		},
+		"ReconAPIBroaderConceptProp": {
+			"value": "Has broader concept",
+			"descriptionmsg": "reconciliationapi-config-reconapibroaderconceptprop"
+		},
+		"ReconAPISMWQueryTypesAllowed": {
+			"value": [ "category", "namespace", "class" ],
+			"description": "Maybe restrict to certain types only. Not implemented."
+		},
+		"ReconAPISMWQueryForCategories": {
+			"value": "[[:Category:+]] [[Modification date::+]]",
+			"descriptionmsg": "reconciliationapi-config-reconapismwqueryforcategories"
+		},
+		"ReconAPISMWQueryForConcepts": {
+			"value": "[[:Concept:+]] [[Modification date::+]]",
+			"descriptionmsg": "reconciliationapi-config-reconapismwqueryforconcepts"
+		},
+		"ReconAPISMWQueryForClasses": {
+			"value": "[[-Class::+]]",
+			"descriptionmsg": "reconciliationapi-config-reconapismwqueryforclasses"
+		},
+		"ReconAPISMWClassPropertiesSchema": {
+			"value": {
+				"propertiesProp": "Allows for property",
+				"targetClassProp": false
+			},
+			"descriptionmsg": "reconciliationapi-config-reconapismwclasspropertiesschema"
+		},
+		"ReconAPIMaxQueries": {
+			"value": 25,
+			"descriptionmsg": "reconciliationapi-config-reconapimaxqueries"
+		},
+		"ReconAPIMaxResults": {
+			"value": 25,
+			"descriptionmsg": "reconciliationapi-config-reconapimaxresults"
+		},
+		"ReconAPIDefaultTypes": {
+			"value": [],
+			"descriptionmsg": "reconciliationapi-config-reconapidefaulttypes"
+		},
+		"ReconAPIConsolidateRedirects": {
+			"value": true,
+			"descriptionmsg": "reconciliationapi-config-reconapiconsolidateredirects"
+		},
+		"ReconAPIRemoveItalicsFromDisplayTitleColumn": {
+			"value": false,
+			"descriptionmsg": "reconciliationapi-config-reconapiremoveitalicsfromdisplaytitlecolumn"
+		},
+		"ReconRedirectDefaultQueryPage": {
+			"value": "Special:Search",
+			"descriptionmsg": "reconciliationapi-config-reconredirectdefaultquerypage"
+		}
+	},
+	"manifest_version": 2,
+	"load_composer_autoloader": false
+}

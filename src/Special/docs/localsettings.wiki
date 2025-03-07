@@ -1,0 +1,15 @@
+<h2>Additional settings</h2>
+If you need to allow CORS requests to your wiki’s API from another domain, set the appropriate value to MediaWiki’s [https://www.mediawiki.org/wiki/Manual:$wgCrossSiteAJAXdomains <code>$wgCrossSiteAJAXdomains</code>]. For example, to allow such requests to your wiki from the English Wikipedia as well as from the Reconciliation API testbench, add entries as follows:
+
+<pre>
+$wgCrossSiteAJAXdomains = [
+	"en.wikipedia.org",
+	"reconciliation-api.github.io/testbench"
+];
+</pre>
+
+See [https://www.mediawiki.org/wiki/Manual:CORS Manual:CORS] for general guidance.
+<!--
+For the REST API (not implemented yet), the relevant setting is <code>$wgAllowCrossOrigin</code>.
+-->
+
