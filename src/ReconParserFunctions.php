@@ -23,9 +23,10 @@ class ReconParserFunctions {
 			"id" => "recon-widget-sitesearch-$random",
 			"class" => "recon-search-widget",
 			"placeholder" => "Search the website",
+			"internal" => false,
 			"dev" => "false"
 		];
-		list( $apiUrl, $apiUrlParams, $targetUrl, $footerUrl, $id, $class, $placeholder, $dev ) = array_values( $this->extractParams( $frame, $args, $paramsAllowed ) );
+		list( $apiUrl, $apiUrlParams, $targetUrl, $footerUrl, $id, $class, $placeholder, $internal, $dev ) = array_values( $this->extractParams( $frame, $args, $paramsAllowed ) );
 		$showDevInfo = ( $dev == "false" ) ? false : true;
 
 		if ( $targetUrl == false || $footerUrl == false ) {
@@ -70,7 +71,8 @@ class ReconParserFunctions {
 			"data-target-url" => $targetUrl,
 			"data-footer-url" => $footerUrl,
 			"data-random" => "sitesearch-$random",
-			"data-placeholder" => $placeholder
+			"data-placeholder" => $placeholder,
+			"data-internal" => $internal
 		];
 		$res = Html::rawElement( "div", $attributes, "" );
 

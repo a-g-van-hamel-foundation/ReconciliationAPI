@@ -140,4 +140,20 @@ class MWNamespaceUtils {
 		return $language->getFormattedNsText( $index );
 	}
 
+	/**
+	 * Get namespace code/index from namespace name, or null
+	 * @param mixed $name
+	 */
+	public function getNamespaceIndexFromName( $name ) {
+		// ? standardizeNamespace
+		$namespaces = $this->contentLanguage->getNamespaces();
+		$code = null;
+		foreach ( $namespaces as $nsCode => $nsName ) {
+			if ( $name === $nsName ) {
+				return intval($nsCode);
+			}
+		}
+		return $code;
+	}
+
 }

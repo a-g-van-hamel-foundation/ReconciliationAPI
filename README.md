@@ -23,3 +23,7 @@ After installing the software, head over to `Special:ReconciliationAPI` for the 
 
 ## Credits
 At an early stage of development, this extension borrowed heavily from the autocompletion features of the [Page Forms](https://www.mediawiki.org/wiki/Extension:Page_Forms) extension. 
+
+## Changes
+* 0.1 - Added additional parameter to the TypeaheadSearch widget, `internal` (boolean), to allow for internal requests to the API. Added support for "supplying an entity identifier as prefix should return this entity in the suggest response" (section 6.4 ongoing). Revised Full-Text Search helper to better guard queries against a bug in SMW that can cause RuntimeException errors. Fixed Page Forms support because of typo 'dispaytitle' for 'displaytitle' in `ReconUtils`. 
+* 0.1 beta - first release, still beta.

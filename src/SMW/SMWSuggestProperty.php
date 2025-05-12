@@ -80,7 +80,7 @@ class SMWSuggestProperty {
 			$this->requestOptions->setOffset( $offset );
 		}
 
-		// SQL method to return array of array( SMWDIProperty|SMWDIError, integer )
+		// SQL method to return array of array( SMW\DIProperty| ?SMW\DIError, integer )
 		$lookupList = $this->getListLookup( $substring )->fetchList() ?? [];
 		$this->resultBatchCount = count( $lookupList );
 		// @todo Not waterproof. What if the final batch count equals 

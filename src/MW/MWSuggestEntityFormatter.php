@@ -16,6 +16,7 @@ use Recon\ReconUtils;
 use Recon\StringModification\StringModifier;
 use Recon\MW\ExtPageImages;
 use Recon\MW\MWCategoryUtils;
+use Recon\MW\MWNamespaceUtils;
 use Recon\API\APIReconQueryHandler;
 
 class MWSuggestEntityFormatter {
@@ -81,7 +82,6 @@ class MWSuggestEntityFormatter {
 		} else {
 			$name = $this->hideNamespacePrefix ? $pageName : $title->getPrefixedText();
 		}
-		$namespaceIndex = $title->getNamespace();
 
 		$redirects = [];
 		if ( $title->isRedirect() ) {
@@ -98,15 +98,17 @@ class MWSuggestEntityFormatter {
 			$namespaceIndex = $mainTitle->getNamespace();
 		} else {
 			$isRedirect = 0;
-			//$namespaceIndex = $title->getNamespace();
+			$namespaceIndex = $title->getNamespace();
 		}
+		$mwNamespaceUtils = new MWNamespaceUtils();
+		$namespaceName = $mwNamespaceUtils->getNamespaceNameFromIndex( $namespaceIndex );
 
 		// Get image thumbnail with Page Images extension
 		// @todo More testing!
 		$thumb = $this->getThumb( $title, $pageName, $namespaceIndex );
 
 		// @todo Actually required only for Reconcile API, not Suggest Entity
-		[ $isFullMatch, $isLowerCaseMatch, $score ] = APIReconQueryHandler::getRelevancyDataForCandidate( $substring, $pageName, $displayTitle );
+		[ $isFullMatch, $isLowerCaseMatch, $score ] = APIReconQueryHandler::getRelevancyDataForCandidate( $substring, $pageName, $displayTitle, $namespaceName );
 
 		// @todo
 		$type = MWCategoryUtils::getCategoriesFromTitle( $title, "idname" );
@@ -174,7 +176,9 @@ class MWSuggestEntityFormatter {
 
 			$thumb = $this->getThumb( $title, $pagename, $row["page_namespace"] );
 
-			list( $isFullMatch, $isLowerCaseMatch, $score ) = APIReconQueryHandler::getRelevancyDataForCandidate( $this->substring, $pagename, $name );
+			$mwNamespaceUtils = new MWNamespaceUtils();
+			$namespaceName = $mwNamespaceUtils->getNamespaceNameFromIndex( $row["page_namespace"] );
+			list( $isFullMatch, $isLowerCaseMatch, $score ) = APIReconQueryHandler::getRelevancyDataForCandidate( $this->substring, $pagename, $name, $namespaceName );
 
 			$sortableName = $row["pp_defaultsort_value"] ?? $name;
 			$sortableKey = strip_tags( strtolower($sortableName) );
@@ -269,12 +273,14 @@ class MWSuggestEntityFormatter {
 			$targetName = $targetPageName;
 		}
 
-		$thumb = $this->getThumb( $targetTitle, $targetPageName, $targetPageName );
+		$thumb = $this->getThumb( $targetTitle, $targetPageName, $targetNamespace );
 
+		$mwNamespaceUtils = new MWNamespaceUtils();
+		$namespaceName = $mwNamespaceUtils->getNamespaceNameFromIndex( $targetNamespace );
 		// @todo - names of redirect pages may provide better matches
 		// but are we really to understand them as alternative labels?
 		// Sometimes a redirect is created to correct an error...
-		list( $isFullMatch, $isLowerCaseMatch, $score ) = APIReconQueryHandler::getRelevancyDataForCandidate( $this->substring, $targetPageName, $targetName );
+		list( $isFullMatch, $isLowerCaseMatch, $score ) = APIReconQueryHandler::getRelevancyDataForCandidate( $this->substring, $targetPageName, $targetName, $namespaceName );
 
 		$sortableKey = strip_tags( strtolower($targetName) );
 

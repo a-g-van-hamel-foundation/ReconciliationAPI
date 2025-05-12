@@ -11,6 +11,7 @@ use \Title;
 use \SMW\Query\QueryResult;
 use Recon\ReconUtils;
 use Recon\MW\MWUtils;
+use Recon\MW\MWNamespaceUtils;
 use Recon\StringModification\StringModifier;
 use Recon\MW\ExtPageImages;
 use Recon\API\APIReconQueryHandler;
@@ -305,7 +306,10 @@ class SMWResultFormatter {
 				if ( $thumb !== false ) {
 					$resItem["thumbnail"] = $thumb;
 				}
-				list( $isFullMatch, $isLowerCaseMatch, $score ) = APIReconQueryHandler::getRelevancyDataForCandidate( $this->substring, $fullPageName, $name );
+
+				$mwNamespaceUtils = new MWNamespaceUtils();
+				$namespaceName = $mwNamespaceUtils->getNamespaceNameFromIndex( $subject["namespace"] );
+				list( $isFullMatch, $isLowerCaseMatch, $score ) = APIReconQueryHandler::getRelevancyDataForCandidate( $this->substring, $fullPageName, $name, $namespaceName );
 				$resItem[ApiResult::META_BC_BOOLS] = [ "match" ];
 				$resItem["match"] = $isFullMatch;
 				$resItem["score"] = $score;

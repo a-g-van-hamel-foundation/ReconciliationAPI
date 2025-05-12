@@ -14,6 +14,7 @@ use Recon\MW\MWSuggestEntity;
 use Recon\SMW\SMWSuggestEntity;
 use Recon\SMW\SMWUtils;
 use Recon\Config\ReconConfig;
+use Recon\ReconUtils;
 
 class APISuggestEntity extends \ApiBase {
 
@@ -22,6 +23,11 @@ class APISuggestEntity extends \ApiBase {
 
 	public function execute() {
 		$params = $this->extractRequestParams();
+
+		global $wgDBname;
+		$address = $_SERVER['REMOTE_ADDR'];
+		$logMsg = "{$wgDBname} / API module recon-suggest-entity visited by $address";
+		ReconUtils::log( $logMsg, $params );
 
 		// TEMP
 		//return;
@@ -110,6 +116,7 @@ class APISuggestEntity extends \ApiBase {
 		foreach( $res as $key => $val ) {
 			$apiResult->addValue( null, $key, $val );
 		}
+		$this->setCache();
 	}
 
 	public function getAllowedParams() : array {		
@@ -181,4 +188,10 @@ class APISuggestEntity extends \ApiBase {
 		];
 		return $arr;
 	}
+
+	private function setCache() {
+		$this->getMain()->setCacheMaxAge( 3600 );
+		$this->getMain()->setCacheMode( 'private' );
+	}
+
 }

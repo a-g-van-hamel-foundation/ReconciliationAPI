@@ -164,19 +164,32 @@ class APIReconQueryHandler {
 	 * @todo Cater for multiple names incl. alternative labels
 	 * 
 	 * @param mixed $substring
-	 * @param mixed $pageName
+	 * @param mixed $pageName - fullpagename or pagename?
 	 * @param mixed $displayTitle
+	 * 
 	 * @return array
 	 */
-	public static function getRelevancyDataForCandidate( $substring, $pageName, $displayTitle ) {
-		$substring = ( mb_detect_encoding( $substring ) == "ASCII" ) ? html_entity_decode( $substring ) : $substring;
+	public static function getRelevancyDataForCandidate( 
+		$substring,
+		$pageName,
+		$displayTitle,
+		$namespaceName = null
+	) {
+		$substring = mb_detect_encoding( $substring ) == "ASCII" ? html_entity_decode( $substring ) : $substring;
+		$substring = str_replace( "_", " ", $substring );
 		$lcSubstring = strtolower( $substring );
 		$lcPageName = strtolower( $pageName );
 		// Ignore html formatting such as italics
 		$displayTitle = strip_tags( html_entity_decode( $displayTitle ) );
-		$lcDisplayTitle = strtolower( $displayTitle );
+		$lcDisplayTitle = strtolower( $displayTitle );		
 
-		$isFullMatch = $substring === $pageName || $substring === $displayTitle;
+		if ( $namespaceName !== null ) {
+			// Not entirely perfect because namespace names may be language-dependent
+			$isFullMatch = $substring === "{$namespaceName}:{$pageName}" || $substring === $pageName || $substring === $displayTitle;
+		} else {
+			$isFullMatch = $substring === $pageName || $substring === $displayTitle;
+		}
+
 		$isLowerCaseMatch = ( $lcSubstring == $lcPageName || $lcSubstring == $lcDisplayTitle ) ? true : false;
 		$isInitialMatch = str_starts_with( $lcPageName, $lcSubstring ) || str_starts_with( $lcDisplayTitle, $lcSubstring );
 

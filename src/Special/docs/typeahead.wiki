@@ -7,6 +7,7 @@
 |targeturl=
 |footerurl=
 |placeholder=
+|internal=
 }}
 </pre>
 
@@ -28,6 +29,14 @@ The extension comes with a special page designed for that purpose. See Special:R
 <div class="recon-data-item">
 <div><code>footerurl</code></div>
 <div>Optional if the wiki being queried is local. The bottom item in the menu, or footer, is reserved for a link to a query page with the provided phrase. When nothing is set, it is assumed that you are happy to send users to MediaWiki’s general full-text search page (<code>Special:Search</code>, .../Special:Search?fulltext=1). Set it to a different URL of your choice as long as as the final parameter is used to take the phrase provided.</div>
+</div>
+<div class="recon-data-item">
+<div><code>placeholder</code></div>
+<div>The placeholder text in the search input.</div>
+</div>
+<div class="recon-data-item">
+<div><code>internal</code></div>
+<div>By default, the widget makes its requests (POST) to the API remotely. Because this relies on the <code>origin=*</code> string being added to the API's URL, it does not work if the wiki is readable by logged in users only and requests to the API need to be made 'internally'. To allow for the non-anonymous approach, set <code>internal=true</code> (which will omit <code>origin=*</code>).</div>
 </div>
 
 == Define your target URLs ==

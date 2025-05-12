@@ -1,3 +1,46 @@
-<div class="recon-summary">{{int:apihelp-recon-suggest-entity-summary}} </div>
+<p class="recon-summary">{{int:apihelp-recon-suggest-entity-summary}} </p>
 
 You can restrict your search by namespace, by category, or by a combination of category and namespace. 
+
+== Parameters ==
+
+<div class="recon-data-item">
+<div>'''Parameter name'''</div>
+<div>'''Description'''</div>
+</div>
+<div class="recon-data-item">
+<div><code>source</code></div>
+<div>Set to <code>mw</code></div>
+</div>
+<div class="recon-data-item">
+<div><code>substr</code></div>
+<div>{{int:apihelp-recon-suggest-entity-param-substr}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>substrpattern</code></div>
+<div>{{int:apihelp-recon-suggest-entity-param-substrpattern}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>cat</code></div>
+<div>{{int:apihelp-recon-suggest-entity-param-cat}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>ns</code></div>
+<div>{{int:apihelp-recon-suggest-entity-param-ns}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>displaytitle</code></div>
+<div>{{int:apihelp-recon-suggest-entity-param-displaytitle}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>pfautocomplete</code></div>
+<div>{{int:apihelp-recon-suggest-entity-param-pfautocomplete}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>offset</code></div>
+<div>{{int:apihelp-recon-suggest-entity-param-offset}}</div>
+</div>
+<div class="recon-data-item">
+<div><code>limit</code></div>
+<div>{{int:apihelp-recon-suggest-entity-param-limit}}</div>
+</div>

@@ -175,11 +175,11 @@ class ReconJsonContentHandler extends JsonContentHandler {
 			{{#recon-search:
 			|apiurl={$currentSite}/api.php
 			|apiurlparams=action=recon-suggest-entity
-			origin=*
 			profile={$profileID}
 			substr=
 			|limit=10
 			|placeholder=Suggest entity (profile test)...
+			|internal=true
 			|targeturl={$currentSite}/Special:Search?fulltext=0&search=
 			|footerurl={$currentSite}/Special:Search?fulltext=1&search=
 			}}

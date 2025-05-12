@@ -35,6 +35,8 @@ class SMWQueryBuilder {
 	private $substringProcessed;
 	private $substringPattern;
 	private $possibleSubstringPatterns = [ "stringprefix", "tokenprefix", "allchars", "doublequotes", "exact" ];
+	// Bool. Support 6.4: "supplying an entity identifier as prefix should return this entity in the suggest response":
+	private $queryEntityIdentifier = true;
 	private $concept;
 	private $rawQuery;
 	// @todo maybe make placeholder configurable
@@ -230,6 +232,9 @@ class SMWQueryBuilder {
 			}
 		}
 
+		if ( $this->queryEntityIdentifier ) {
+			$rawQuery .= " OR [[{$this->substring}]]";
+		}
 		$this->rawQuery = $rawQuery;
 		$queryRes = $this->getResultForQuery( $this->rawQuery );
 

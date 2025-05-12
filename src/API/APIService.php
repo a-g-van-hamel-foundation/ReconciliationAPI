@@ -85,6 +85,7 @@ class APIService extends \ApiBase {
 			foreach( $res as $k => $v ) {
 				$apiResult->addValue( null, $k, $v );
 			}
+			$this->setCache();
 			return;
 		}
 
@@ -103,6 +104,7 @@ class APIService extends \ApiBase {
 			foreach( $res as $k => $v ) {
 				$apiResult->addValue( null, $k, $v );
 			}
+			$this->setCache();
 			return;
 		}
 
@@ -310,6 +312,7 @@ class APIService extends \ApiBase {
 		foreach( $res as $key => $val ) {
 			$apiResult->addValue( null, $key, $val );
 		}
+		$this->setCache();
 	}
 
 	/**
@@ -383,6 +386,11 @@ class APIService extends \ApiBase {
 			]
 		];
 		return $arr;
+	}
+
+	private function setCache() {
+		$this->getMain()->setCacheMaxAge( 3600 );
+		$this->getMain()->setCacheMode( 'private' );
 	}
 
 }

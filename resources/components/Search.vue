@@ -73,6 +73,7 @@ module.exports = defineComponent( {
 			footerUrl: this.configProps['footerUrl'] ?? "",
 			searchSiteForPagesContaining: this.configProps['footerText'] ?? "Search the site for pages containing",
 			placeholder: this.configProps['placeholder'] ?? "Search the website",
+			internal: this.configProps['internal'] ?? false,
 			//description: this.configProps['description'] ?? "",
 			//supportingtext: this.configProps['supportingtext'] ?? ""
 		}
@@ -127,10 +128,18 @@ module.exports = defineComponent( {
 
 			var targetUrl = data.configProps.targetUrl;
 			var footerUrl = data.configProps.footerUrl;
+			var internal = data.configProps.internal === "true" ? true : false;
 			// console.log( apiUrlParamsObj);
 
-			var actionApi = new mw.ForeignApi( actionApiBaseUrl, { anonymous: true } );
-			actionApi.post( apiUrlParamsObj )
+			if ( !internal ) {
+				// remote requests
+				var actionApi = new mw.ForeignApi( actionApiBaseUrl, { anonymous: true } );
+			} else {
+				// internal use
+				var actionApi = new mw.ForeignApi( actionApiBaseUrl, { anonymous: false } );
+			}
+
+			actionApi.get( apiUrlParamsObj )
 			.done( function ( data ) {
 				searchResults.value = data.result && data.result.length > 0
 						? adaptApiResponse( data.result )

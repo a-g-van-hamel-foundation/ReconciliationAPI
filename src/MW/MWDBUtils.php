@@ -8,6 +8,7 @@
 namespace Recon\MW;
 
 use \MediaWiki\MediaWikiServices;
+use Recon\MW\MWNamespaceUtils;
 
 class MWDBUtils {
 
@@ -20,7 +21,9 @@ class MWDBUtils {
 	 *
 	 * @param string $column Value column name
 	 * @param string $substring Substring to look for
-	 * @param bool $replaceSpaces - whether to replace spaces with underscores from substring (e.g. for 'page_title', but should NOT be done for 'pp_displaytitle.pp_value' ) AND if whether to treat underscores as space representations
+	 * @param bool $replaceSpaces - whether to replace spaces with underscores from substring 
+	 * (e.g. for 'page_title', but should NOT be done for 'pp_displaytitle.pp_value' )
+	 * AND whether to treat underscores as space representations
 	 * @return string SQL condition for use in WHERE clause
 	 */
 	public static function getSQLConditionForAutocompleteInColumn(
@@ -32,7 +35,7 @@ class MWDBUtils {
 	): string {
 		$db = $db ?? self::getReadDB();
 
-		// Some preprocessing because sadly, there is no 
+		// Some preprocessing because sadly, there is no
 		// search-optimised version of Displaytitle.
 		// @todo maybe treat italics as word separators below?
 		if ( $db->getType() == 'mysql' ) {
@@ -78,7 +81,8 @@ class MWDBUtils {
 			case "tokenprefix":
 			case "prefix":
 			default:
-				// Default: match on beginning of each pseudo-token:
+				// Match on beginning of each pseudo-token:
+				/*
 				$sqlCond = $column_value . $db->buildLike( $substring, $db->anyString() );
 				// for _ MW also has $db->anyChar()
 				$spaceRepresentation = $replaceSpaces ? '_' : ' ';
@@ -88,9 +92,74 @@ class MWDBUtils {
 					$sqlCond .= " OR " . $column_value .
 					$db->buildLike( $db->anyString(), $wordSeparator . $substring, $db->anyString() );
 				}
+				*/
+				$sqlConditions = [];
+				$sqlConditions[] = $column_value . $db->buildLike( $substring, $db->anyString() );
+				$spaceRepresentation = $replaceSpaces ? '_' : ' ';
+				$wordSeparators = [ $spaceRepresentation, '/', '(', ')', '-', '\'', '\"' ];
+				foreach ( $wordSeparators as $wordSeparator ) {
+					$sqlConditions[] = $column_value . $db->buildLike( $db->anyString(), $wordSeparator . $substring, $db->anyString() );
+				}
+				$sqlCond = $db->makeList( $sqlConditions, LIST_OR );
 		}
-
 		return $sqlCond;
+	}
+
+	/**
+	 * Needed for API specs 6.4: "supplying an entity identifier as prefix 
+	 * should return this entity in the suggest response."
+	 * 
+	 * @param string $column - "page_title"
+	 * @param mixed $substring
+	 * @param $db
+	 * @param array|null $namespaceIndexes - can be used to constrain query to particular namespaces
+	 * @return string
+	 */	
+	public static function getExactSQLConditionForAutocompleteInColumn(
+		string $column,
+		string $substring,
+		$db = null,
+		$namespaceIndexes = null,
+		$category = null
+	): string {
+		$db = $db ?? self::getReadDB();
+		// Do we still need to do this?
+		// $column_value = "CONVERT($column USING utf8)";
+
+		// Check for non-main namespace
+		$substringParts = explode( ":", $substring );
+		if ( count($substringParts) > 1 ) {
+			$namespaceUtils = new MWNamespaceUtils();
+			if ( $namespaceIndexes == null ) {
+				// Get namespace index from prefix
+				$namespaceIndex = $namespaceUtils->getNamespaceIndexFromName( $substringParts[0] );
+				$namespaceIndexes = $namespaceIndex !== null ? [ $namespaceIndex ] : null;
+			}
+			if ( $namespaceIndexes !== null ) {
+				$sqlConds = [];
+				foreach( $namespaceIndexes as $idx ) {
+					$sqlCond = [
+						"page_namespace" => $idx,
+						$column => str_replace( ' ', '_', $substringParts[1] )
+					];
+					if ( $category !== null ) {
+						$sqlCond["cl_to"] = "{$category}";
+						$sqlCond[] = "cl_from = page_id";
+					}
+					$sqlConds[] = $db->makeList( $sqlCond, LIST_AND );
+				}
+				return $db->makeList( $sqlConds, LIST_OR );
+			}
+		}
+		// Assuming main namespace
+		$sqlCond = [
+			"page_namespace" => 0,
+			$column => str_replace( ' ', '_', $substring )
+		];
+		if ( $category !== null ) {
+			array_push( $sqlCond, "cl_to = '{$category}'", "cl_from = page_id" );
+		}
+		return $db->makeList( $sqlCond, LIST_AND );
 	}
 
 	/**

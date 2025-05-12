@@ -128,15 +128,15 @@ class MWPageQueryBuilder {
 
 		$table = "page";
 		$columns = [ "page_title", "page_namespace", "page_is_redirect", "page_id" ];
-		$conditions = [];
+		$likeConditions = [];
 		list( $columns, $leftJoins ) = $this->setupBaseSQLQueryForDefaultSort( $columns, [] );
 
 		if ( $this->useDisplayTitle ) {
 			list( $columns, $leftJoins ) = $this->setupBaseSQLQueryForDisplayTitle( $columns, $leftJoins );
-			$conditions[] = $this->createSubstringCondition( $substring, [], true, false );
+			$likeConditions[] = $this->createSubstringCondition( $substring, [], true, false );
 		} else {
-			// todo ???
-			$conditions[] = MWDBUtils::getSQLConditionForAutocompleteInColumn(
+			// @todo ???
+			$likeConditions[] = MWDBUtils::getSQLConditionForAutocompleteInColumn(
 				"page_title",
 				$substring,
 				true,
@@ -145,11 +145,19 @@ class MWPageQueryBuilder {
 			);
 		}
 
+		// Exact identifier match
+		$exactConditions = MWDBUtils::getExactSQLConditionForAutocompleteInColumn( "page_title", $substring );
+
+		$conditions = $this->dbr->makeList([
+			$this->dbr->makeList( $likeConditions, LIST_AND ),
+			$exactConditions
+		], LIST_OR );
+
 		// Options
 		$orderBy = "pp_defaultsort_value";
 		$limit = isset( $queryOptions["limit"] ) ? $queryOptions["limit"] : $this->resultLimit;
 
-		/* Uncomment for debugging.		
+		/* Uncomment for debugging.
 		$sqlStuff = [ "tables" => $table, "columns" => $columns, "limit" => $limit, "orderBy" => $orderBy, "leftJoins" => $leftJoins, "conditions" => $conditions ];
 		*/
 
@@ -206,12 +214,23 @@ class MWPageQueryBuilder {
 
 		// Get all the elements to build the syntax of the SQL query
 		$namespaceConditions = $this->getSQLConditionsFromNamespaceIndexes( $namespaceIndexes );
-		list( $tables, $columns, $conditions, $options, $join, $leftJoins ) = $this->getBuildingBlocksForSQLQueryOnNamespaces( $substring, $namespaceIndexes, $namespaceConditions );
+		list( $tables, $columns, $likeConditions, $options, $join, $leftJoins ) = $this->getBuildingBlocksForSQLQueryOnNamespaces( $substring, $namespaceIndexes, $namespaceConditions );
+
+		$exactConditions = MWDBUtils::getExactSQLConditionForAutocompleteInColumn(
+			"page_title",
+			$substring,
+			$this->dbr,
+			$namespaceIndexes
+		);
+		$conditions = [ $this->dbr->makeList( [
+			$this->dbr->makeList( $likeConditions, LIST_AND ),
+			$exactConditions
+		], LIST_OR ) ];
 
 		// Now run the query
 		// Older method where res = Wikimedia\Rdbms\MysqliResultWrapper:
 		// $res = $this->dbr->select( $tables, $columns, $conditions, __METHOD__, $options, $join );
-		
+
 		// Modern version
 		$build = MWDBUtils::selectQueryBuilder(
 			$this->dbr->newSelectQueryBuilder(),
@@ -405,6 +424,7 @@ class MWPageQueryBuilder {
 
 	/**
 	 * Returns a SQL condition for autocompletion substring value in a column.
+	 * @deprecated Use MWDBUtils::getSQLConditionForAutocompleteInColumn
 	 *
 	 * @param string $column Value column name
 	 * @param string $substring Substring to look for
@@ -508,10 +528,10 @@ class MWPageQueryBuilder {
 				// Common
 				$table = "page";
 				$columns = [ "page_title", "page_namespace", "page_is_redirect", "page_id" ];
-				$conditions = $joins = $leftJoins = [];
-				$conditions[] = "cl_from = page_id";
-				$conditions[] = "cl_to = '$category'";
-				// = same as $conditions["cl_to"] = $category;
+				$likeConditions = $joins = $leftJoins = [];
+				$likeConditions[] = "cl_from = page_id";
+				$likeConditions[] = "cl_to = '$category'";
+				// = same as $likeConditions["cl_to"] = $category;
 
 				$joins[] = [ "categorylinks", "cl", [ "cl.cl_from = page_id" ] ];
 				$leftJoins[] = [ "category", null, [ "cat_title = page_title", "page_namespace = " . NS_CATEGORY ] ];
@@ -523,13 +543,14 @@ class MWPageQueryBuilder {
 					list( $columns, $leftJoins ) = $this->setupBaseSQLQueryForDisplayTitle( $columns, $leftJoins );
 					// Search by display title
 					if ( $substring !== null ) {
-						$conditions[] = $this->createSubstringCondition( $substring, [], true, true );
+						$likeConditions[] = $this->createSubstringCondition( $substring, [], true, true );
 					}
 				} else {
 					// No display title
 					//$leftJoins = [];
 					if ( $substring != null ) {
-						$conditions[] = MWDBUtils::getSQLConditionForAutocompleteInColumn( 
+						/*
+						$likeConditions[] = MWDBUtils::getSQLConditionForAutocompleteInColumn( 
 							"page_title",
 							$substring,
 							true,
@@ -537,8 +558,26 @@ class MWPageQueryBuilder {
 							$this->dbr
 						) 
 						. " OR page_namespace = " . NS_CATEGORY;
+						*/
+						$cond = $this->dbr->makeList([
+							MWDBUtils::getSQLConditionForAutocompleteInColumn( 
+								"page_title",
+								$substring,
+								true,
+								$this->substringPattern,
+								$this->dbr
+							),
+							// get categories for next query
+							"page_namespace = " . NS_CATEGORY
+						], LIST_OR );
+						$likeConditions[] = $cond;
 					}
 				}
+
+				$conditions = $this->dbr->makeList([
+					$this->dbr->makeList( $likeConditions, LIST_AND ),
+					MWDBUtils::getExactSQLConditionForAutocompleteInColumn( "page_title", $substring, $this->dbr, null, $category )
+				], LIST_OR );
 
 				// order by cl_type? (file, page, subcat)
 				$options = [
@@ -569,7 +608,6 @@ class MWPageQueryBuilder {
 			}
 
 			if ( count( $newCategories ) === 0 ) {
-				// $pagesSorted = self::fixedMultiSort( $sortkeys, $pages );
 				return self::fixedMultiSort( $sortkeys, $pages );
 			} else {
 				$categories = array_merge( $categories, $newCategories );
@@ -669,6 +707,7 @@ class MWPageQueryBuilder {
 	/**
 	 * Helper function to create condition for substring.
 	 * @todo If possible, rewrite using newSelectQueryBuilder() syntax
+	 * @deprecated - see createSubstringCondition, kept for comparison
 	 * 
 	 * @param string $substring
 	 * @param mixed $queriedNamespaces
@@ -677,7 +716,7 @@ class MWPageQueryBuilder {
 	 * @param bool $getAllCategories whether to get categories in addition to substring matches
 	 * @return string
 	 */
-	public function createSubstringCondition(
+	public function createSubstringConditionOld(
 		string $substring,
 		array $queriedNamespaces = [],
 		bool $checkIfDisplayTitleEmpty = false,
@@ -731,6 +770,56 @@ class MWPageQueryBuilder {
 			'page_title', $substring, true, $this->substringPattern, $this->dbr 
 		);
 		*/
+	}
+
+	/**
+	 * Helper function to create condition for substring.
+	 * @todo If possible, rewrite using newSelectQueryBuilder() syntax
+	 * 
+	 * @param string $substring
+	 * @param mixed $queriedNamespaces
+	 * @param bool $replaceSpacesinDisplayTitle
+	 * @param bool $checkIfDisplayTitleEmpty
+	 * @param bool $getAllCategories whether to get categories in addition to substring matches
+	 * @return string
+	 */
+	public function createSubstringCondition(
+		string $substring,
+		array $queriedNamespaces = [],
+		bool $checkIfDisplayTitleEmpty = false,
+		bool $getAllCategories = false
+	) {
+		// 1. Display title
+		$orCondsForDisplayTitle = [];
+		$orCondsForDisplayTitle[] = "pp_displaytitle.pp_value IS NULL";
+		if ( $checkIfDisplayTitleEmpty ) {
+			$orCondsForDisplayTitle[] = "pp_displaytitle.pp_value = ''";
+		}
+		$orCondForDisplayTitle = $this->dbr->makeList( $orCondsForDisplayTitle, LIST_OR );
+
+		//2. LIKE
+		$likeCondition = MWDBUtils::getSQLConditionForAutocompleteInColumn(
+			"page_title",
+			$substring,
+			true,
+			$this->substringPattern,
+			$this->dbr
+		);
+
+		// 3. Combine conditions and potentially extend
+		// to get categories, too
+		$newCondition = $this->dbr->makeList([ $orCondForDisplayTitle, $likeCondition ], LIST_AND );
+		if ( $getAllCategories ) {
+			$newCondition = $this->dbr->makeList([
+				"page_namespace = " . NS_CATEGORY,
+				$newCondition
+			], LIST_OR );
+		} elseif( !in_array( NS_CATEGORY, $queriedNamespaces ) ) {
+			// @todo Here we would check if we want NS_CATEGORY to be included
+			// $substringCondition .= ' OR page_namespace = ' . NS_CATEGORY;
+		}
+
+		return $newCondition;
 	}
 
 	/**

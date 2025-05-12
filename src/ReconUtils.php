@@ -11,8 +11,10 @@ use MediaWiki\MainConfigNames;
 use MediaWiki\MediaWikiServices;
 use HtmlArmor;
 use Recon\MW\MWUtils;
+use MediaWiki\Logger\LoggerFactory;
 
 class ReconUtils {
+	private const LOGNAME = 'ReconciliationAPI';
 	
 	/**
 	 * Get URL base, without trailing slash,
@@ -201,7 +203,7 @@ class ReconUtils {
 		foreach( $qRes["result"] as $res ) {
 			$newRes[] = [
 				"title" => $res["id"] ?? "",
-				"dispaytitle" => $res["name"] ?? "",
+				"displaytitle" => $res["name"] ?? "",
 				"description" => $res["description"] ?? ""
 			];
 		}
@@ -260,6 +262,34 @@ class ReconUtils {
 	public static function getSiteLogo() {
 		$wgLogos = MediaWikiServices::getInstance()->getMainConfig()->get( MainConfigNames::Logos );
 		return $wgLogos["1x"] ?? false;
+	}
+
+	/**
+	 * @depreciated
+	 * @param string $msg
+	 * @param array $data
+	 * @return void
+	 */
+	public static function log( string $msg, array $data = [] ) {
+		// $logger = LoggerFactory::getInstance( self::LOGNAME );
+		// $logger->info( $msg, $data );
+	}
+
+	/**
+	 * Sort array values by length (asc)
+	 * (and preserve keys)
+	 *
+	 * @param array $values
+	 * @return array $values
+	 */
+	public static function sortValuesByLength( $values ) {
+		if ( empty( $values ) ) {
+			return $values;
+		}
+		uasort( $values, static function ( $a, $b ) {
+			return strlen( $a ) - strlen( $b );
+		} );
+		return $values;
 	}
 
 }
