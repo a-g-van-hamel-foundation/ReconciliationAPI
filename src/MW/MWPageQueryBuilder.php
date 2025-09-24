@@ -502,9 +502,6 @@ class MWPageQueryBuilder {
 		string $substringPattern = "",
 		mixed $namespaces = null
 	) {
-		// Safety measure
-		set_time_limit( 30 );
-
 		$topCategories = str_replace( " ", "_", $topCategories );
 		// cumulative $categories = all
 		// checkCategories = which to check next below
