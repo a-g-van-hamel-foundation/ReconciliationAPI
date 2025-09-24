@@ -3,7 +3,7 @@ The **Reconciliation API** extension (_beta_) is an extension for MediaWiki and 
 ## Features in a nutshell
 * Current focus is on two ways of setting up your data: MediaWiki core, using native methods only, and Semantic MediaWiki (tested with v4.1.3 only)
 * Special handling for matching with Full-Text Search
-* About five Action API modules, incl. metadata
+* About five Action API modules, incl. metadata (for better transparency)
 * Many configuration options available
 * Dedicated API profiles managed through JSON schemas in the wiki (namespace: `Recon`). Comes with simple JSON validation
 * A parser function (`#recon-search`) for creating typeahead widgets
@@ -22,8 +22,9 @@ wfLoadExtension( 'ReconciliationAPI' );
 After installing the software, head over to `Special:ReconciliationAPI` for the usage guide.
 
 ## Credits
-At an early stage of development, this extension borrowed heavily from the autocompletion features of the [Page Forms](https://www.mediawiki.org/wiki/Extension:Page_Forms) extension. 
+At an early stage of development, this extension borrowed heavily from the autocompletion features of the [Page Forms](https://www.mediawiki.org/wiki/Extension:Page_Forms) extension.
 
 ## Changes
-* 0.1 - Added additional parameter to the TypeaheadSearch widget, `internal` (boolean), to allow for internal requests to the API. Added support for "supplying an entity identifier as prefix should return this entity in the suggest response" (section 6.4 ongoing). Revised Full-Text Search helper to better guard queries against a bug in SMW that can cause RuntimeException errors. Fixed Page Forms support because of typo 'dispaytitle' for 'displaytitle' in `ReconUtils`. 
+* 0.2 - Revised SMW implementation of behaviour expected in section 6.4 (see below), using a separate query to ensure any identifier match is the first to be returned. Fixes.
+* 0.1 - Added additional parameter to the TypeaheadSearch widget, `internal` (boolean), to allow for internal requests to the API. Added support for "supplying an entity identifier as prefix should return this entity in the suggest response" (section 6.4). Revised Full-Text Search helper to better guard queries against a bug in SMW that can cause RuntimeException errors. Fixed Page Forms support because of typo 'dispaytitle' for 'displaytitle' in `ReconUtils`.
 * 0.1 beta - first release, still beta.

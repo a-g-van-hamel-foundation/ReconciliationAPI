@@ -73,7 +73,7 @@ class SMWQueryHelperForFTS {
 			$pattern,
 			function ($match) use (&$phrasesInQuotes, $isSinglePageRestriction) {
 				// Guard against RuntimeException with short strings
-				if( $isSinglePageRestriction == true ) {
+				if( $isSinglePageRestriction === true ) {
 					// Single page restriction does not support boolean operators
 					// And from experience, string length does not matter (@todo unconfirmed)
 					$phrasesInQuotes[] = $match[0];

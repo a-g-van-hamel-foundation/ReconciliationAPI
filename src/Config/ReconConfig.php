@@ -168,7 +168,7 @@ class ReconConfig {
 		// @todo wgSitename
 		GLOBAL $wgSitename;
 		$this->config = [
-			"name" => $this->name ?? $wgSitename . " Reconciliation Service",
+			"name" => $this->name ?? "$wgSitename Reconciliation Service",
 			"source" => $this->source
 		];
 	}

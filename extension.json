@@ -1,6 +1,6 @@
 {
 	"name": "ReconciliationAPI",
-	"version": "0.1",
+	"version": "0.2",
 	"type": "api",
 	"author": [
 		"[https://codecs.vanhamel.nl Dennis Groenewegen (CODECS)]"
@@ -80,7 +80,7 @@
 			"messages": [
 				"reconciliationapi-typeahead-norecord"
 			],
-			"styles": [],			
+			"styles": [],
 			"packageFiles": [
 				"components/index.js",
 				"components/Search.vue"

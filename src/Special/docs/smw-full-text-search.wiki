@@ -1,0 +1,79 @@
+Semantic MediaWiki allows for SQL's native Full-Text Search (FTS) to be used for the SQLStore. This is especially useful if you want make use of full-text search capabilities but cannot install Elasticsearch to provide it instead, for instance because your provider simply won't let you. Another possible reason you might opt for LTS is this: while Elasticsearch is in many ways superior to FTS, using it means you don't have recourse to the precision of SQL queries using LIKE.
+
+Full-text search can be helpful if you need to search larger chunks of text. Using it, however, comes with a number of caveats. The status of SMW's support for FTS has remained experimental, but more to the point:
+
+* The wrong syntax can cause RuntimeException errors.
+* What qualifies as the right syntax depends on the (sub)string used for search matching. If the string is a variable of variable length, the rest of the syntax needs to adapt.
+* Search results may not be what users expect - this point is not explored below.
+
+== Tokenisation ==
+=== Tesa (TextSanitizer) ===
+SMW does not rely on SQL's native tokenizer, but comes with a custom library called Tesa, short for TextSanitizer.
+
+Where in MySQL a name like <code>O'Se</code> is treated as a single token, Tesa throws away the whole thing. Why? It treats an apostrophe as a word boundary, creating two potential elements that are evaluated individually. Neither element, <code>O</code> or <code>Se</code>, meets the minimum length requirement for tokens, which is 3 by default. What this means is: (a) the surname will not be stored in the FTS index; (b) the following query exits with an error.
+
+[[Display title of::~O'Se*]]
+<nowiki>[[Display title of::~O'Se*]]</nowiki>
+
+== What to do ==
+[...]
+
+== What to avoid in query syntax ==
+
+=== Avoid boolean operators (+/-) in front of non-tokens ===
+
+=== Do not add an asterisk wildcard after a non-token ===
+* with one exception: if a single token candidate is used.
+
+Errors get emitted with the following:
+<pre>
+[[ MyProp :: ~s s* ]]
+[[Display title of::~s* t]]
+</pre>
+
+Added spacing for legibility:
+
+{|
+|-
+| colspan=2 | Strings too short to be treated as tokens
+|-
+| <nowiki>[[ MyProp :: ~sa* ]]</nowiki>
+| Falls back to LIKE, hence equivalent to <nowiki>[[ MyProp :: like:sa* ]]</nowiki>
+|-
+| <nowiki>[[ MyProp :: ~sa sa* ]]</nowiki>
+| Crashes the site
+|-
+| <nowiki>[[ MyProp :: ~sa* sa ]]</nowiki>
+| Crashes the site
+|-
+| colspan=2 | Token boundaries that are not spaces
+|-
+| <nowiki>[[ MyProp :: ~O'Se* ]]</nowiki>
+| Crashes the site.
+|-
+| <nowiki>[[ MyProp :: ~O_Se* ]]</nowiki>,<br>
+| idem
+|-
+| <nowiki>[[ MyProp :: ~Id:sa* ]]</nowiki>
+| Crashes the site.
+|-
+| <nowiki>[[ MyProp :: ~Id-sa* ]]</nowiki>
+| Crashes the site
+|-
+| and similar examples with non-alphanumeric chars,<br>including <code>"</code>, <code>(</code>, <code>)</code>, <code>!</code>, <code>@</code>
+| Crashes the site.
+|-
+| <nowiki>[[ MyProp :: ~Id:san* ]]</nowiki>
+| Does not crash the site
+|-
+| <nowiki>[[ MyProp :: ~Id*:saaaan ]]</nowiki>
+|
+|}
+
+== RunTimeException errors ==
+Several
+* <code>O'Br</code> -
+
+== References ==
+* https://www.semantic-mediawiki.org/wiki/Help:Full-text_search
+* TESA (TextSanitizer)

@@ -34,7 +34,8 @@ class SMWQueryBuilder {
 	private $substringUTF8;
 	private $substringProcessed;
 	private $substringPattern;
-	private $possibleSubstringPatterns = [ "stringprefix", "tokenprefix", "allchars", "doublequotes", "exact" ];
+	// Unused; 'exactpagename' = simple single page restriction
+	private $possibleSubstringPatterns = [ "stringprefix", "tokenprefix", "allchars", "doublequotes", "exact", "exactpagename" ];
 	// Bool. Support 6.4: "supplying an entity identifier as prefix should return this entity in the suggest response":
 	private $queryEntityIdentifier = true;
 	private $concept;
@@ -83,7 +84,7 @@ class SMWQueryBuilder {
 		$this->smwgFulltextSearchMinTokenSize = $smwgFulltextSearchMinTokenSize;
 		global $smwgDefaultStore;
 		$this->smwDefaultStore = $smwgDefaultStore;
-		$this->setOptions();
+		$this->setOptions( 0, 25 );
 
 		// Get default properties from config.		
 		$this->wgReconAPILabelProp = $config->get( "ReconAPILabelProp" );
@@ -105,11 +106,27 @@ class SMWQueryBuilder {
 
 	public function setOptions(
 		$offset = 0,
-		$limit = 25
+		$limit = 25,
+		$substring = null,
+		$substringPattern = null,
+		$useDisplayTitle = null,
+		$hideNamespacePrefix = null
 	) {
 		$this->resultOffset = $offset;
 		$this->resultLimit = $limit;
 		// $this->profileType = "entity";
+		if ( $substring !== null ) {
+			$this->substring = $substring;
+		}
+		if ( $substringPattern !== null ) {
+			$this->substringPattern = $substringPattern;
+		}
+		if ( $useDisplayTitle !== null ) {
+			$this->useDisplayTitle = $useDisplayTitle;
+		}
+		if ( $hideNamespacePrefix !== null ) {
+			$this->hideNamespacePrefix = $hideNamespacePrefix;
+		}		
 	}
 
 	/**
@@ -148,9 +165,10 @@ class SMWQueryBuilder {
 
 	/**
 	 * Run query
+	 * 
 	 * @param string $substring
 	 * @param mixed $substringPattern
-	 * @param mixed $concept
+	 * @param mixed $concept - deprecated
 	 * @param bool $useDisplayTitle
 	 * @param mixed $profileID
 	 * @param mixed $rawQuery
@@ -161,7 +179,7 @@ class SMWQueryBuilder {
 	public function run(
 		string $substring,
 		mixed $substringPattern = null,
-		mixed $concept = null,// @deprecated
+		mixed $concept = null,
 		mixed $useDisplayTitle = null,
 		mixed $profileID = null,
 		mixed $rawQuery = null,
@@ -186,14 +204,10 @@ class SMWQueryBuilder {
 			$this->comment[] = "Warning. Because SQL's full-text search is enabled on the wiki, it does not support 'stringprefix' in combination with the tilde notation, meaning the use of substrings to match only on the beginning of the full string is supported only if the 'like:' notation is used.";
 		}
 
-		$rawTypeQuery = SMWQuerySyntaxConverters::translateTypesToSMWSyntax( $types );
-		$rawPropValQuery = SMWQuerySyntaxConverters::translatePropValPairsToSMWSyntax( $properties );
-
 		// Set class props and create raw query for SMW
 		if ( isset( $profileID ) ) {
 			$smwMethod = "SMW query by JSON profile";
-			$profileType = "entity";
-			$rawQuery = $this->setProfileAndGetRawQuery( $profileID, $profileType );
+			$rawQuery = $this->setProfileAndGetRawQuery( $profileID, "entity" );
 		} elseif ( isset( $this->concept ) ) {
 			// @deprecated ?
 			$smwMethod = $this->useDisplayTitle ? "SMW query on concept by display title" : "SMW query on concept";
@@ -211,8 +225,11 @@ class SMWQueryBuilder {
 			$this->hideNamespacePrefix = true;
 			// $rawQuery already set. No need to define it.
 		} else {
+			$rawTypeQuery = SMWQuerySyntaxConverters::translateTypesToSMWSyntax( $types );
+			$rawPropValQuery = SMWQuerySyntaxConverters::translatePropValPairsToSMWSyntax( $properties );
 			$queryProp = $this->getQueryProperty( $this->useDisplayTitle );
 			$fromQuery = trim($rawTypeQuery . $rawPropValQuery ) == ""
+				// @todo should we really restrict to existing pages only?
 				? "[[Modification date::+]]"
 				: $rawTypeQuery . $rawPropValQuery;
 			// A fallback though less than ideal.
@@ -233,11 +250,13 @@ class SMWQueryBuilder {
 		}
 
 		if ( $this->queryEntityIdentifier ) {
-			$rawQuery .= " OR [[{$this->substring}]]";
+			// @todo remove - we're handling this differently
+			// $rawQuery .= " OR [[{$this->substring}]]";
 		}
 		$this->rawQuery = $rawQuery;
 		$queryRes = $this->getResultForQuery( $this->rawQuery );
 
+		/*
 		// Formatting
 		if ( $queryRes !== null ) {
 			$smwResultFormatter = new SMWResultFormatter( $queryRes, $this->substring, $this->hideNamespacePrefix );
@@ -253,6 +272,8 @@ class SMWQueryBuilder {
 		} else {
 			$pages = [];
 		}
+		*/
+		$pages = $this->formatQueryResult( $queryRes );
 
 		$meta = [
 			"service" => "Suggest entities",
@@ -292,11 +313,37 @@ class SMWQueryBuilder {
 	}
 
 	/**
+	 * Format query results given that all the
+	 * printout properties, etc., have been set
+	 * @param SMW\Query\QueryResult|null $queryRes
+	 * @return array
+	 */
+	public function formatQueryResult( $queryRes ): array {
+		if ( $queryRes !== null ) {
+			$smwResultFormatter = new SMWResultFormatter( $queryRes, $this->substring, $this->hideNamespacePrefix );
+			$smwResultFormatter->setPrintoutProperties(
+				$this->labelProperty,
+				$this->descriptionProperty,
+				$this->imageProperty,
+				true,
+				$this->classProperty
+			);
+			// @todo set from profile
+			return $smwResultFormatter->doFormat();
+		} else {
+			return [];
+		}
+	}
+
+	/**
 	 * Set the profile's config data and create 
 	 * raw query syntax
-	 * @todo other 'suggest services'
+	 * @todo suggest services other than 'suggest entity'
 	 */
-	public function setProfileAndGetRawQuery( mixed $profileID, string $profileType = "entity" ) {
+	public function setProfileAndGetRawQuery(
+		mixed $profileID,
+		string $profileType = "entity"
+	) {
 		$this->profileID = intval( $profileID );
 		$reconConfig = new ReconConfig( $this->profileID );
 		$this->profilePage = $reconConfig->getFullPageName();
@@ -312,7 +359,7 @@ class SMWQueryBuilder {
 		// Pattern set in URL takes precedence
 		// next, check if it is in our config profile
 		// next, if q is array AND 
-		if ( $this->substringPattern == null ) {
+		if ( $this->substringPattern === null ) {
 			$patternFromConfig = $reconConfig->getSubstringPattern();
 			if ( $patternFromConfig !== null ) {
 				$this->substringPattern = $patternFromConfig;
@@ -429,12 +476,17 @@ class SMWQueryBuilder {
 	 * @param mixed $concept
 	 * @return string
 	 */
-	private function getRawQueryForConcept( $concept ) {
+	public function getRawQueryForConcept( $concept ) {
 		$concept = Title::makeTitleSafe( SMW_NS_CONCEPT, $concept );
 		$this->hideNamespacePrefix = true;
-		$rawQueries = [];
+
 		// $pages = $this->getAllPagesForConceptRemotely( $this->concept, null );
 
+		if ( $this->substringPattern === "exactpagename" ) {
+			return "[[{$concept}]] [[{$this->substring}]]";
+		}
+
+		$rawQueries = [];
 		if ( $this->useDisplayTitle ) {
 			$labelProp = "Display title of";
 		} else {
@@ -591,6 +643,7 @@ class SMWQueryBuilder {
 		$rawQuery = "";
 		if ( gettype( $query ) == "string" && $query !== "" ) {
 			// @todo wildcards? - it depends!
+			// @todo can we use this for 6.4 ?
 			$usesLikeSyntax = $this->usesLikeSyntax( $query );			
 			$replacement = $this->getReplacementString(
 				$this->substring,
@@ -606,6 +659,15 @@ class SMWQueryBuilder {
 			foreach( $query as $statement ) {
 				$base = $statement["from"] ?? "";
 				$condition = $statement["where"] ?? "";
+
+				// Use '6.4' instead! A departure because we are
+				// replacing the 'where' condition wholesale
+				// (no LIKE/MATCH)
+				if ( $this->substringPattern === "exactpagename" ) {
+					$newStatements[] = "$base [[{$this->substring}]]";
+					continue;
+				}
+
 				// @todo Remove substringpattern once camelCase is used consistently
 				$substringPattern = $statement["substringPattern"] ?? $statement["substringpattern"] ?? $this->substringPattern;
 				$conditionsReplaced = [];
@@ -650,7 +712,8 @@ class SMWQueryBuilder {
 	}
 
 	/**
-	 * Replacement string consisting of substring and additional syntax sugar.
+	 * Create replacement string consisting of substring and additional
+	 * syntax sugar.
 	 * 
 	 * @todo Elasticsearch
 	 * 
@@ -695,6 +758,10 @@ class SMWQueryBuilder {
 				case "suffix":
 					// currently unused
 					$replacement = "*{$substring}";
+					break;
+				case "exact":
+				case "exactpagename":
+					$replacement = $substring;
 					break;
 				default:
 					$replacement = "{$substring}*";

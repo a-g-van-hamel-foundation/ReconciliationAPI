@@ -117,9 +117,6 @@ class MWPageQueryBuilder {
 		array $queryOptions = [],
 		bool $getRaw = true
 	) {
-		// Safety measure
-		set_time_limit( 30 );
-
 		$this->substringPattern = $substringPattern;
 		$this->useDisplayTitle = $useDisplayTitle;
 		if ( $substring == null ) {
@@ -196,8 +193,6 @@ class MWPageQueryBuilder {
 		array $queryOptions = [],
 		bool $getRaw = false
 	) {
-		// Safety measure
-		set_time_limit( 30 );
 		$this->substringPattern = $substringPattern;
 
 		// Get data for the namespaces to be searched
