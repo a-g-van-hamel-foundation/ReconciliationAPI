@@ -2,10 +2,7 @@
 
 ( function () {
 	// Require Vue.js v3
-	const Vue = require( "vue" );	
-	Vue.configureCompat( {
-		MODE: 3
-	} );
+	const Vue = require( "vue" );
 
 	const reconWidgets = document.querySelectorAll(".recon-search-widget");
 	reconWidgets.forEach( function(item) {
