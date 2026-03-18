@@ -285,11 +285,11 @@ class SMWResultFormatter {
 				// Presentation of types can benefit from disambiguation
 				// @todo content language
 				if ( $subject["namespace"] == NS_CATEGORY ) {
-					$name .= " ($this->localCategoryName)";
+					$name .= " ({$this->localCategoryName})";
 				} elseif ( $subject["namespace"] == SMW_NS_CONCEPT ) {
 					$name .= " ({$this->localConceptName})";
 				} else {
-					$name .= " ($this->localClassName})"; 
+					$name .= " ({$this->localClassName})";
 				}
 			}
 
