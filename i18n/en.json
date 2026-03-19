@@ -45,7 +45,7 @@
 	"apihelp-recon-suggest-entity-param-limit": "Result limit.",
 	"apihelp-recon-suggest-entity-param-pfautocomplete": "Set this option to 1 (default: 0) if you want to transform results in the format expected by Page Forms' 'values from url' (https:\/\/www.mediawiki.org\/wiki/Extension:Page_Forms\/Values,_mappings_and_autocompletion#Autocompleting_on_outside_values).",
 	"apihelp-recon-suggest-entity-param-property": "...",
-	"apihelp-recon-suggest-entity-param-query": "...",
+	"apihelp-recon-suggest-entity-param-query": "If source=smw, <code>query<\/code> can be used as an alternative to referencing a profile page (<code>profile<\/code>). <code>query<\/code> accepts a JSON-encoded configuration of a semantic query and this config should follow the same format that profile pages use under the <code>suggestEntity<\/code> key.",
 
 	"apihelp-recon-suggest-property-summary": "Service for suggesting ''properties'' whose (page) names match the search condition. In a pure MediaWiki context, ''properties'' typically refer to categories and namespaces in the abstract; in the context of Semantic MediaWiki, to semantic properties as well as concepts, categories and namespaces.",
 	"apihelp-recon-suggest-property-param-source": "{{int:apihelp-recon-param-source}}",

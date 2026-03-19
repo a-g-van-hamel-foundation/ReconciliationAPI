@@ -1,0 +1,25 @@
+<p class="recon-summary">Profile pages are best for setting up configuration profiles that need to be made available repeatedly or in multiple contexts. Save it in one place and reference it when needed. But sometimes you may need something a little more bespoke or context-specific, such as when your query depends on a variable. If that is the case, consider using the <code>query</code> parameter. </p>
+
+== Use <code>recon-suggest-entity</code> with the <code>query</code> parameter ==
+Instead of referencing a profile page by its ID, the <code>recon-suggest-entity</code> module also lets you add a JSON-encoded configuration directly to the URL. It uses the same format as a subset of the profile page, corresponding to the section <strong>under</strong> (and not including) the <code>suggestEntity</code> key. Use the <code>query</code> parameter to provide this JSON string.
+
+== Parser function <code>#recon-smwquery-url</code> ==
+Adding JSON to a URL query string is not something you would want to do manually, but there's help: a parser function <code>#recon-smwquery-url</code> is available to let you build the required URL:
+
+<pre>{{#recon-smwquery-url:
+|query= // The condition you would add to the first parameter of an #ask query, but without the search property (below)
+|searchprop= // Property used to accept the user's substring. Defaults to $wgReconAPISearchableLabelProp or $wgReconAPILabelProp
+|labelprop= // The property used to provide a display label. Defaults to $wgReconAPILabelProp
+|descriptionprop= // The property used to provide an accompanying description. Defaults to $wgReconAPIDescriptionProp
+}}</pre>
+
+Example of usage within a wiki template, with a variable:
+
+<pre>
+{{#recon-smwquery-url:
+|query=[[Category:Mopeds]] [[Manufactured by::{{{Manufacturer|}}}]]
+|searchprop=Display title of
+|labelprop=Display title of
+|descriptionprop=Has description
+}}
+</pre>

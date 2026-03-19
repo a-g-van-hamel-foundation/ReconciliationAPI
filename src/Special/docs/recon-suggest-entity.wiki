@@ -27,6 +27,10 @@ Get pages based on a configuration profile:
 <div>{{int:apihelp-recon-suggest-entity-param-property}} </div>
 </div>
 <div class="recon-data-item">
+<div><code>query</code></div>
+<div>{{int:apihelp-recon-suggest-entity-param-query}}</div>
+</div>
+<div class="recon-data-item">
 <div><code>substr</code></div>
 <div>{{int:apihelp-recon-suggest-entity-param-substr}}</div>
 </div>

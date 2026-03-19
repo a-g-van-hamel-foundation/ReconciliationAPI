@@ -2,8 +2,8 @@
 
 namespace Recon\Special;
 
-use SpecialPage;
-use ExtensionRegistry;
+use MediaWiki\SpecialPage\SpecialPage;
+use MediaWiki\Registration\ExtensionRegistry;
 use Recon\ReconUtils;
 
 class ReconSpecial extends SpecialPage {
@@ -41,7 +41,11 @@ class ReconSpecial extends SpecialPage {
 				break;
 			case "profiles":
 				$fileName = "profiles.wiki";
-				$output->setPageTitle( "JSON profiles" );
+				$output->setPageTitle( "JSON profile pages" );
+				break;
+			case "profiles-query":
+				$fileName = "profiles-query.wiki";
+				$output->setPageTitle( "JSON profiles in the URL string" );
 				break;
 			case "matching":
 				$fileName = "matching.wiki";
@@ -124,6 +128,7 @@ class ReconSpecial extends SpecialPage {
 			[ null, "Configuration" ],
 			[ "Special:ReconciliationAPI/localsettings", "Local file settings" ],
 			[ "Special:ReconciliationAPI/profiles", "JSON profiles" ],
+			[ "Special:ReconciliationAPI/profiles-query", "JSON profiles, pt 2" ],
 			[ "Special:ReconciliationAPI/matching", "Pattern matching" ],
 			[ null, "Modules" ],
 			[ "Special:ReconciliationAPI/recon", "recon" ],
