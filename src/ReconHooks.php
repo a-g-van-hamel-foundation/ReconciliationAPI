@@ -2,10 +2,10 @@
 
 namespace Recon;
 
-use Title;
-use Parser;
-use PPFrame;
-use ExtensionRegistry;
+use MediaWiki\Title\Title;
+use MediaWiki\Parser\Parser;
+use MediaWiki\Parser\PPFrame;
+use MediaWiki\Registration\ExtensionRegistry;
 use MediaWiki\Hook\ParserFirstCallInitHook;
 use MediaWiki\Hook\BeforePageDisplayHook;
 use MediaWiki\Revision\Hook\ContentHandlerDefaultModelForHook;
@@ -53,7 +53,14 @@ class ReconHooks implements
 			},
 			$flags
 		);
-
+		$parser->setFunctionHook(
+			"recon-smwquery-url",
+			function( Parser $parser, PPFrame $frame, array $args ) {
+				$pf = new ReconParserFunctions;
+				return $pf->runSmwQueryUrl( $parser, $frame, $args );
+			},
+			$flags
+		);
 	}
 
 	public static function registrationCallback() {

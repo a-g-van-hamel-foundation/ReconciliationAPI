@@ -56,9 +56,9 @@ class SMWQueryBuilder {
 	private $searchableLabelProperty = null;
 	private $descriptionProperty = null;
 	private $imageProperty = null;
-	// 
 	private $profileID;
 	private $profilePage;
+	private $queryProfile;
 	private $resultOffset;
 	private $resultLimit;
 	private $resultbatchcount;
@@ -127,6 +127,10 @@ class SMWQueryBuilder {
 		if ( $hideNamespacePrefix !== null ) {
 			$this->hideNamespacePrefix = $hideNamespacePrefix;
 		}		
+	}
+
+	public function setQueryProfile( $queryProfile ) {
+		$this->queryProfile = $queryProfile;
 	}
 
 	/**
@@ -206,8 +210,11 @@ class SMWQueryBuilder {
 
 		// Set class props and create raw query for SMW
 		if ( isset( $profileID ) ) {
-			$smwMethod = "SMW query by JSON profile";
+			$smwMethod = "SMW query by JSON profile (page)";
 			$rawQuery = $this->setProfileAndGetRawQuery( $profileID, "entity" );
+		} elseif( isset( $this->queryProfile ) ) {
+			$smwMethod = "SMW query by JSON profile, added to the URL string directly";
+			$rawQuery = $this->getRawQueryFromQueryProfile( $this->queryProfile );
 		} elseif ( isset( $this->concept ) ) {
 			// @deprecated ?
 			$smwMethod = $this->useDisplayTitle ? "SMW query on concept by display title" : "SMW query on concept";
@@ -383,6 +390,17 @@ class SMWQueryBuilder {
 		$rawQuery = $this->constructQueryFromConfigProfile( $q );
 		// $outputPropertyInfo - formatting options @todo
 
+		return $rawQuery;
+	}
+
+	/**
+	 * Get raw query from already provided profile (array)
+	 */
+	private function getRawQueryFromQueryProfile( array $queryProfile ) {
+		// @todo - using this pattern for now
+		$this->substringPattern = "allchars";
+		$q = $queryProfile["smwquery"]["statement"];
+		$rawQuery = $this->constructQueryFromConfigProfile( $q );
 		return $rawQuery;
 	}
 

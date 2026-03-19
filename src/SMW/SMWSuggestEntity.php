@@ -32,6 +32,7 @@ class SMWSuggestEntity {
 	// whether to format results for Page Forms (pfautocomplete)
 	private $formatForPageForms = false;
 	private $computedBatchCount;
+	private $queryProfile;
 
 	public function __construct() {
 		$this->stringCondition = StringCondition::COND_PRE;
@@ -39,6 +40,12 @@ class SMWSuggestEntity {
 		$this->smwgEnabledFulltextSearch = $smwgEnabledFulltextSearch;
 	}
 
+	/**
+	 * Set secondary options such as offset, limit
+	 * and whether to use Page Forms' pfautocomplete format.
+	 * To be called before run()
+	 * @return void
+	 */
 	public function setOptions(
 		$offset = 0,
 		$limit = 25,
@@ -47,6 +54,16 @@ class SMWSuggestEntity {
 		$this->resultOffset = $offset;
 		$this->resultLimit = $limit;
 		$this->formatForPageForms = ( $formatForPageForms === 1 ) ? true : false;
+	}
+
+	/**
+	 * Sets query profile (array) from the 'query' parameter.
+	 * To be called before run()
+	 * @param string $queryStr
+	 * @return void
+	 */
+	public function setQueryProfile( string $queryStr ) {
+		$this->queryProfile = json_decode( $queryStr, true );
 	}
 
 	/**
@@ -80,6 +97,9 @@ class SMWSuggestEntity {
 			$this->resultOffset,
 			$this->resultLimit
 		);
+		if ( isset( $this->queryProfile ) ) {
+			$smwQueryBuilder->setQueryProfile( $this->queryProfile );
+		}
 		$this->substringPattern = $substringPattern ?? "tokenprefix";
 
 		$qRes = $smwQueryBuilder->run(

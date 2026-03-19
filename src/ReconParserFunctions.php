@@ -2,11 +2,12 @@
 
 namespace Recon;
 
-use Title;
-use Parser;
+//use MediaWiki\Title\Title;
+use MediaWiki\Parser\Parser;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\MainConfigNames;
-use Html;
+use MediaWiki\Html\Html;
+use Recon\SMW\SMWQueryHelperForUrl;
 
 class ReconParserFunctions {
 
@@ -109,7 +110,7 @@ class ReconParserFunctions {
 
 	/**
 	 * #recon-query-helper
-	 * @param \Parser $parser
+	 * @param Parser $parser
 	 * @param mixed $frame
 	 * @param mixed $args
 	 */
@@ -140,6 +141,28 @@ class ReconParserFunctions {
 		];
 		$res = Html::rawElement( "pre", $attributes, $jsonStr );
 		return [ $res, 'noparse' => true, 'isHTML' => true ];
+	}
+
+	/**
+	 * Parser function #recon-smwquery-url
+	 * Creates URL for the recon-suggest-entity API module
+	 */
+	public function runSmwQueryUrl( Parser $parser, $frame, $args ) {
+		$config = MediaWikiServices::getInstance()->getMainConfig();
+		$paramsAllowed = [
+			"query" => "[[Creation date::+]]",
+			"searchprop" => $config->get( "ReconAPISearchableLabelProp" ) ?? $config->get( "ReconAPILabelProp" ),
+			"labelprop" => $config->get( "ReconAPILabelProp" ),
+			"descriptionprop" => $config->get( "ReconAPIDescriptionProp" ),
+			// unused
+			"sort" => $config->get( "ReconAPILabelProp" ),
+			"order" => "asc"
+		];
+		[ $queryCondition, $searchProp, $labelProp, $descriptionProp, $sortProp, $order ] = array_values( $this->extractParams( $frame, $args, $paramsAllowed ) );
+
+		$res = SMWQueryHelperForUrl::convertQueryToJSONObject( $queryCondition, $searchProp, $labelProp, $descriptionProp );
+
+		return [ $res, "noparse" => false, "isHTML" => false ];
 	}
 
 	public function extractParams( $frame, array $params, $paramsAllowed ) {

@@ -38,14 +38,13 @@ class APISuggestEntity extends \ApiBase {
 		// match on 'tokenprefix', 'stringprefix', or 'allchars' (al. 'contains')
 		$substrPattern = $params['substrpattern'] ?? null;
 
+		$profileID = $params['profile'] ?? null;
+		$query = $params['query'] ?? null;
 		$categories = $params['cat'] ?? null;
 		$namespaces = $params['ns'] ?? null;
-		$profileID = $params['profile'] ?? null;
 		$concept = $params['concept'] ?? null;
-
 		// To be considered, not implemented
-		// $property = $params['property'] ?? null;
-		// $query = $params['query'] ?? null;
+		// $property = $params['property'] ?? null;		
 
 		// Option to format result for Page Forms
 		$formatForPageForms = $params['pfautocomplete'] ?? 0;
@@ -97,6 +96,9 @@ class APISuggestEntity extends \ApiBase {
 		} elseif ( $source == "smw" && SMWUtils::isSMWStoreAvailable() ) {
 			$smwSuggestEntity = new SMWSuggestEntity();
 			$smwSuggestEntity->setOptions( intval($offset), intval($limit), $formatForPageForms );
+			if( $query !== null ) {
+				$smwSuggestEntity->setQueryProfile( $query );
+			}
 			$res = $smwSuggestEntity->run(
 				$substr,
 				$substrPattern,
@@ -152,7 +154,7 @@ class APISuggestEntity extends \ApiBase {
 				ParamValidator::PARAM_TYPE => 'string',
 				ParamValidator::PARAM_REQUIRED => false
 			],
-			// @todo maybe smwquery - not implemented
+			// @todo - not implemented
 			"query" => [
 				ParamValidator::PARAM_TYPE => 'string',
 				ParamValidator::PARAM_REQUIRED => false
