@@ -165,7 +165,7 @@ class ReconSpecial extends SpecialPage {
 	public function getSiteConfigSettings( $additionalContent ) {
 		$config = $this->getConfig();
 		$propertySettings = [ "ReconAPILabelProp", "ReconAPIAltLabelProp", "ReconAPISearchableLabelProp", "ReconAPIDescriptionProp", "ReconAPIClassProp", "ReconAPIBroaderClassProp", "ReconAPIBroaderConceptProp", "ReconAPIThumbnailProp", "ReconAPISMWClassPropertiesSchema" ];
-		$otherSettings = [ "ReconAPIMaxQueries", "ReconAPIMaxResults", "ReconAPIMWUseDisplayTitle", "ReconAPIDefaultTypes", "ReconAPIConsolidateRedirects", "ReconAPIRemoveItalicsFromDisplayTitleColumn", "ReconRedirectDefaultQueryPage", "ReconAPISMWQueryForCategories", "ReconAPISMWQueryForConcepts", "ReconAPISMWQueryForClasses" ];
+		$otherSettings = [ "ReconAPIQueryTrigger", "ReconAPIMaxQueries", "ReconAPIMaxResults", "ReconAPIMWUseDisplayTitle", "ReconAPIDefaultTypes", "ReconAPIConsolidateRedirects", "ReconAPIRemoveItalicsFromDisplayTitleColumn", "ReconRedirectDefaultQueryPage", "ReconAPISMWQueryForCategories", "ReconAPISMWQueryForConcepts", "ReconAPISMWQueryForClasses" ];
 		$body = "<p class='recon-summary'>The following configuration settings provide defaults which can be customised in your LocalSettings.php file.</p>
 		<h3>Properties</h3>";
 		foreach ( $propertySettings as $name ) {

@@ -221,6 +221,10 @@
 		"ReconRedirectDefaultQueryPage": {
 			"value": "Special:Search",
 			"descriptionmsg": "reconciliationapi-config-reconredirectdefaultquerypage"
+		},
+		"ReconAPIQueryTrigger": {
+			"value": "prefix",
+			"descriptionmsg": "reconciliationapi-config-reconapiquerytrigger"
 		}
 	},
 	"manifest_version": 2,

@@ -12,14 +12,10 @@
 
 namespace Recon\SMW;
 
-use \Title;
-use \MediaWiki\MediaWikiServices;
-
-use \SMWQueryProcessor;
-use \SMWRequestOptions;
-use \SMW\Query\QueryResult;
+use MediaWiki\Title\Title;
+use MediaWiki\MediaWikiServices;
+use SMW\Query\QueryResult;
 use Recon\StringModification\StringModifier;
-use Recon\MW\MWUtils;
 use Recon\SMW\SMWUtils;
 use Recon\SMW\SMWQuerySyntaxConverters;
 use Recon\SMW\SMWResultFormatter;
@@ -31,7 +27,7 @@ class SMWQueryBuilder {
 	private $smwStore;
 	private $maxAutocompleteValues;
 	private $substring;
-	private $substringUTF8;
+	// private $substringUTF8;
 	private $substringProcessed;
 	private $substringPattern;
 	// Unused; 'exactpagename' = simple single page restriction
@@ -65,6 +61,9 @@ class SMWQueryBuilder {
 	private $hasFurtherResults;
 	private $comment = [];
 	private $hideNamespacePrefix = true;
+	// Whether the query should run (a) only if it receives 
+	// a non-empty string as "prefix", or (b) "always"
+	private $wgReconAPIQueryTrigger;
 
 	public function __construct() {
 		$this->smwStore = SMWUtils::getSMWStore();
@@ -91,6 +90,7 @@ class SMWQueryBuilder {
 		$this->wgReconAPISearchableLabelProp = $config->get( "ReconAPISearchableLabelProp" );
 		$this->wgReconAPIDescriptionProp = $config->get( "ReconAPIDescriptionProp" );
 		$this->wgReconAPIThumbnailProp = $config->get( "ReconAPIThumbnailProp" );
+		$this->wgReconAPIQueryTrigger = $config->get( "ReconAPIQueryTrigger" );
 
 		// Initialise with default properties from config. 
 		// May get overruled, ultimately.
@@ -505,12 +505,15 @@ class SMWQueryBuilder {
 		}
 
 		$rawQueries = [];
+		// @todo - should have been handled in a previous step?
 		if ( $this->useDisplayTitle ) {
 			$labelProp = "Display title of";
 		} else {
 			$labelProp = $this->wgReconAPISearchableLabelProp ?? $this->wgReconAPILabelProp ?? null;
 		}
-		if ( $labelProp !== null ) {
+		if ( $this->substring === "" && $this->wgReconAPIQueryTrigger === "always" ) {
+			$rawQueries[] = "[[Concept:{$this->concept}]]";
+		} elseif ( $labelProp !== null ) {
 			// @todo
 			$replacement = $this->getReplacementString(
 				$this->substring,
@@ -721,11 +724,12 @@ class SMWQueryBuilder {
 					$conditionsReplaced[] = str_replace( $this->smwqueryPlaceholder, $replacement, $condition );
 				}
 				*/
-				$newStatements[] = $base . " " . implode( " ", $conditionsReplaced );
+				$newStatements[] = ( $substring === "" && $this->wgReconAPIQueryTrigger === "always" )
+						? ( $base !== "" ? $base : "[[Creation date::+]]" )
+						: $base . " " . implode( " ", $conditionsReplaced );
 			}
 			$rawQuery = implode( " OR ", $newStatements );
 		}
-		// @todo currently testing printout
 		return $rawQuery;
 	}
 
