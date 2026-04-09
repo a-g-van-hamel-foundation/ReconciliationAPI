@@ -92,6 +92,38 @@
 				"CdxTypeaheadSearch",
 				"CdxSearchInput"
 			]
+		},
+
+		"ext.recon.testbench": {
+			"packageFiles": [
+				"ext.recon.testbench.js"
+			],
+			"dependencies": [
+				"ext.recon.testbench.components",
+				"vue",
+				"vuex",
+				"mediawiki.ForeignApi"
+			]
+		},
+		"ext.recon.testbench.components": {
+			"packageFiles": [
+				"components/index-testbench.js",
+				"components/TestBench.vue",
+				"components/TestBenchReconcile.vue",
+				"components/TestBenchSuggest.vue",
+				{
+					"name": "components/icons.json",
+					"callback": "MediaWiki\\ResourceLoader\\CodexModule::getIcons",
+					"callbackParam": [ "cdxIconAdd", "cdxIconClose", "cdxIconTrash", "cdxIconDraggable", "cdxIconCheck", "cdxIconEllipsis", "cdxIconTableAddRowAfter", "cdxIconCollapse", "cdxIconExpand", "cdxIconCheck", "cdxIconNewWindow", "cdxIconCopy" ]
+				}
+			],
+			"dependencies": [
+				"@wikimedia/codex"
+			],
+			"codexComponents": [
+				"CdxButton", "CdxButtonGroup", "CdxToggleButtonGroup", "CdxIcon", "CdxTabs", "CdxTab",
+				"CdxTextInput", "CdxSearchInput", "CdxLookup", "CdxMultiselectLookup", "CdxField", "CdxRadio"
+			]
 		}
 	},
 	"ResourceFileModulePaths": {
@@ -134,7 +166,8 @@
 	"SpecialPages": {
 		"ReconciliationAPI": "Recon\\Special\\ReconSpecial",
 		"ReconPreview": "Recon\\Special\\ReconSpecialPreview",
-		"ReconRedirect": "Recon\\Special\\ReconSpecialRedirect"
+		"ReconRedirect": "Recon\\Special\\ReconSpecialRedirect",
+		"ReconTestbench": "Recon\\Special\\ReconSpecialTestbench"
 	},
 	"config_prefix": "wg",
 	"config": {
