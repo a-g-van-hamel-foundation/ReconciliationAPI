@@ -3,7 +3,8 @@
 namespace Recon\Special;
 
 use MediaWiki\SpecialPage\SpecialPage;
-//use MediaWiki\Registration\ExtensionRegistry;
+use MediaWiki\Html\Html;
+use Recon\SMW\SMWUtils;
 
 class ReconSpecialTestbench extends SpecialPage {
 
@@ -23,8 +24,14 @@ class ReconSpecialTestbench extends SpecialPage {
 		$this->setHeaders();
 		$output = $this->getContext()->getOutput();
 		$output->setPageTitle( "Reconciliation API: Testbench" );
-		// @todo add check for availability of SMW
-		$res = "<div class='recon-testbench'></div>";
+		$res = Html::rawElement(
+			"div",
+			[
+				"class" => "recon-testbench",
+				"data-smw" => SMWUtils::isSMWStoreAvailable(),
+				"data-fts" => SMWUtils::isFTSEnabled()
+			]
+		);
 		$output->addModules( [ 'ext.recon.testbench' ] );
 		$output->addWikiTextAsContent( $res );
 	}

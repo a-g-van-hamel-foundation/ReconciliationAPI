@@ -3,5 +3,6 @@
 module.exports = {
 	TestBench: require( './TestBench.vue' ),
 	TestBenchReconcile: require( './TestBenchReconcile.vue' ),
-	TestBenchSuggest: require( './TestBenchSuggest.vue' )
+	TestBenchSuggest: require( './TestBenchSuggest.vue' ),
+	TestBenchExtend: require( './TestBenchExtend.vue' )
 };

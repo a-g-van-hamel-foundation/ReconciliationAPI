@@ -111,6 +111,7 @@
 				"components/TestBench.vue",
 				"components/TestBenchReconcile.vue",
 				"components/TestBenchSuggest.vue",
+				"components/TestBenchExtend.vue",
 				{
 					"name": "components/icons.json",
 					"callback": "MediaWiki\\ResourceLoader\\CodexModule::getIcons",

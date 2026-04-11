@@ -1,9 +1,10 @@
 <template>
-	<section>recon API module
+	<section>
 
 		<div class="row">
+		<div class="col-md-12">recon API module</div>
 		<div class="col-md-7">
-			<h3>Query</h3>
+			<h2>Query</h2>
 
 			<div class="form-group">
 				<label>Substring:</label>
@@ -63,11 +64,11 @@
 
 			<cdx-button @click="submitQuery()" action="progressive" weight="primary">Submit query</cdx-button>
 
-			<h3>Query string</h3>
+			<h2>Query string</h2>
 			<pre>{{ reconQuery }}</pre>
 		</div>
 		<div class="col-md-5 text-small">
-			<h3>Result</h3>
+			<h2>Result</h2>
 			<span class="loader" v-if="showLoader"></span>
 			<a v-if="serviceUrl" :href="serviceUrl">View this query result in the API</a>
 			<pre>{{ reconApiResult }}</pre>
@@ -90,11 +91,15 @@ module.exports = defineComponent( {
 	},
 	props: {
 		apiUrl: { type: String, default: null },
-		source: { type: String, default: "mw" }
+		source: { type: String, default: "mw" },
+		profileId: { type: String, default: "" }
 	},
 	setup(props, context) {
 		const sourceProxy = computed( () => {
 			return props.source;
+		} );
+		const profileIdProxy = computed( () => {
+			return props.profileId;
 		} );
 		// Full url with query string
 		const serviceUrl = ref( null );
@@ -192,6 +197,9 @@ module.exports = defineComponent( {
 				source: sourceProxy.value,
 				queries: JSON.stringify(reconQuery)
 			};
+			if ( profileIdProxy.value !== "" && profileIdProxy.value !== null ) {
+				apiUrlParams.profile = profileIdProxy.value;
+			}
 	
 			reconApiResult.length = 0;
 			actionApi.get(apiUrlParams)
@@ -211,6 +219,7 @@ module.exports = defineComponent( {
 
 		return {
 			sourceProxy,
+			profileIdProxy,
 			serviceUrl,
 
 			reconQuery,
@@ -248,26 +257,4 @@ module.exports = defineComponent( {
 	}
 }
 
-.loader {
-	width: 48px;
-	height: 48px;
-	border: 5px solid #E6D8D8;
-	border-bottom-color: rgb(255, 255, 255);
-	border-bottom-color: transparent;
-	border-radius: 50%;
-	display: inline-block;
-	box-sizing: border-box;
-	animation: rotation 1s linear infinite;
-}
-@keyframes rotation {
-	from {
-		transform: rotate(0deg);
-	}
-	to {
-		transform: rotate(360deg);
-	}
-}
-
-
 </style>
-

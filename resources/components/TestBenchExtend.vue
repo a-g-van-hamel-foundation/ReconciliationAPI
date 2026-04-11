@@ -1,64 +1,69 @@
 <template>
-	<div class="form-group">
-		<label>Entity:</label>
-		<div>
-			<cdx-lookup 
-				name="entity"
-				v-model:selected="suggestQuery.entity"
-				v-model:input-value="entityInput"
-				:menu-items="entityList"
-				@update:input-value="requestEntity"
-				placeholder="Entity"
-			></cdx-lookup>
-			<div class="recon-about">
-				{{ substrPatternProxy }}. 
+
+<div class="row recon-row">
+
+	<div class="col-md-6">
+		<section style="margin-bottom:1.5rem;">
+		<h2>Query</h2>
+
+		<div class="form-group">
+			<label>Entity:</label>
+			<div>
+				<cdx-lookup 
+					name="suggest-entity"
+					v-model:selected="extendQuery.ids[0]"
+					v-model:input-value="entityInput"
+					:menu-items="entityList"
+					@update:input-value="requestEntity"
+					placeholder="Entity"
+				></cdx-lookup>
 				<template v-if="profileIdProxy !== ''">Profile ID: {{ profileIdProxy }}</template>
+				<template v-if="extendQuery.ids[0]">
+					<a class="recon-link" :href="createWikiLink(extendQuery.ids[0])">{{ extendQuery.ids[0] }}</a>
+				</template>
 			</div>
-			<template v-if="suggestQuery.entity">
-				<a class="recon-link" :href="createWikiLink(suggestQuery.entity)">{{ suggestQuery.entity }}</a>
-			</template>
+
 		</div>
+
+		<div class="form-group">
+			<label>Property:</label>
+			<div>
+				<cdx-lookup 
+					name="suggest-property"
+					v-model:selected="extendQuery.properties[0].id"
+					v-model:input-value="propertyInput"
+					:menu-items="propertyList"
+					@update:input-value="requestProperty"
+					placeholder="Property"
+				></cdx-lookup>
+			</div>
+		</div>
+
+		<cdx-button @click="submitQuery()" action="progressive" weight="primary">Submit query</cdx-button>
+		</section>
+
+		<section>
+			<h2>Query string</h2>
+			<pre>{{ extendQuery }}</pre>
+		</section>
 	</div>
-	<div class="form-group">
-		<label>Type:</label>
-		<div>
-			<cdx-lookup 
-				name="type"
-				v-model:selected="suggestQuery.type"
-				v-model:input-value="typeInput"
-				:menu-items="typeList"
-				@update:input-value="requestType"
-				placeholder="Type"
-			></cdx-lookup>
-			<template v-if="suggestQuery.type">
-				<a class="recon-link" :href="createWikiLink(suggestQuery.type)">{{ suggestQuery.type }}</a>
-			</template>
-		</div>
-	</div>
-	<div class="form-group">
-		<label>Property:</label>
-		<div>
-			<cdx-lookup 
-				name="property"
-				v-model:selected="suggestQuery.property"
-				v-model:input-value="propertyInput"
-				:menu-items="propertyList"
-				@update:input-value="requestProperty"
-				placeholder="Property"
-			></cdx-lookup>
-		</div>
+	<div class="col-md-6">
+		<h2>Result</h2>
+		<span class="loader" v-if="showLoader"></span>
+		<a v-if="serviceUrl" :href="serviceUrl">View this query result in the API</a>
+		<pre>{{ reconApiResult }}</pre>
 	</div>
 
-	<pre>{{ suggestQuery }}</pre>
+</div>
 </template>
 
 <script>
 const { defineComponent, ref, reactive, computed, watch } = require("vue");
 const { CdxButton, CdxIcon, CdxTextInput, CdxLookup, CdxField, CdxRadio, CdxSearchInput } = require( "@wikimedia/codex" );
-const { cdxIconAdd, cdxIconClose } = require( './icons.json' );
+//const { cdxIconAdd, cdxIconClose } = require( './icons.json' );
 
 module.exports = defineComponent( {
-	name: "TestBenchSuggest",
+	name: "TestBenchExtend",
 	components: {
 		CdxButton, CdxIcon,
 		CdxTextInput, CdxLookup, CdxField, CdxRadio, CdxSearchInput
@@ -66,8 +71,7 @@ module.exports = defineComponent( {
 	props: {
 		apiUrl: { type: String, default: null },
 		source: { type: String, default: "mw" },
-		profileId: { type: String, default: "" },
-		substrPattern: { type: String, default: "tokenstring" }
+		profileId: { type: String, default: "" }
 	},
 	setup(props, context) {
 		const sourceProxy = computed( () => {
@@ -76,13 +80,12 @@ module.exports = defineComponent( {
 		const profileIdProxy = computed( () => {
 			return props.profileId;
 		} );
-		const substrPatternProxy = computed( () => {
-			return props.substrPattern;
+
+		const extendQuery = reactive( {
+			ids: [],
+			properties: [ { id: null } ]
 		} );
 
-		const suggestQuery = reactive( {} );
-
-		// 'Entity' field
 		const entityInput = ref( "" );
 		const entityList = ref( [] );
 		function requestEntity(term) {
@@ -96,11 +99,9 @@ module.exports = defineComponent( {
 				format: "json",
 				formatversion: "2",
 				source: sourceProxy.value,
-				substrpattern: substrPatternProxy.value,
 				prefix: term
 			};
 			if ( profileIdProxy.value !== "" && profileIdProxy.value !== null ) {
-				// maybe remove substrpattern?
 				apiUrlParams.profile = profileIdProxy.value;
 			}
 			actionApi.get(apiUrlParams)
@@ -117,42 +118,11 @@ module.exports = defineComponent( {
 			} );
 		}
 
-		// 'Type' field
-		const typeInput = ref( "" );
-		const typeList = ref( [] );
-		function requestType(term) {
-			if ( !term ) {
-				//typeList = [];
-				return;
-			}
-			const actionApi = new mw.ForeignApi( props.apiUrl, { anonymous: false } );
-			const apiUrlParams = {
-				action: "recon-suggest-type",
-				format: "json",
-				formatversion: "2",
-				source: sourceProxy.value,
-				prefix: term
-			};
-			actionApi.get(apiUrlParams)
-			.done( function ( data ) {
-				console.log("data",data);
-				if ( data.result == undefined ) {
-					return;
-				}
-				typeList.value = data.result.map( (res) => ( {
-					value: res.id,
-					label: res.name,
-					description: res.description ?? ""
-				} ) );
-			} );
-		}
-
-		// 'Property' field
-		const propertyInput = ref( "" );
+		const propertyInput = reactive( "" );
 		const propertyList = ref( [] );
 		function requestProperty(term) {
 			if ( !term ) {
-				propertyList = [];
+				//propertyList = [];
 				return;
 			}
 			const actionApi = new mw.ForeignApi( props.apiUrl, { anonymous: false } );
@@ -165,7 +135,6 @@ module.exports = defineComponent( {
 			};
 			actionApi.get(apiUrlParams)
 			.done( function ( data ) {
-				console.log("data",data);
 				if ( data.result == undefined ) {
 					return;
 				}
@@ -177,6 +146,32 @@ module.exports = defineComponent( {
 			} );
 		}
 
+		const reconApiResult = ref( {} );
+		const serviceUrl = ref( null );
+		const showLoader = ref( false );
+		function submitQuery() {
+			showLoader.value = true;
+			const actionApi = new mw.ForeignApi( props.apiUrl, { anonymous: false } );
+			const apiUrlParams = {
+				action: "recon",
+				format: "json",
+				formatversion: "2",
+				source: sourceProxy.value,
+				extend: JSON.stringify(extendQuery)
+			};
+			//reconApiResult.length = 0;
+
+			actionApi.get(apiUrlParams)
+			.done( function (data) {
+				const searchParams = new URLSearchParams(apiUrlParams);
+				serviceUrl.value = props.apiUrl + "?" + searchParams.toString();
+				showLoader.value = false;
+				reconApiResult.value = data.rows;
+				//processReconApiResult( data.rows );
+			});
+
+		}
+
 		function createWikiLink(pagename) {
 			const t = new mw.Title(pagename)
 			return t.getUrl();
@@ -185,17 +180,21 @@ module.exports = defineComponent( {
 		return {
 			sourceProxy,
 			profileIdProxy,
-			substrPatternProxy,
-			suggestQuery,
+			extendQuery,
+
 			entityInput,
 			entityList,
 			requestEntity,
-			typeInput,
-			typeList,
-			requestType,
+
 			propertyInput,
 			propertyList,
 			requestProperty,
+
+			reconApiResult,
+			serviceUrl,
+			showLoader,
+			submitQuery,
+
 			createWikiLink
 		}
 
@@ -204,8 +203,4 @@ module.exports = defineComponent( {
 </script>
 
 <style lang="less">
-.recon-link {
-  padding: .6rem;
-  display: block;
-}
 </style>

@@ -79,6 +79,15 @@ class SMWUtils {
 	}
 
 	/**
+	 * Whether or not Full-Text Search is enabled for SMW.
+	 * @return bool
+	 */
+	public static function isFTSEnabled(): bool {
+		global $smwgEnabledFulltextSearch;
+		return $smwgEnabledFulltextSearch ?? false;
+	}
+
+	/**
 	 * string representation not SMW\DIWikiPage
 	 * @param mixed $diWikipage
 	 * @return string
