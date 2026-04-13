@@ -1,0 +1,9 @@
+<p class="recon-summary">Test and debug your reconciliation service</p>
+
+== Remote ==
+* A testbench for Reconciliation API services is available on https://reconciliation-api.github.io/testbench/#/client/ 
+* If you installed [https://openrefine.org/ OpenRefine], you can also add your wiki's reconciliation endpoint [https://openrefine.org/docs/manual/reconciling as a standard service] and try reconciling a data set against it.
+
+== Local ==
+Head over to [[Special:ReconTestbench]]. This testbench is inspired by and closely modelled after the testbench above, but additionally includes features to help you work with the specifics of your wiki.
+

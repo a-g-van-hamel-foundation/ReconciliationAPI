@@ -2,8 +2,8 @@
 
 == General ==
 
-=== Can I test my API remotely? ===
-You can. A test bench for the Reconciliation API is available on https://reconciliation-api.github.io/testbench/#/client/ and if you installed [https://openrefine.org/ OpenRefine], you could add your wiki's reconciliation endpoint [https://openrefine.org/docs/manual/reconciling as a standard service] and try reconciling a data set against it.
+=== Can I test my API? ===
+See the section 'Testbench'
 
 == Semantic MediaWiki ==
 === How do you recommend I set up my semantic properties on my wiki? ===
@@ -52,4 +52,3 @@ If you DO want to include those pages, you need to decide where to send users wh
 
 * MediaWiki’s built-in solution is to direct all requests to <code>Special:Search</code>, with the page name appended to the 'search' parameter. Special:Search is the page familiar to wiki users that allows for further site searches to be made. If the page exists (and the standard behaviour is not suppressed through <code>&fulltext=1</code> in the URL), the user is automatically redirected. Unfortunately, the usefulness of Special:Search may be limited.
 * Another solution is to set up a custom wiki page for search results and set it as a target page. For more information, see [[Special:ReconciliationAPI/special-redirect |<code>Special:ReconRedirect</code>]].
-

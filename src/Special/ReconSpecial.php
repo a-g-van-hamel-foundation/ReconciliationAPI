@@ -31,80 +31,10 @@ class ReconSpecial extends SpecialPage {
 		$this->setHeaders();
 		$output = $this->getContext()->getOutput();
 
-		$fileName = null;
-		$res = "";
-		switch( $subPage ) {
-			case "localsettings":
-				global $IP;
-				$additionalContent = $this->getWikiFileContents( "localsettings.wiki" );
-				$res = $this->getSiteConfigSettings( $additionalContent );
-				break;
-			case "profiles":
-				$fileName = "profiles.wiki";
-				$output->setPageTitle( "JSON profile pages" );
-				break;
-			case "profiles-query":
-				$fileName = "profiles-query.wiki";
-				$output->setPageTitle( "JSON profiles in the URL string" );
-				break;
-			case "matching":
-				$fileName = "matching.wiki";
-				$output->setPageTitle( "Pattern matching" );
-				break;
-			case "special-redirect":
-				$fileName = "special-redirect.wiki";
-				$output->setPageTitle( "Redirect service" );
-				break;
-			case "typeahead":
-				$fileName = "typeahead.wiki";
-				$output->setPageTitle( "TypeaheadSearch" );
-				break;
-			case "recon":
-				$fileName = "recon.wiki";
-				$output->setPageTitle( "Reconciliation API modules: <code>recon</code>" );
-				break;
-			case "recon-suggest-property":
-				$fileName = "recon-suggest-property.wiki";
-				$output->setPageTitle( "Reconciliation API modules: <code>recon-suggest-property</code>" );
-				break;
-			case "recon-suggest-entity":
-				$fileName = "recon-suggest-entity.wiki";
-				$output->setPageTitle( "Reconciliation API modules: <code>recon-suggest-entity</code>" );
-				break;
-			case "recon-suggest-entity-mw":
-				$fileName = "recon-suggest-entity-mw.wiki";
-				$output->setPageTitle( "Reconciliation API modules: <code>recon-suggest-entity</code> using MediaWiki core" );
-				break;
-			case "recon-suggest-type":
-				$fileName = "recon-suggest-type.wiki";
-				$output->setPageTitle( "Reconciliation API modules: <code>recon-suggest-type</code>" );
-				break;
-			case "recon-suggest-propvalue":
-				$fileName = "recon-suggest-propvalue.wiki";
-				$output->setPageTitle( "Reconciliation API modules: <code>recon-suggest-propvalue</code>" );
-				break;
-			case "recon-propose-property":
-				$fileName = "recon-propose-property.wiki";
-				$output->setPageTitle( "Reconciliation API modules: <code>recon-propose-property</code>" );
-				break;
-			case "guide":
-				$fileName = "guide.wiki";
-				$output->setPageTitle( "Reconciliation API: additional guide" );
-				break;
-			default:
-				// Main
-				$fileName = "main.wiki";
-		}
-		// get file internally
-
-		if ( $fileName ) {
-			$doc = $this->getWikiFileContents( $fileName );
-			$res = $this->insertInPageLayout( $doc, $this->version );
-		}
+		$content = $this->getPageContentAndSetTitle( $subPage, $output );
 
 		$output->addModuleStyles( [ 'recon.general.styles' ] );
-
-		$output->addWikiTextAsContent( $res );
+		$output->addWikiTextAsContent( $content );
 	}
 
 	private function getWikiFileContents( $fileName ) {
@@ -118,43 +48,49 @@ class ReconSpecial extends SpecialPage {
 		return "";
 	}
 
+	private function getPageContentAndSetTitle( string|null $subPage, &$output ) {
+		$tocItems = $this->getTOC();
+		$res = "";
+
+		if ( $subPage === "localsettings" ) {
+			// special case
+			$additionalContent = $this->getWikiFileContents( "localsettings.wiki" );
+			$output->setPageTitle( $tocItems[$subPage]["pagetitle"] );
+			return $this->getSiteConfigSettings( $additionalContent );
+		}
+
+		// Default to main
+		$subPage = array_key_exists( $subPage, $tocItems ) && $tocItems[$subPage]["type"] !== "header" 
+			? $subPage 
+			: "main";
+		$output->setPageTitle( $tocItems[$subPage]["pagetitle"] );
+		return $this->insertInPageLayout(
+			$this->getWikiFileContents( $tocItems[$subPage]["file"] ),
+			$this->version
+		);
+	}
+
 	/**
 	 * @param mixed $content
 	 * @return string
 	 */
-	private static function insertInPageLayout( $content, $version ) {
-		$menuItems = [
-			[ "Special:ReconciliationAPI", "Main" ],
-			[ null, "Configuration" ],
-			[ "Special:ReconciliationAPI/localsettings", "Local file settings" ],
-			[ "Special:ReconciliationAPI/profiles", "JSON profiles" ],
-			[ "Special:ReconciliationAPI/profiles-query", "JSON profiles, pt 2" ],
-			[ "Special:ReconciliationAPI/matching", "Pattern matching" ],
-			[ null, "Modules" ],
-			[ "Special:ReconciliationAPI/recon", "recon" ],
-			[ "Special:ReconciliationAPI/recon-suggest-entity", "recon-suggest-entity" ],
-			[ "Special:ReconciliationAPI/recon-suggest-entity-mw", "recon-suggest-entity (MW)" ],
-			[ "Special:ReconciliationAPI/recon-suggest-property", "recon-suggest-property" ],
-			[ "Special:ReconciliationAPI/recon-suggest-type", "recon-suggest-type" ],
-			[ "Special:ReconciliationAPI/recon-suggest-propvalue", "recon-suggest-propvalue" ],
-			[ "Special:ReconciliationAPI/recon-propose-property", "recon-propose-property" ],
-			[ null, "Other" ],
-			[ "Special:ReconciliationAPI/special-redirect", "Redirect service" ],
-			[ "Special:ReconciliationAPI/typeahead", "TypeaheadSearch" ],
-			[ "Special:ReconciliationAPI/guide", "Additional usage guide" ]
-		];
-		$menu = "<li><strong>Reconciliation API</strong><br>v. $version</li>";
-		foreach( $menuItems as $item ) {
-			if ( $item[0] == null ) {
-				$menu .= "<li class='recon-subheading'>{$item[1]}</li>";
+	private function insertInPageLayout( $content, $version ) {
+		$tocItems = $this->getTOC();
+		$tocMenu = "<li><strong>Reconciliation API</strong><br>v. $version</li>";
+		foreach( $tocItems as $k => $item ) {
+			if ( $item["type"] === "header" ) {
+				$tocMenu .= "<li class='recon-subheading'>{$item["menutitle"]}</li>";
+			} elseif( $k === "main" ) {
+				$tocMenu .= "<li>[[Special:ReconciliationAPI|{$item["menutitle"]}]]</li>";
 			} else {
-				$menu .= "<li>[[{$item[0]}|{$item[1]}]]</li>";
+				$tocMenu .= "<li>[[Special:ReconciliationAPI/{$k}|{$item["menutitle"]}]]</li>";
 			}
 		}
+
 		$res = <<<WIKI
 		<div class="recon-row">
 		<div class="recon-col recon-col-menu recon-order-1 recon-order-md-2">
-		__NOTOC__<ul class="recon-list-group">$menu</ul>
+		__NOTOC__<ul class="recon-list-group">$tocMenu</ul>
 		</div>
 		<div class="recon-col recon-col-content recon-order-2 recon-order-md-1">$content</div>
 		</div>
@@ -217,7 +153,7 @@ class ReconSpecial extends SpecialPage {
 			WIKI;
 		}
 		$body .= $additionalContent;
-		$res = self::insertInPageLayout( $body, $this->version );
+		$res = $this->insertInPageLayout( $body, $this->version );
 		return $res;
 	}
 
@@ -231,6 +167,120 @@ class ReconSpecial extends SpecialPage {
 		}
 		$arr = json_decode( $contents, true );
 		return $arr["version"] ?? "?";
+	}
+
+	private function getTOC() {
+		return [
+			"main" => [
+				"type" => "page",
+				"page" => "Special:ReconciliationAPI",
+				"pagetitle" => "Reconciliation API",
+				"menutitle" => "Main",
+				"file" => "main.wiki"
+			],
+			"configuration" => [
+				"type" => "header",
+				"menutitle" => "Configuration"
+			],
+			"localsettings" => [
+				"type" => "page",
+				"pagetitle" => "Local file settings",
+				"menutitle" => "Local file settings",
+				"file" => "localsettings.wiki"
+			],
+			"profiles" => [
+				"type" => "page",
+				"menutitle" => "JSON profiles",
+				"pagetitle" => "JSON profile pages",
+				"file" => "profiles.wiki"
+			],
+			"profiles-query" => [
+				"type" => "page",
+				"menutitle" => "JSON profiles, pt 2",
+				"pagetitle" => "JSON profiles in the URL string",
+				"file" => "profiles-query.wiki"
+			],
+			"matching" => [
+				"type" => "page",
+				"menutitle" => "Pattern matching",
+				"pagetitle" => "Pattern matching",
+				"file" => "matching.wiki"
+			],
+			"modules" => [
+				"type" => "header",
+				"menutitle" => "Modules"
+			],
+			"recon" => [
+				"type" => "page",
+				"pagename" => "Reconciliation API modules: <code>recon</code>",
+				"menutitle" => "recon",
+				"file" => "recon.wiki"
+			],
+			"recon-suggest-entity" => [
+				"type" => "page",
+				"pagetitle" => "Reconciliation API modules: <code>recon-suggest-entity</code>",
+				"menutitle" => "recon-suggest-entity",
+				"file" => "recon-suggest-entity.wiki"
+			],
+			"recon-suggest-entity-mw" => [
+				"type" => "page",
+				"pagetitle" => "Reconciliation API modules: <code>recon-suggest-entity</code> using MediaWiki core",
+				"menutitle" => "recon-suggest-entity (MW)",
+				"file" => "recon-suggest-entity-mw.wiki"
+			],
+			"recon-suggest-property" => [
+				"type" => "page",
+				"pagetitle" =>  "Reconciliation API modules: <code>recon-suggest-property</code>",
+				"menutitle" => "recon-suggest-property",
+				"file" => "recon-suggest-property.wiki"
+			],
+			"recon-suggest-type" => [
+				"type" => "page",
+				"pagetitle" => "Reconciliation API modules: <code>recon-suggest-type</code>",
+				"menutitle" => "recon-suggest-type",
+				"file" => "recon-suggest-type.wiki"
+			],
+			"recon-suggest-propvalue" => [
+				"type" => "page",
+				"pagetitle" => "Reconciliation API modules: <code>recon-suggest-propvalue</code>",
+				"menutitle" => "recon-suggest-propvalue",
+				"file" => "recon-suggest-propvalue.wiki"
+			],
+			"recon-propose-property" => [
+				"type" => "page",
+				"pagetitle" => "Reconciliation API modules: <code>recon-propose-property</code>",
+				"menutitle" => "recon-propose-property",
+				"file" => "recon-propose-property.wiki"
+			],
+			"other" => [
+				"type" => "header",
+				"menutitle" => "Other"
+			],
+			"special-redirect" => [
+				"type" => "page",
+				"pagetitle" => "Redirect service",
+				"menutitle" => "Redirect service",
+				"file" => "special-redirect.wiki"
+			],
+			"typeahead" => [
+				"type" => "page",
+				"pagetitle" => "Typeahead search widget",
+				"menutitle" => "Typeahead search widget",
+				"file" =>  "typeahead.wiki"
+			],
+			"testbench" => [
+				"type" => "page",
+				"pagetitle" => "Testbench",
+				"menutitle" => "Testbench",
+				"file" => "testbench.wiki"
+			],
+			"guide" => [
+				"type" => "page",
+				"menutitle" => "Additional usage guide",
+				"pagetitle" => "Reconciliation API: additional guide",
+				"file" => "guide.wiki"
+			]
+		];
 	}
 
 }
