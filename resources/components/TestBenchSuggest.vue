@@ -1,4 +1,5 @@
 <template>
+	<p>Test the API modules <code>recon-suggest-entity</code>, <code>recon-suggest-type</code> and <code>recon-suggest-property</code>.</p>
 	<div class="form-group">
 		<label>Entity:</label>
 		<div>
@@ -11,8 +12,8 @@
 				placeholder="Entity"
 			></cdx-lookup>
 			<div class="recon-about">
-				{{ substrPatternProxy }}. 
 				<template v-if="profileIdProxy !== ''">Profile ID: {{ profileIdProxy }}</template>
+				<template v-else>{{ substrPatternProxy }}. </template>
 			</div>
 			<template v-if="suggestQuery.entity">
 				<a class="recon-link" :href="createWikiLink(suggestQuery.entity)">{{ suggestQuery.entity }}</a>
@@ -96,16 +97,16 @@ module.exports = defineComponent( {
 				format: "json",
 				formatversion: "2",
 				source: sourceProxy.value,
-				substrpattern: substrPatternProxy.value,
 				prefix: term
 			};
 			if ( profileIdProxy.value !== "" && profileIdProxy.value !== null ) {
-				// maybe remove substrpattern?
 				apiUrlParams.profile = profileIdProxy.value;
+			} else {
+				apiUrlParams.substrpattern = substrPatternProxy.value;
 			}
 			actionApi.get(apiUrlParams)
 			.done( function ( data ) {
-				console.log("data",data);
+				//console.log("data",data);
 				if ( data.result == undefined ) {
 					return;
 				}
@@ -133,6 +134,11 @@ module.exports = defineComponent( {
 				source: sourceProxy.value,
 				prefix: term
 			};
+			if ( profileIdProxy.value !== "" && profileIdProxy.value !== null ) {
+				apiUrlParams.profile = profileIdProxy.value;
+			} else {
+				apiUrlParams.substrpattern = substrPatternProxy.value;
+			}
 			actionApi.get(apiUrlParams)
 			.done( function ( data ) {
 				console.log("data",data);

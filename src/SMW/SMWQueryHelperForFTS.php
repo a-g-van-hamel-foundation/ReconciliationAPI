@@ -51,14 +51,17 @@ class SMWQueryHelperForFTS {
 	 * Tokens, shorter strings, double quotes, boolean operators, etc.
 	 * SMW comes with its own tokenizer
 	 * 
+	 * @param string|null substrPattern
+	 * 
 	 * @return string
 	 */
 	public function getReplacementStringForFTS(
 		string $substring,
-		bool $isSinglePageRestriction = false
+		bool $isSinglePageRestriction = false,
+		mixed $substrPattern = "tokenprefix"
 	) {
 		// Replace foll. characters with special meaning in FTS
-		$substring = str_replace( [ "+", "-", "*" ], " ", $substring);
+		$substring = str_replace( [ "+", "-", "*" ], " ", $substring );
 
 		// Important! Non-tokens can throw RuntimeExceptions
 		// e.g. with MATCH (*) IN BOOLEAN MODE
@@ -103,8 +106,8 @@ class SMWQueryHelperForFTS {
 			//$countableToken = trim( $token );
 			if ( $isSinglePageRestriction ) {
 				// e.g. [[~Aa* Ba*]] may be fine but tokenisation is limited.
-				// @todo consider "*{$token}*", which IS possible in this case
-				$newTokens[] = "{$token}*";
+				// stringprefix: ...*; tokenprefix: fall back to stringprefix; allchars: *...*
+				$newTokens[] = $substrPattern === "allchars" ? "*{$token}*" : "{$token}*";
 			} elseif( iconv_strlen( $countableToken ) >= $this->smwgFulltextSearchMinTokenSize ) {
 				// Add + boolean operator to each individual token
 				// to create an AND relationship (unsafe for non-tokens)

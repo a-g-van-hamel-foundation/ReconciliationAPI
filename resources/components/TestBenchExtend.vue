@@ -1,60 +1,65 @@
 <template>
+	<p>Test the API module <code>recon</code> with the <code>extend</code> parameter.</p>
+	<div class="recon-row">
 
-<div class="row recon-row">
+		<div class="recon-col-6">
+			<section style="margin-bottom:1.5rem;">
+			<h2>Query</h2>
 
-	<div class="col-md-6">
-		<section style="margin-bottom:1.5rem;">
-		<h2>Query</h2>
+			<div class="form-group">
+				<label>Entity:</label>
+				<div>
+					<cdx-lookup 
+						name="suggest-entity"
+						v-model:selected="extendQuery.ids[0]"
+						v-model:input-value="entityInput"
+						:menu-items="entityList"
+						@update:input-value="requestEntity"
+						placeholder="Entity"
+					></cdx-lookup>
+					<template v-if="profileIdProxy !== ''">Profile ID: {{ profileIdProxy }}</template>
+					<template v-if="extendQuery.ids[0]">
+						<a class="recon-link" :href="createWikiLink(extendQuery.ids[0])">{{ extendQuery.ids[0] }}</a>
+					</template>
+				</div>
 
-		<div class="form-group">
-			<label>Entity:</label>
-			<div>
-				<cdx-lookup 
-					name="suggest-entity"
-					v-model:selected="extendQuery.ids[0]"
-					v-model:input-value="entityInput"
-					:menu-items="entityList"
-					@update:input-value="requestEntity"
-					placeholder="Entity"
-				></cdx-lookup>
-				<template v-if="profileIdProxy !== ''">Profile ID: {{ profileIdProxy }}</template>
-				<template v-if="extendQuery.ids[0]">
-					<a class="recon-link" :href="createWikiLink(extendQuery.ids[0])">{{ extendQuery.ids[0] }}</a>
-				</template>
 			</div>
 
-		</div>
-
-		<div class="form-group">
-			<label>Property:</label>
-			<div>
-				<cdx-lookup 
-					name="suggest-property"
-					v-model:selected="extendQuery.properties[0].id"
-					v-model:input-value="propertyInput"
-					:menu-items="propertyList"
-					@update:input-value="requestProperty"
-					placeholder="Property"
-				></cdx-lookup>
+			<div class="form-group">
+				<label>Property:</label>
+				<div>
+					<cdx-lookup 
+						name="suggest-property"
+						v-model:selected="extendQuery.properties[0].id"
+						v-model:input-value="propertyInput"
+						:menu-items="propertyList"
+						@update:input-value="requestProperty"
+						placeholder="Property"
+					></cdx-lookup>
+				</div>
 			</div>
+
+			<cdx-button @click="submitQuery()" action="progressive" weight="primary">Submit query</cdx-button>
+			</section>
+
+			<section>
+				<h2>Query string</h2>
+				<pre>{{ extendQuery }}</pre>
+			</section>
+		</div>
+		<div class="recon-col-6">
+			<h2>Result</h2>
+			<span class="loader" v-if="showLoader"></span>
+			<template v-if="serviceUrl">
+				<a :href="serviceUrl" target="_blank">View this result on the API service</a>
+				<pre>{{ reconApiResult }}</pre>
+				<h4>Result metadata</h4>
+				<pre>{{ reconApiMeta }}</pre>
+			</template>
+			<template v-else><i>No query run</i></template>
 		</div>
 
-		<cdx-button @click="submitQuery()" action="progressive" weight="primary">Submit query</cdx-button>
-		</section>
-
-		<section>
-			<h2>Query string</h2>
-			<pre>{{ extendQuery }}</pre>
-		</section>
 	</div>
-	<div class="col-md-6">
-		<h2>Result</h2>
-		<span class="loader" v-if="showLoader"></span>
-		<a v-if="serviceUrl" :href="serviceUrl">View this query result in the API</a>
-		<pre>{{ reconApiResult }}</pre>
-	</div>
-
-</div>
 </template>
 
 <script>
@@ -71,7 +76,9 @@ module.exports = defineComponent( {
 	props: {
 		apiUrl: { type: String, default: null },
 		source: { type: String, default: "mw" },
-		profileId: { type: String, default: "" }
+		profileId: { type: String, default: "" },
+		substrPattern: { type: String, default: "tokenprefix" },
+		singlePageRestriction: { type: Boolean, default: false }
 	},
 	setup(props, context) {
 		const sourceProxy = computed( () => {
@@ -79,6 +86,12 @@ module.exports = defineComponent( {
 		} );
 		const profileIdProxy = computed( () => {
 			return props.profileId;
+		} );
+		const substrPatternProxy = computed( () => {
+			return props.substrPattern;
+		} );
+		const singlePageRestrictionProxy = computed( () => {
+			return props.singlePageRestriction;
 		} );
 
 		const extendQuery = reactive( {
@@ -106,7 +119,7 @@ module.exports = defineComponent( {
 			}
 			actionApi.get(apiUrlParams)
 			.done( function ( data ) {
-				console.log("data",data);
+				//console.log("data",data);
 				if ( data.result == undefined ) {
 					return;
 				}
@@ -147,6 +160,7 @@ module.exports = defineComponent( {
 		}
 
 		const reconApiResult = ref( {} );
+		const reconApiMeta = ref( {} );
 		const serviceUrl = ref( null );
 		const showLoader = ref( false );
 		function submitQuery() {
@@ -159,7 +173,14 @@ module.exports = defineComponent( {
 				source: sourceProxy.value,
 				extend: JSON.stringify(extendQuery)
 			};
-			//reconApiResult.length = 0;
+			if ( profileIdProxy.value !== "" && profileIdProxy.value !== null ) {
+				apiUrlParams.profile = profileIdProxy.value;
+			} else {
+				apiUrlParams.substrpattern = substrPatternProxy.value;
+			}
+			if ( singlePageRestrictionProxy.value ) {
+				apiUrlParams.displaytitle = "0";
+			}
 
 			actionApi.get(apiUrlParams)
 			.done( function (data) {
@@ -167,6 +188,7 @@ module.exports = defineComponent( {
 				serviceUrl.value = props.apiUrl + "?" + searchParams.toString();
 				showLoader.value = false;
 				reconApiResult.value = data.rows;
+				reconApiMeta.value = data.meta;
 				//processReconApiResult( data.rows );
 			});
 
@@ -180,6 +202,7 @@ module.exports = defineComponent( {
 		return {
 			sourceProxy,
 			profileIdProxy,
+			singlePageRestrictionProxy,
 			extendQuery,
 
 			entityInput,
@@ -191,6 +214,7 @@ module.exports = defineComponent( {
 			requestProperty,
 
 			reconApiResult,
+			reconApiMeta,
 			serviceUrl,
 			showLoader,
 			submitQuery,

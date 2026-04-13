@@ -240,16 +240,18 @@ class SMWQueryBuilder {
 				? "[[Modification date::+]]"
 				: $rawTypeQuery . $rawPropValQuery;
 			// A fallback though less than ideal.
+			$isSinglePageRestriction = ( $queryProp === false || $useDisplayTitle === false ) ? true : false;
 			$this->substringProcessed = $this->getReplacementString(
 				$this->substring,
 				$this->substringPattern,
 				false,
-				false
+				$isSinglePageRestriction
 			);
 			$this->hideNamespacePrefix = true;
 			if ( $queryProp === false ) {
 				$smwMethod = "SMW query by single page restriction";
-				$rawQuery = "{$fromQuery} [[~{$this->substring}]]";
+				$rawQuery = "{$fromQuery} [[~{$this->substringProcessed}]]";
+				//$rawQuery = "{$fromQuery} [[~*{$this->substringProcessed}]]";
 			} else {
 				$smwMethod = "SMW query by property '$queryProp'";
 				$rawQuery = "{$fromQuery} [[{$queryProp}::~{$this->substringProcessed}]]";
@@ -757,11 +759,13 @@ class SMWQueryBuilder {
 		$useFTS = ( $this->smwgEnabledFulltextSearch && !$usesLikeSyntax ) ? true : false;
 		if ( $useFTS ) {
 			// FTS with tilde prefix
-			// does not support alternative substring patterns. May override setting:
-			$this->substringPattern = "tokenprefix";
+			if ( !$isSinglePageRestriction) {
+				// Does not support alternative substring patterns. May override setting:
+				$this->substringPattern = "tokenprefix";
+			}
 			//$isNonToken = ( strlen( $substring ) < $this->smwgFulltextSearchMinTokenSize ) ? true : false;
 			$smwQueryHelperForFTS = new SMWQueryHelperForFTS();
-			$replacement = $smwQueryHelperForFTS->getReplacementStringForFTS( $substring, $isSinglePageRestriction );			
+			$replacement = $smwQueryHelperForFTS->getReplacementStringForFTS( $substring, $isSinglePageRestriction, $this->substringPattern );
 		} else {
 			// regular SQL
 			// $subStrings = explode( " ", $substring );
@@ -847,7 +851,10 @@ class SMWQueryBuilder {
 	 * @return bool|mixed|string
 	 */
 	public function getQueryProperty( mixed $useDisplayTitle ) {
-		if ( $useDisplayTitle ) {
+		if ( $useDisplayTitle === false ) {
+			// Explicit
+			return false;
+		} elseif ( $useDisplayTitle ) {
 			return "Display title of";
 		} elseif ( $this->wgReconAPISearchableLabelProp !== null && $this->wgReconAPISearchableLabelProp !== false ) {
 			return $this->wgReconAPISearchableLabelProp;

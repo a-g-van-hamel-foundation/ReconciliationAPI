@@ -6,37 +6,51 @@
 			<label>Endpoint:</label>
 			<div>{{ reconApiUrl }}</div>
 		</div>
-		<div class="form-group">
-			<label>Profile ID</label>
-			<cdx-text-input
-				v-model="profileId"
-				name="profileId"
-			></cdx-text-input>
-		</div>
-		<div class="form-group">
-			<label>or Source:</label>
-			<div class="recon-radios-horizontal">
-				<cdx-radio
-					v-for="radio in sourceList"
-					:key="'radio-' + radio.id"
-					v-model="source"
-					name="source"
-					:input-value="radio.id"
-				>{{ radio.name }}</cdx-radio>
+		<div class="recon-row">
+			<div class="recon-col-6" :style="settingsStyleLeft">
+				<div class="form-group">
+					<label>Source:</label>
+					<div class="recon-radios-horizontal">
+						<cdx-radio
+							v-for="radio in sourceList"
+							:key="'radio-' + radio.id"
+							v-model="source"
+							name="source"
+							:input-value="radio.id"
+						>{{ radio.name }}</cdx-radio>
+					</div>
+				</div>
+				<div class="form-group">
+					<label>Substring pattern</label>
+					<div>
+						<div class="recon-radios-horizontal" style="margin-bottom:.6rem;">
+							<cdx-radio
+								v-for="radio in substrPatternList"
+								:key="'radio-' + radio.id"
+								v-model="substrPattern"
+								name="substrpattern"
+								:input-value="radio.id"
+							>{{ radio.name }}</cdx-radio>
+						</div>
+						<cdx-checkbox
+							v-model="singlePageRestriction"
+							@update:model-value="updateSinglePageRestriction"
+						>Single page restriction</cdx-checkbox>
+					</div>
+				</div>
+				<div>
+					
+				</div>
 			</div>
-		</div>
-		<div class="form-group">
-			<label>Substring pattern</label>
-			<div class="recon-radios-horizontal">
-				<cdx-radio
-					v-for="radio in substrPatternList"
-					:key="'radio-' + radio.id"
-					v-model="substrPattern"
-					name="source"
-					:input-value="radio.id"
-				>{{ radio.name }}</cdx-radio>
+			<div class="recon-col-6">
+				<div class="form-group">
+					<label>or Profile ID</label>
+					<cdx-text-input
+						v-model="profileId"
+						name="profileId"
+					></cdx-text-input>
+				</div>
 			</div>
-
 		</div>
 	</section>
 
@@ -61,6 +75,7 @@
 					:source="source"
 					:profile-id="profileId"
 					:substr-pattern="substrPattern"
+					:single-page-restriction="singlePageRestriction"
 				></test-bench-reconcile>
 			</template>
 			<template v-if="tab.value == 'suggest'">
@@ -69,6 +84,7 @@
 					:source="source"
 					:profile-id="profileId"
 					:substr-pattern="substrPattern"
+					:single-page-restriction="singlePageRestriction"
 				></test-bench-suggest>
 			</template>
 			<template v-if="tab.value == 'extend'">
@@ -77,6 +93,7 @@
 					:source="source"
 					:profile-id="profileId"
 					:substr-pattern="substrPattern"
+					:single-page-restriction="singlePageRestriction"
 				></test-bench-extend>
 			</template>
 	</section>
@@ -88,7 +105,7 @@ const { defineComponent, computed, ref, reactive, watch } = require("vue");
 const TestBenchReconcile = require("./TestBenchReconcile.vue");
 const TestBenchSuggest = require("./TestBenchSuggest.vue");
 const TestBenchExtend = require("./TestBenchExtend.vue");
-const { CdxButton, CdxButtonGroup, CdxToggleButtonGroup, CdxIcon, CdxTabs, CdxTab, CdxTextInput, CdxLookup, CdxField, CdxRadio, CdxSearchInput } = require( "@wikimedia/codex" );
+const { CdxButton, CdxButtonGroup, CdxToggleButtonGroup, CdxIcon, CdxTabs, CdxTab, CdxTextInput, CdxLookup, CdxField, CdxRadio, CdxCheckbox, CdxSearchInput } = require( "@wikimedia/codex" );
 //const { cdxIconAdd, cdxIconClose } = require( './icons.json' );
 
 module.exports = defineComponent( {
@@ -97,7 +114,7 @@ module.exports = defineComponent( {
 		TestBenchReconcile, TestBenchSuggest, TestBenchExtend,
 		CdxButton, CdxButtonGroup, CdxToggleButtonGroup, 
 		CdxIcon, CdxTabs, CdxTab,
-		CdxTextInput, CdxLookup, CdxField, CdxRadio, CdxSearchInput
+		CdxTextInput, CdxLookup, CdxField, CdxRadio, CdxCheckbox, CdxSearchInput
 	},
 	props: {
 		configData: { type: Object, default: {} }
@@ -141,6 +158,20 @@ module.exports = defineComponent( {
 			{ id: "allchars", name: "allchars" }
 		] );
 
+		const singlePageRestriction = ref( false );
+		function updateSinglePageRestriction(n) {
+			console.log(n);
+		}
+
+		const settingsStyleLeft = ref( "" );
+		watch(profileId, (n) => {
+			if ( n !== "" && n !== null ) {
+				settingsStyleLeft.value = "color:grey;";
+			} else {
+				settingsStyleLeft.value = "";
+			}
+		});
+
 		return {
 			tabsData,
 			selectedTab,
@@ -153,7 +184,12 @@ module.exports = defineComponent( {
 			profileId,
 
 			substrPattern,
-			substrPatternList
+			substrPatternList,
+
+			singlePageRestriction,
+			updateSinglePageRestriction,
+
+			settingsStyleLeft
 		}
 	}
 } );
@@ -171,8 +207,29 @@ module.exports = defineComponent( {
 	background-color: #d9e3e1;
 }
 
+.recon-row {
+	display: flex;
+	flex-wrap: wrap;
+	margin-right: -15px;
+	margin-left: -15px;
+
+	.recon-col-6 {
+		position: relative;
+		width: 100%;
+		padding-right: 15px;
+		padding-left: 15px;
+	}
+	@media (min-width: 768px) {
+		.recon-col-6 {
+			flex: 0 0 50%;
+			max-width: 50%;
+		}
+	}
+}
+
 .form-group {
 	display: flex;
+	flex-direction: row;
 	flex-wrap: wrap;
 	width:100%;
 	& > label:first-child {
@@ -187,6 +244,17 @@ module.exports = defineComponent( {
 		min-width: 75px;
 	}
 }
+@media (max-width: 767px) {
+	.form-group {
+		flex-direction: column;
+		& > label:first-child {
+			width: auto;
+		}
+		& > *:last-child {
+			width: auto;
+		}
+	}
+}
 
 .recon-radios-horizontal {
   display: flex;
@@ -195,10 +263,9 @@ module.exports = defineComponent( {
 	margin-bottom: 0;
   }
 }
-
-.recon-row {
-	h2, h3 {
-		padding-top: 0;
+@media(max-width:767px) {
+	.recon-radios-horizontal {
+		flex-direction:column;
 	}
 }
 

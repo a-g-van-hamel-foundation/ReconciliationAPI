@@ -1,9 +1,8 @@
 <template>
-	<section>
+	<p>Test the API module <code>recon</code> with the <code>queries</code> parameter.</p>
 
-		<div class="row">
-		<div class="col-md-12">recon API module</div>
-		<div class="col-md-7">
+	<div class="recon-row">
+		<div class="recon-col-6">
 			<h2>Query</h2>
 
 			<div class="form-group">
@@ -15,6 +14,7 @@
 						name="query"
 						placeholder="Substring for entity to reconcile"
 						aria-label="Entity to reconcile"
+						clearable
 					></cdx-text-input>
 				</div>
 			</div>
@@ -59,7 +59,12 @@
 			</div>
 			<div class="form-group">
 				<label>Limit</label>
-				<div>100</div>
+				<div>
+					<cdx-text-input
+						v-model="reconQuery['q0']['limit']"
+						input-type="number"
+					></cdx-text-input>
+				</div>
 			</div>
 
 			<cdx-button @click="submitQuery()" action="progressive" weight="primary">Submit query</cdx-button>
@@ -67,15 +72,25 @@
 			<h2>Query string</h2>
 			<pre>{{ reconQuery }}</pre>
 		</div>
-		<div class="col-md-5 text-small">
+
+		<div class="recon-col-6">
 			<h2>Result</h2>
 			<span class="loader" v-if="showLoader"></span>
-			<a v-if="serviceUrl" :href="serviceUrl">View this query result in the API</a>
-			<pre>{{ reconApiResult }}</pre>
+			<div v-if="serviceUrl" class="text-small">
+				<p><a :href="serviceUrl" target="_blank">View this result on the API service</a></p>
+				<template v-for="(res,index) in reconApiResult">
+					<div><a :href="res.other.fullurl">{{ res.name }}</a></div>
+				</template>
+				<pre>{{ reconApiResult }}</pre>
+				<h4>Result metadata</h4>
+				<pre>{{ reconApiMeta }}</pre>
+			</div>
+			<template v-else>
+				<em>No query run</em>
+			</template>
 		</div>
-		</div>
+	</div>
 
-	</section>
 </template>
 
 <script>
@@ -92,7 +107,9 @@ module.exports = defineComponent( {
 	props: {
 		apiUrl: { type: String, default: null },
 		source: { type: String, default: "mw" },
-		profileId: { type: String, default: "" }
+		profileId: { type: String, default: "" },
+		substrPattern: { type: String, default: "tokenprefix" },
+		singlePageRestriction: { type: Boolean, default: false }
 	},
 	setup(props, context) {
 		const sourceProxy = computed( () => {
@@ -100,6 +117,12 @@ module.exports = defineComponent( {
 		} );
 		const profileIdProxy = computed( () => {
 			return props.profileId;
+		} );
+		const substrPatternProxy = computed( () => {
+			return props.substrPattern;
+		} );
+		const singlePageRestrictionProxy = computed( () => {
+			return props.singlePageRestriction;
 		} );
 		// Full url with query string
 		const serviceUrl = ref( null );
@@ -110,7 +133,8 @@ module.exports = defineComponent( {
 				query: "",
 				// pid:"...", v:"..."
 				properties: [],
-				type: null
+				type: null,
+				limit: 25
 			}
 		} );
 
@@ -134,6 +158,11 @@ module.exports = defineComponent( {
 				source: sourceProxy.value,
 				prefix: term
 			};
+			if ( profileIdProxy.value !== "" && profileIdProxy.value !== null ) {
+				apiUrlParams.profile = profileIdProxy.value;
+			} else {
+				apiUrlParams.substrpattern = substrPatternProxy.value;
+			}
 			actionApi.get(apiUrlParams)
 			.done( function ( data ) {
 				if ( data.result == undefined ) {
@@ -150,7 +179,7 @@ module.exports = defineComponent( {
 		// 'Properties' field
 		function addProperty() {
 			propertyInputs.push( "" );
-			reconQuery.q0.properties.push( { pid: null, v: null } );
+			reconQuery.q0.properties.push( { pid: "", v: "" } );
 		}
 		function removeProperty(index) {
 			propertyInputs.splice( index, 1 );
@@ -186,6 +215,7 @@ module.exports = defineComponent( {
 		
 		// query result
 		const reconApiResult = reactive( [] );
+		const reconApiMeta = ref( {} );
 		const showLoader = ref( false );
 		function submitQuery() {
 			showLoader.value = true;
@@ -195,10 +225,15 @@ module.exports = defineComponent( {
 				format: "json",
 				formatversion: "2",
 				source: sourceProxy.value,
-				queries: JSON.stringify(reconQuery)
+				queries: JSON.stringify( sanitiseQueryBeforeExecute(reconQuery) )
 			};
 			if ( profileIdProxy.value !== "" && profileIdProxy.value !== null ) {
 				apiUrlParams.profile = profileIdProxy.value;
+			} else {
+				apiUrlParams.substrpattern = substrPatternProxy.value;
+			}
+			if ( singlePageRestrictionProxy.value ) {
+				apiUrlParams.displaytitle = "0";
 			}
 	
 			reconApiResult.length = 0;
@@ -208,7 +243,8 @@ module.exports = defineComponent( {
 				serviceUrl.value = props.apiUrl + "?" + searchParams.toString();
 				showLoader.value = false;
 				reconApiResult.push(...data.q0?.result);
-				// show data.q0.meta ?
+				//console.log( data );
+				reconApiMeta.value = data.q0?.meta;
 				//processReconApiResult( data.result );
 			});
 		}
@@ -217,13 +253,22 @@ module.exports = defineComponent( {
 			//reconApiResult.value = result;
 		}
 
+		function sanitiseQueryBeforeExecute(q) {
+			if ( q.q0['type'] == null || q.q0['type'] == "" ) {
+				delete q.q0.type;
+			}
+			return q;
+		}
+
 		return {
 			sourceProxy,
 			profileIdProxy,
+			singlePageRestrictionProxy,
 			serviceUrl,
 
 			reconQuery,
 			reconApiResult,
+			reconApiMeta,
 
 			onUpdateSubstring,
 

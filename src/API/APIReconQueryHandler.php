@@ -80,7 +80,8 @@ class APIReconQueryHandler {
 			if ( isset( $v["type"] ) ) {
 				$types = ( gettype( $v["type"] ) == "array" ) ? $v["type"] : [ $v["type"] ];
 			}
-			$properties = isset( $v["properties"] ) ? $v["properties"] : [];
+
+			$properties = $this->getUsableProperties( $v );
 			// @todo Currently ignored
 			$typeStrict = $v["type_strict"] ?? "should";
 			$limit = $v["limit"] ?? $this->wgReconAPIMaxResults;
@@ -200,6 +201,28 @@ class APIReconQueryHandler {
 				: ( $isInitialMatch ? 70 : 50 )
 			);
 		return [ $isFullMatch, $isLowerCaseMatch, $score ];
+	}
+
+
+	/**
+	 * Potentially, sanitise the list of properties
+	 * @param array $queryRequest
+	 * @return
+	 */
+	private function getUsableProperties( $req ) {
+		if ( !array_key_exists( "properties", $req ) ) {
+			return [];
+		}
+		$newProperties = [];
+		foreach( $req["properties"] as $prop ) {
+			if ( $prop["pid"] !== "" && $prop["v"] !== "" ) {
+				$newProperties[] = $prop;
+			}
+		}
+		if ( empty( $newProperties ) ) {
+			return [];
+		}
+		return $newProperties;
 	}
 
 }
