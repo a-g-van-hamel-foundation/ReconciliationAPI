@@ -21,15 +21,17 @@
 
 namespace Recon\Special;
 
-use MediaWiki\MainConfigNames;
-use MediaWiki\MediaWikiServices;
+use MediaWiki\SpecialPage\SpecialPage;
+use MediaWiki\Title\Title;
+use File;
+// use MediaWiki\FileRepo\File\File;
 use Recon\ReconUtils;
 use Recon\SMW\SMWUtils;
 use Recon\SMW\SMWQueryBuilder;
 use Recon\SMW\SMWResultFormatter;
 use Recon\Config\ReconConfig;
 
-class ReconSpecialPreview extends \SpecialPage {
+class ReconSpecialPreview extends SpecialPage {
 
 	private $profileID;
 	// "smw", "mw":
@@ -106,14 +108,14 @@ class ReconSpecialPreview extends \SpecialPage {
 		}
 
 		if ( isset( $urlParts[1] ) && $urlParts[1] == "id" && isset( $urlParts[2] ) ) {
-			$title = \Title::newFromID( $urlParts[2] );
+			$title = Title::newFromID( $urlParts[2] );
 			if ( $title == false ) {
 				$output->addHTML( "<div>No such page found</div>" );
 				return;
 			}
 			$this->name = ReconUtils::getDisplayTitleElsePageName( $title, $urlParts[2], "" );
 		} elseif( isset( $urlParts[1] ) && $urlParts[1] == "page" ) {
-			$title = \Title::newFromText( $urlParts[2] );
+			$title = Title::newFromText( $urlParts[2] );
 			if ( $title == false ) {
 				$output->addHTML( "<div>No such page found</div>" );
 				return;
@@ -138,7 +140,7 @@ class ReconSpecialPreview extends \SpecialPage {
 		}
 
 		// Frames to be allowed in X-Frame-Options
-		$output->preventClickjacking( false );
+		$output->setPreventClickjacking( false );
 
 		$res = $this->getHtmlSample( $this->id, $this->name, $this->description, $this->thumbnail, $fullUrl );
 		$output->addHTML( $res );
@@ -156,6 +158,7 @@ class ReconSpecialPreview extends \SpecialPage {
 		$smwResultFormatter = new SMWResultFormatter( $smwQueryRes, null );
 		[ $labelProp, $descriptionProp, $thumbnailProp ] = $queryBuilder->getPrintoutProperties();
 		$smwResultFormatter->setPrintoutProperties( $labelProp, $descriptionProp, $thumbnailProp, true );
+
 		$pages = $smwResultFormatter->doFormat();
 
 		return $pages;
@@ -172,13 +175,13 @@ class ReconSpecialPreview extends \SpecialPage {
 		//
 	}
 
-	private static function createThumbnail( \File $img, $width, $height = -1 ): string {
+	private static function createThumbnail( File $img, $width, $height = -1 ): string {
 		$thumb = $img->createThumb( $width, $height );
 		return $thumb;
 	}
 
 	/**
-	 * 
+	 * @todo maybe use Mustache
 	 * @param string $id
 	 * @param mixed $name
 	 * @param mixed $description
