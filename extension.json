@@ -27,13 +27,13 @@
 		"Recon\\API": "src/API/",
 		"Recon\\SMW": "src/SMW/",
 		"Recon\\Config": "src/Config/",
+		"Recon\\ParserFunctions": "src/ParserFunctions/",
 		"Recon\\Special": "src/Special/"
 	},
 	"AutoloadClasses": {
 		"ReconHooks": "Recon\\ReconHooks",
 		"ReconJsonContent": "Recon\\Config\\ReconJsonContent",
-		"ReconJsonContentHandler": "Recon\\Config\\ReconJsonContentHandler",
-		"ReconParserFunctions": "Recon\\ReconParserFunctions"
+		"ReconJsonContentHandler": "Recon\\Config\\ReconJsonContentHandler"
 	},
 	"callback": "Recon\\ReconHooks::registrationCallback",
 	"HookHandlers": {

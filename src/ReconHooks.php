@@ -15,6 +15,9 @@ use AdminLinksHook;
 use ALItem;
 use ALSection;
 use ALTree;
+use Recon\ParserFunctions\ReconSearch;
+use Recon\ParserFunctions\ReconSMWQueryUrl;
+use Recon\ParserFunctions\ReconQueryHelper;
 
 class ReconHooks implements
 	ParserFirstCallInitHook,
@@ -40,24 +43,24 @@ class ReconHooks implements
 		$parser->setFunctionHook(
 			"recon-search",
 			function( Parser $parser, PPFrame $frame, array $args ) {
-				$pf = new ReconParserFunctions;
-				return $pf->runSearch( $parser, $frame, $args );
+				$pf = new ReconSearch;
+				return $pf->run( $parser, $frame, $args );
 			},
 			$flags
 		);
 		$parser->setFunctionHook(
 			"recon-query-helper",
 			function( Parser $parser, PPFrame $frame, array $args ) {
-				$pf = new ReconParserFunctions;
-				return $pf->runQueryHelper( $parser, $frame, $args );
+				$pf = new ReconQueryHelper;
+				return $pf->run( $parser, $frame, $args );
 			},
 			$flags
 		);
 		$parser->setFunctionHook(
 			"recon-smwquery-url",
 			function( Parser $parser, PPFrame $frame, array $args ) {
-				$pf = new ReconParserFunctions;
-				return $pf->runSmwQueryUrl( $parser, $frame, $args );
+				$pf = new ReconSMWQueryUrl;
+				return $pf->run( $parser, $frame, $args );
 			},
 			$flags
 		);
