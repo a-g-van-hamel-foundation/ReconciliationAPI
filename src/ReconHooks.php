@@ -18,6 +18,7 @@ use ALTree;
 use Recon\ParserFunctions\ReconSearch;
 use Recon\ParserFunctions\ReconSMWQueryUrl;
 use Recon\ParserFunctions\ReconQueryHelper;
+use Recon\ParserFunctions\ReconFacetedSearch;
 
 class ReconHooks implements
 	ParserFirstCallInitHook,
@@ -60,6 +61,14 @@ class ReconHooks implements
 			"recon-smwquery-url",
 			function( Parser $parser, PPFrame $frame, array $args ) {
 				$pf = new ReconSMWQueryUrl;
+				return $pf->run( $parser, $frame, $args );
+			},
+			$flags
+		);
+		$parser->setFunctionHook(
+			"recon-faceted-search",
+			function( Parser $parser, PPFrame $frame, array $args ) {
+				$pf = new ReconFacetedSearch;
 				return $pf->run( $parser, $frame, $args );
 			},
 			$flags

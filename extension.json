@@ -125,6 +125,30 @@
 				"CdxButton", "CdxButtonGroup", "CdxToggleButtonGroup", "CdxIcon", "CdxTabs", "CdxTab",
 				"CdxTextInput", "CdxSearchInput", "CdxLookup", "CdxMultiselectLookup", "CdxField", "CdxRadio", "CdxCheckbox"
 			]
+		},
+
+		"ext.recon.facetedsearch": {
+			"packageFiles": [
+				"ext.recon.facetedsearch.js"
+			],
+			"dependencies": [
+				"ext.recon.facetedsearch.components",
+				"vue",
+				"vuex",
+				"mediawiki.api",
+				"mediawiki.ForeignApi"
+			]
+		},
+		"ext.recon.facetedsearch.components": {
+			"packageFiles": [
+				"components/index-facetedsearch.js",
+				"components/FacetedSearch.vue",
+				"components/DynamicFacet.vue"
+			],
+			"dependencies": [ "@wikimedia/codex" ],
+			"codexComponents": [
+				"CdxTextInput", "CdxSelect", "CdxLookup", "CdxMultiselectLookup"
+			]
 		}
 	},
 	"ResourceFileModulePaths": {

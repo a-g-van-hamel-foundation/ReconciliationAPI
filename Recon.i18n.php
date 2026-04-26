@@ -14,5 +14,6 @@ $magicWords['en'] = [
 	// 'recon' => [ 0, 'recon' ]
 	'recon-query-helper' => [ 0, 'recon-query-helper' ],
 	'recon-search' => [ 0, 'recon-search' ],
-	'recon-smwquery-url' => [ 0, 'recon-smwquery-url' ]
+	'recon-smwquery-url' => [ 0, 'recon-smwquery-url' ],
+	'recon-faceted-search' => [ 0, 'recon-faceted-search' ]
 ];
