@@ -71,7 +71,7 @@ const { defineComponent, computed, ref, reactive, watch } = require("vue");
 const { CdxTextInput, CdxSelect, CdxLookup, CdxMultiselectLookup } = require( "@wikimedia/codex" );
 
 module.exports = defineComponent( {
-	name: "DynamicFacet",
+	name: "Facet",
 	components: {
 		//CdxButton, CdxIcon,
 		CdxTextInput, CdxSelect, CdxLookup, CdxMultiselectLookup

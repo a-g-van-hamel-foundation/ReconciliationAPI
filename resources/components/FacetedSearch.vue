@@ -3,7 +3,7 @@
 		<div class="recon-facets">
 
 			<template v-for="facet in facets">
-				<dynamic-facet
+				<facet
 					:ref="facet.name"
 					:name="facet.name ?? facet.smwproperty"
 					:label="facet.label ?? facet.name"
@@ -12,7 +12,7 @@
 					v-model:query="query"
 					:api-url="apiUrl"
 					:config-data="facet"
-				></dynamic-facet>
+				></facet>
 			</template>
 
 			<button @click="convertQuery" class="btn-submit">Show results</button>
@@ -30,13 +30,13 @@
 
 <script>
 const { defineComponent, computed, ref, reactive, watch } = require("vue");
-const DynamicFacet = require("./DynamicFacet.vue");
+const Facet = require("./Facet.vue");
 // const { CdxButton, CdxButtonGroup, CdxToggleButtonGroup, CdxIcon, CdxTabs, CdxTab, CdxTextInput, CdxLookup, CdxField, CdxRadio, CdxCheckbox, CdxSearchInput } = require( "@wikimedia/codex" );
 
 module.exports = defineComponent( {
 	name: "FacetedSearch",
 	components: {
-		DynamicFacet
+		Facet
 	},
 	props: {
 		configData: { type: Object, default: {} },
