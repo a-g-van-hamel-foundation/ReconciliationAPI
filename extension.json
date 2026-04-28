@@ -52,7 +52,7 @@
 		"recon.general.styles": {
 			"localBasePath": "resources",
 			"remoteExtPath": "ReconciliationAPI/resources",
-			"styles": "recon.less"
+			"styles": "ext.recon.less"
 		},
 		"ext.recon.base": {
 			"localBasePath": "resources",
