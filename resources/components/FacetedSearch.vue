@@ -15,15 +15,41 @@
 				></facet>
 			</template>
 
-			<button @click="convertQuery" class="btn-submit">Show results</button>
+			<button @click="submitQuery(0)" class="btn-submit">Show results</button>
+
 		</div>
 		<div class="recon-results">
-			<i>Results here...</i>
-			<pre>{{ query }}</pre>
-			<pre style="color:red; font-size: .7rem;">{{ smwQueryObj }}</pre>
+			<details v-if="debug">
+				<div style="margin-bottom:.5rem;"><i>Profile: {{ configData.profile }}</i></div>
+				<summary>Query details</summary>
+				<pre>{{ query }}</pre>
+				<pre style="color:red; font-size: .7rem;">{{ smwQueryObj }}</pre>
+			</details>
 
-			<pre>{{ smwQueryResults }}</pre>
-			
+			<span class="loader" v-if="showLoader"></span>
+			<template v-if="smwQueryResults && smwQueryResults !== null">
+				<div class="recon-result-count">
+					<span>{{ resultCount }} <span v-if="resultCount==1">result</span><span v-else>results</span>
+					</span>
+				</div>
+				<faceted-search-result
+					:key="smwQueryResultKey"
+					:smw-result="smwQueryResults"
+					:template="configData.template ?? null"
+					:value-sep="configData.valueSep"
+					:debug="debug"
+				></faceted-search-result>
+			</template>
+
+			<pagination
+				:key="`pag-` + smwQueryResultKey"
+				:total="resultCount"
+				:limit="configData.limit"
+				v-model:offset="offset"
+				@update-offset="updateOffset"
+				:max-pages="maxPages"
+			></pagination>
+
 		</div>
 	</div>
 </template>
@@ -31,12 +57,16 @@
 <script>
 const { defineComponent, computed, ref, reactive, watch } = require("vue");
 const Facet = require("./Facet.vue");
+const FacetedSearchResult = require("./FacetedSearchResult.vue");
+const Pagination = require("./Pagination.vue");
 // const { CdxButton, CdxButtonGroup, CdxToggleButtonGroup, CdxIcon, CdxTabs, CdxTab, CdxTextInput, CdxLookup, CdxField, CdxRadio, CdxCheckbox, CdxSearchInput } = require( "@wikimedia/codex" );
 
 module.exports = defineComponent( {
 	name: "FacetedSearch",
 	components: {
-		Facet
+		Facet,
+		FacetedSearchResult,
+		Pagination
 	},
 	props: {
 		configData: { type: Object, default: {} },
@@ -58,12 +88,56 @@ module.exports = defineComponent( {
 			var k = facet.name ?? facet.smwproperty;
 			query[k] = facet.inputType == "multiselect" ? [] : "";
 		} );
+		const offset = ref( 0 );
+		function updateOffset(n) {
+			// submitQuery will adjust the offset
+			submitQuery(n);
+		}
+		const maxPages = Number( props.configData.maxpages ?? 5 );
 
 		const smwPrintoutProps = reactive( props.profile?.printout?.properties ?? [] );
-		const smwQueryResults = reactive( {} );
+		const smwQueryResults = ref( {} );
+		const smwQueryResultKey = ref( "" );
 
-		function convertQuery() {
+		const showLoader = ref( false );
+		function submitQuery(newOffset) {
+			offset.value = newOffset;
+			smwQueryResults.value = null;
+			showLoader.value = true;
 			// query, apiUrl
+
+			// Build the query
+			var smwQuery = buildQuery();
+			//console.log( "smw query", smwQuery );
+
+			setResultCount( smwQuery );
+
+			// Run the query
+			const smwAskApi = new mw.ForeignApi( apiUrl.value, { anonymous: false } );
+			const smwAskParams = {
+				action: "ask",
+				format: "json",
+				formatversion: "2",
+				query: smwQuery
+			};
+			smwAskApi.get(smwAskParams)
+			.done( function(data) {
+				showLoader.value = false;
+				if ( data.query == undefined ) {
+					return;
+				}
+				// console.log( "data.query?.results", data.query?.results );
+				smwQueryResultKey.value = getTimestamp();
+				if ( typeof data.query?.results == "object" ) {
+					smwQueryResults.value = data.query?.results;
+				}
+				// ...
+			} );
+		}
+
+		// Transform query elements to syntax required for API
+		// smwQuery, smwQueryObj, COUNT?
+		function buildQuery() {
 			// set/reset smwQuery and smwQueryObject to initial
 			var smwQuery = props.profile?.baseQuery ?? "";
 			for (var k in smwQueryObj) delete smwQueryObj[k];
@@ -80,10 +154,18 @@ module.exports = defineComponent( {
 					case "lookup":
 						// = codex select or lookup
 						smwQueryObj[k] = "";
+						/*if ( facet.subquery !== undefined ) {
+							// work in progress; API only
+							var newQ = `[[${facet.smwproperty}::` + `<q>` + facet.subquery.replaceAll( "@@@", query[k] ) + `</q>` + `]]`;
+							console.log( "test Q", newQ);
+							smwQuery += newQ + ` `;
+							smwQueryObj[k] = newQ;
+						}*/
 						if ( facet.options !== undefined ) {
 							var option = facet.options.find( (opt) => opt['value'] == query[k] );
-							smwQuery += `[[${facet.smwproperty}::${option.value}]]`;
-							smwQueryObj[k] = `[[${facet.smwproperty}::${option.value}]]`;
+							var newQ = assignToProperty( facet.smwproperty, option.value, facet.subquery );
+							smwQuery += newQ;
+							smwQueryObj[k] = newQ;
 						} else if ( facet.mapOptions !== undefined ) {	
 							var mapOption = facet.mapOptions.find( (opt) => opt['option'] == query[k] );
 							//console.log( "mapOption", mapOption );
@@ -91,8 +173,9 @@ module.exports = defineComponent( {
 							smwQueryObj[k] = mapOption.where;
 						} else {
 							// API
-							smwQuery += `[[${facet.smwproperty}::${query[k]}]] `;
-							smwQueryObj[k] = `[[${facet.smwproperty}::${query[k]}]]`;
+							var newQ = assignToProperty( facet.smwproperty, query[k], facet.subquery );
+							smwQuery += newQ + ` `;
+							smwQueryObj[k] = newQ;
 						}
 					break;
 					case "multiselect":
@@ -101,9 +184,10 @@ module.exports = defineComponent( {
 							// No need to check I think
 						}
 						query[k].forEach( (v) => {
-							smwQuery += `[[${facet.smwproperty}::${v}]] `;
-							smwQueryObj[k].push( `[[${facet.smwproperty}::${v}]]` );
-						} );
+							var newQ = assignToProperty( facet.smwproperty, v, facet.subquery );
+							smwQuery += newQ;
+							smwQueryObj[k].push(newQ);
+						});
 					break;
 					case "text":
 						var substr = sanitiseString(query[k]);
@@ -124,24 +208,30 @@ module.exports = defineComponent( {
 				smwQuery += `|?${prop}\n`;
 			} );
 
-			//apiUrl
-			console.log( "smw query", smwQuery );
-			const smwAskApi = new mw.ForeignApi( apiUrl.value, { anonymous: false } );
-			const smwAskParams = {
-				action: "ask",
-				format: "json",
-				formatversion: "2",
-				query: smwQuery
+			// options (limit, offset, sort, order)
+			var options = {
+				limit: props.configData.limit,
+				offset: offset.value,
+				sort: ( typeof props.configData.sort !== "undefined" ) ? props.configData.sort : null,
+				order: ( typeof props.configData.order !== "undefined" ) ? props.configData.order : null,
 			};
-			smwAskApi.get(smwAskParams)
-			.done( function ( data ) {
-				if ( data.query == undefined ) {
-					return;
+			for (const [k,v] of Object.entries(options)) {
+				if ( v !== null ) {
+					smwQuery += `|${k}=${v}`;
 				}
-				smwQueryResults.value = data.query?.results;
-				console.log( data.query?.results );
-				// ...
-			} );
+			}
+
+			return smwQuery;
+		}
+
+		// Helper function for buildQuery
+		function assignToProperty( propertyName, selectedValue, subQuery ) {
+			if ( typeof subQuery == "undefined" ) {
+				var newQ = `[[${propertyName}::${selectedValue}]]`;
+			} else {
+				var newQ = `[[${propertyName}::` + `<q>` + subQuery.replaceAll( "@@@", selectedValue ) + `</q>` + `]]`;
+			}
+			return newQ;
 		}
 
 		function sanitiseString( substr ) {
@@ -177,6 +267,36 @@ module.exports = defineComponent( {
 			}
 		}
 
+		const resultCount = ref( 0 );
+		function setResultCount(smwQuery) {
+			// Parsing a query to get the total result count is
+			// a bit of a hack, sadly, but the API (still) does 
+			// not return this info.
+			var countQuery = `{{#ask: ${smwQuery} |format=count }}`;
+			//console.log( "countQuery", countQuery);
+			new mw.Api().parse( countQuery )
+			.done(function(rawData) {
+				// strip html from the result
+				var tmp = document.createElement("DIV");
+   				tmp.innerHTML = rawData;
+				resultCount.value = Number(tmp.textContent||tmp.innerText);
+				// enforce..
+				smwQueryResultKey.value = getTimestamp();
+				//console.log( "count", resultCount.value );
+			});
+		}
+
+		// Get timestamp to enforce child component's reactivity
+		function getTimestamp() {
+			var today = new Date();
+			return today.getDay() + today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+		}
+
+		const debug = ref( false );
+		if( typeof props.configData.debug !== "undefined" && props.configData.debug == "true" ) {
+			debug.value = true;
+		}
+
 		return {
 			facets,
 			apiUrl,
@@ -184,7 +304,16 @@ module.exports = defineComponent( {
 			query,
 			smwQueryObj,
 			smwQueryResults,
-			convertQuery
+			smwQueryResultKey,
+			showLoader,
+			submitQuery,
+			offset,
+			updateOffset,
+			resultCount,
+			maxPages,
+
+			getTimestamp,
+			debug
 		}
 	}
 } );
@@ -224,6 +353,13 @@ module.exports = defineComponent( {
 		background: #4e5f5c linear-gradient(180deg,#687774,#4e5f5c) repeat-x;
 		border-color: #485855;
 	}
+}
+
+.recon-result-count {
+  display: flex;
+  justify-content: end;
+  font-size: .8rem;
+  margin-bottom: .5rem;
 }
 
 </style>

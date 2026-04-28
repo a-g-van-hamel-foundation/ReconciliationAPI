@@ -143,7 +143,9 @@
 			"packageFiles": [
 				"components/index-facetedsearch.js",
 				"components/FacetedSearch.vue",
-				"components/Facet.vue"
+				"components/Facet.vue",
+				"components/FacetedSearchResult.vue",
+				"components/Pagination.vue"
 			],
 			"dependencies": [ "@wikimedia/codex" ],
 			"codexComponents": [

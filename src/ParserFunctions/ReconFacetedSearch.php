@@ -14,13 +14,23 @@ class ReconFacetedSearch {
 	 * Parser function #recon-faceted-search
 	 */
 	public function run( Parser $parser, $frame, $args ) {
-		//$random = rand(10000,99999);
 		$paramsAllowed = [
 			// Either profile or profileid is mandatory
 			"profile" => null,
-			"profileid" => null
+			"profileid" => null,
+			// wiki template:
+			"template" => null,
+			// #ask parameters
+			"valuesep" => ";",
+			"limit" => "10",
+			"sort" => null,
+			"order" => null,
+			// pagination
+			"maxpages" => "5",
+			// active if "true":
+			"debug" => null
 		];
-		[ $profile, $profileId ] = array_values( ParserFunctionUtils::extractParams( $frame, $args, $paramsAllowed ) );
+		[ $profile, $profileId, $template, $valueSep, $limit, $sort, $order, $maxPages, $debug ] = array_values( ParserFunctionUtils::extractParams( $frame, $args, $paramsAllowed ) );
 
 		$parser->getOutput()->addModuleStyles( [ "recon.general.styles" ] );
 		$parser->getOutput()->addModules( [ "ext.recon.facetedsearch" ] );
@@ -31,10 +41,18 @@ class ReconFacetedSearch {
 		global $smwgFulltextSearchMinTokenSize;
 
 		$attributes = [
+			"id" => "recon-faceted-search-" . rand(10000,99999),
 			"class" => "recon-faceted-search-widget",
 			"data-smw-fts" => $smwgEnabledFulltextSearch ? "1" : "0",
 			"data-smw-elastic" => $smwgDefaultStore == "SMW\Elastic\ElasticStore" ? "1" : "0",
-			"data-smw-fts-mintokensize" => $smwgFulltextSearchMinTokenSize
+			"data-smw-fts-mintokensize" => $smwgFulltextSearchMinTokenSize,
+			"data-template" => $template,
+			"data-value-sep" => $valueSep,
+			"data-limit" => $limit,
+			"data-sort" => $sort,
+			"data-order" => $order,
+			"data-maxpages" => $maxPages,
+			"data-debug" => $debug
 		];
 		if ( $profile !== null && $profile !== "" ) {
 			$profileId = Title::newFromText( $profile )->getId();
