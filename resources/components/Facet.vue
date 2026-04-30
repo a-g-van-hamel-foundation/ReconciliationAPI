@@ -9,8 +9,10 @@
 					v-model:input-value="lookupInput"
 					:menu-items="selectList"
 					@update:input-value="runRequest"
+					@focus="runRequest('')"
 					:placeholder="label"
 					:clearable="true"
+					@keyup.enter="onEnter()"
 				></cdx-lookup>
 			</div>
 		</div>
@@ -25,7 +27,6 @@
 					default-label="Select"
 					:placeholder="label"
 					:multiple="multiple || false"
-					:clearable="true"
 					@update:selected="onUpdateSelected"
 				></cdx-select>
 			</div>
@@ -43,6 +44,8 @@
 					aria-label="..."
 					@update:selected="onUpdateSelected"
 					@input="onMultiselectInput"
+					@focus="onMultiselectInput('')"
+					@keyup.enter="onEnter()"
 				>
 				<!--
 				query[name]
@@ -59,6 +62,7 @@
 					:name="name"
 					v-model="query[name]"
 					:placeholder="label"
+					@keyup.enter="onEnter()"
 				></cdx-text-input>
 			</div>
 		</div>
@@ -85,7 +89,8 @@ module.exports = defineComponent( {
 		query: { type: "Object", default: {} },
 		configData: { type: "Object", default: {} }
 	},
-	setup(props, context) {
+	emits: [ 'run-query' ],
+	setup(props, { emit } ) {
 	
 		// Source type
 		// api types profileId and valuesFromProperty
@@ -142,8 +147,8 @@ module.exports = defineComponent( {
 				return;
 			} else if ( !term ) {
 				// reset
-				selectList.value = [];
-				return;
+				//selectList.value = [];
+				//return;
 			}
 			clearTimeout(delayTimer);
 			delayTimer = setTimeout(function() {
@@ -152,7 +157,7 @@ module.exports = defineComponent( {
 				} else if(valuesFromProperty.value !== null) {
 					requestPropertyValue(term);
 				}
-			}, 350);
+			}, 200);
 		}
 
 		function requestEntity(term) {
@@ -217,7 +222,7 @@ module.exports = defineComponent( {
 			boldLabel: false,
 			visibleItemLimit: 10
 		};
-		function onMultiselectInput( value ) {
+		function onMultiselectInput(value) {
 			//console.log( 'onMultiselectInput', value );
 			if(dataSourceType.value == "api") {
 				runRequest( value );
@@ -228,6 +233,12 @@ module.exports = defineComponent( {
 				// console.log( "no value" );
 				selectList.value = [];
 			}
+		}
+
+		function onEnter() {
+			//console.log( "enter!" );
+			// Let the parent initiate query on enter
+			emit('run-query', 0 );
 		}
 
 		return {
@@ -243,7 +254,9 @@ module.exports = defineComponent( {
 
 			chips,
 			onMultiselectInput,
-			multiselectConfig
+			multiselectConfig,
+
+			onEnter
 		}
 	}
 } );

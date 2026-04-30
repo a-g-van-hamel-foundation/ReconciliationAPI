@@ -4,7 +4,7 @@ namespace Recon\ParserFunctions;
 
 use MediaWiki\Parser\Parser;
 use MediaWiki\Title\Title;
-use MediaWiki\MediaWikiServices;
+//use MediaWiki\MediaWikiServices;
 //use MediaWiki\MainConfigNames;
 use MediaWiki\Html\Html;
 use Recon\ParserFunctions\ParserFunctionUtils;
@@ -21,21 +21,26 @@ class ReconFacetedSearch {
 			// wiki template:
 			"template" => null,
 			// #ask parameters
+			"format" => "plainlist",
 			"valuesep" => ";",
 			"limit" => "10",
 			"sort" => null,
 			"order" => null,
+			"userparam" => null,
 			// pagination
 			"maxpages" => "5",
 			// active if "true":
+			"scrollmargintop" => "0px",
 			"debug" => null
 		];
-		[ $profile, $profileId, $template, $valueSep, $limit, $sort, $order, $maxPages, $debug ] = array_values( ParserFunctionUtils::extractParams( $frame, $args, $paramsAllowed ) );
+		[ $profile, $profileId, $template, $format, $valueSep, $limit, $sort, $order, $userParam, $maxPages, $scrollMarginTop, $debug ] = array_values( ParserFunctionUtils::extractParams( $frame, $args, $paramsAllowed ) );
+		$parser->getOutput()->addModuleStyles( [ 
+			"recon.general.styles"
+		] );
+		$parser->getOutput()->addModules( [
+			"ext.recon.facetedsearch"
+		] );
 
-		$parser->getOutput()->addModuleStyles( [ "recon.general.styles" ] );
-		$parser->getOutput()->addModules( [ "ext.recon.facetedsearch" ] );
-
-		// not possible to get these globals through $config = MediaWikiServices::getInstance()->getMainConfig();
 		global $smwgDefaultStore;
 		global $smwgEnabledFulltextSearch;
 		global $smwgFulltextSearchMinTokenSize;
@@ -46,12 +51,15 @@ class ReconFacetedSearch {
 			"data-smw-fts" => $smwgEnabledFulltextSearch ? "1" : "0",
 			"data-smw-elastic" => $smwgDefaultStore == "SMW\Elastic\ElasticStore" ? "1" : "0",
 			"data-smw-fts-mintokensize" => $smwgFulltextSearchMinTokenSize,
+			"data-result-format" => $format,
 			"data-template" => $template,
 			"data-value-sep" => $valueSep,
 			"data-limit" => $limit,
 			"data-sort" => $sort,
 			"data-order" => $order,
+			"data-userparam" => $userParam,
 			"data-maxpages" => $maxPages,
+			"data-scrollmargintop" => $scrollMarginTop,
 			"data-debug" => $debug
 		];
 		if ( $profile !== null && $profile !== "" ) {
@@ -63,8 +71,8 @@ class ReconFacetedSearch {
 			$attributes["data-profile"] = $profile;
 			$attributes["data-profile-id"] = $profileId;
 		}
-		$res = Html::rawElement( "div", $attributes, "..." );
-		return $res;
+
+		return Html::rawElement( "div", $attributes, "" );
 	}
 
 }

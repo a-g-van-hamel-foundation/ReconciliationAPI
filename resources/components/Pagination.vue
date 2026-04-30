@@ -6,7 +6,7 @@
 		<button class="page-link" 
 			:data-target-offset="page.targetOffset"
 			:data-indicator="page.indicator"
-			@click="changeOffset(page.targetOffset)"
+			@click="updateOffset(page.targetOffset)"
 		>{{ page.text }}</button>
 	</li>
 </ul>
@@ -28,7 +28,7 @@ module.exports = defineComponent( {
 		queryContinueOffset: { type: "Number" },
 		maxPages: { type: "Number", default: 5 }
 	},
-	emits: [ 'update-offset' ],
+	emits: [ 'update-offset', 'scroll-into-view' ],
 	setup(props, { emit } ) {
 		const items = reactive( [] );
 		const pageCount = ref(0);
@@ -143,21 +143,21 @@ module.exports = defineComponent( {
 			return [ pageStart, pageEnd, currPage, middleNumber ];
 		}
 
-		function changeOffset( targetOffset ) {
-			if ( targetOffset == props.offset ) {
-				//console.log( "same offset, no change" );
+		function updateOffset( targetOffset ) {
+			if ( targetOffset == props.offset || targetOffset == null ) {
+				// If no change in offset, no update necessary
 				return;
 			}
-			//console.log( "targetOffset", targetOffset);
 			// Let the parent component work this out:
 			emit('update-offset', targetOffset);
+			emit('scroll-into-view');
 		}
 
 		return {
 			items,
 			pageCount,
 			paginationList,
-			changeOffset
+			updateOffset
 		}
 	}
 } );

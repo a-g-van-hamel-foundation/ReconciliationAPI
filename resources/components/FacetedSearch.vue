@@ -1,7 +1,6 @@
 <template>
-	<div class="recon-faceted-search">
+	<div class="recon-faceted-search" ref="wrapper" :style="`scroll-margin-top:` + scrollMarginTop + `; scroll-snap-margin-top:` + scrollMarginTop + `;`">
 		<div class="recon-facets">
-
 			<template v-for="facet in facets">
 				<facet
 					:ref="facet.name"
@@ -12,6 +11,7 @@
 					v-model:query="query"
 					:api-url="apiUrl"
 					:config-data="facet"
+					@run-query=submitQuery(0)
 				></facet>
 			</template>
 
@@ -19,43 +19,56 @@
 
 		</div>
 		<div class="recon-results">
-			<details v-if="debug">
-				<div style="margin-bottom:.5rem;"><i>Profile: {{ configData.profile }}</i></div>
-				<summary>Query details</summary>
-				<pre>{{ query }}</pre>
-				<pre style="color:red; font-size: .7rem;">{{ smwQueryObj }}</pre>
-			</details>
+			<section v-if="debug">
+				<div style="margin-bottom:.5rem;">
+				<i>Profile: {{ configData.profile }}</i></div>
+				<details>
+					<summary>Query details</summary>
+					<pre>{{ query }}</pre>
+					<pre style="color:red; font-size: .7rem;">{{ smwQueryObj }}</pre>
+				</details>
+				<details v-if="smwQueryResults && smwQueryResults !== null">
+					<summary>Query result details</summary>
+					<pre style="color:olive">{{ smwQueryResults }}</pre>
+				</details>
+			</section>
 
 			<span class="loader" v-if="showLoader"></span>
 			<template v-if="smwQueryResults && smwQueryResults !== null">
+				<faceted-search-result
+					v-if="`false`"
+					:key="`result-` + smwQueryResultKey"
+					:smw-result="smwQueryResults"
+					:template="configData.template ?? null"
+					:value-sep="configData.valueSep"
+				></faceted-search-result>
+			</template>
+
+			<template v-if="templateResult">
 				<div class="recon-result-count">
 					<span>{{ resultCount }} <span v-if="resultCount==1">result</span><span v-else>results</span>
 					</span>
 				</div>
-				<faceted-search-result
-					:key="smwQueryResultKey"
-					:smw-result="smwQueryResults"
-					:template="configData.template ?? null"
-					:value-sep="configData.valueSep"
-					:debug="debug"
-				></faceted-search-result>
+				<div v-html="templateResult" class="faceted-query-list"></div>
 			</template>
 
-			<pagination
-				:key="`pag-` + smwQueryResultKey"
-				:total="resultCount"
-				:limit="configData.limit"
-				v-model:offset="offset"
-				@update-offset="updateOffset"
-				:max-pages="maxPages"
-			></pagination>
-
+			<nav class="recon-pagination-wrapper">
+				<pagination
+					:key="`pag-` + smwQueryResultKey"
+					:total="resultCount"
+					:max-pages="maxPages"
+					:limit="configData.limit"
+					v-model:offset="offset"
+					@update-offset="updateOffset"
+					@scroll-into-view="scrollIntoView"				
+				></pagination>
+			</nav>
 		</div>
 	</div>
 </template>
 
 <script>
-const { defineComponent, computed, ref, reactive, watch } = require("vue");
+const { defineComponent, computed, ref, reactive, defineExpose, watch } = require("vue");
 const Facet = require("./Facet.vue");
 const FacetedSearchResult = require("./FacetedSearchResult.vue");
 const Pagination = require("./Pagination.vue");
@@ -99,6 +112,7 @@ module.exports = defineComponent( {
 		const smwQueryResults = ref( {} );
 		const smwQueryResultKey = ref( "" );
 
+		const templateResult = ref( null );
 		const showLoader = ref( false );
 		function submitQuery(newOffset) {
 			offset.value = newOffset;
@@ -113,26 +127,55 @@ module.exports = defineComponent( {
 			setResultCount( smwQuery );
 
 			// Run the query
-			const smwAskApi = new mw.ForeignApi( apiUrl.value, { anonymous: false } );
-			const smwAskParams = {
-				action: "ask",
-				format: "json",
-				formatversion: "2",
-				query: smwQuery
-			};
-			smwAskApi.get(smwAskParams)
-			.done( function(data) {
-				showLoader.value = false;
-				if ( data.query == undefined ) {
-					return;
-				}
-				// console.log( "data.query?.results", data.query?.results );
-				smwQueryResultKey.value = getTimestamp();
-				if ( typeof data.query?.results == "object" ) {
-					smwQueryResults.value = data.query?.results;
-				}
-				// ...
-			} );
+			if ( props.configData.template ) {
+				// Parse the full {{#ask:...}}
+				var format = props.configData.resultFormat ?? "plainlist";
+				var userParam = props.configData.userParam ?? "";
+				var askPF = `{{#ask: ${smwQuery} |format=${format} |template=${props.configData.template} |link=none |namedargs=true |searchlabel= |userparam=${userParam} }}`;
+				console.log( "#ask", askPF );
+
+				showLoader.value = true;
+
+				new mw.Api().parse( askPF )
+				.done(function(rawData) {
+					showLoader.value = false;
+					templateResult.value = rawData;
+				})
+				.fail(function() {
+					showLoader.value = false;
+					console.log( "Parsing failed..." );
+				});
+			} else {
+				// Get results from SMW's ask API
+				// and do whatever
+				const smwAskApi = new mw.ForeignApi( apiUrl.value, { anonymous: false } );
+				const smwAskParams = {
+					action: "ask",
+					format: "json",
+					formatversion: "2",
+					query: smwQuery
+				};
+				smwAskApi.post(smwAskParams)
+				.done( function(data) {
+					showLoader.value = false;
+					if ( data.query == undefined ) {
+						return;
+					}
+					// console.log( "data.query?.results", data.query?.results );
+					if ( typeof data.query?.results == "object" ) {
+						smwQueryResults.value = data.query?.results;
+					}
+					// Messes up pagination because the key is used to trigger the child component's reactivity, which is needed when the same query is run again with a different offset - but it also means that the results are reset when the query changes, which is not ideal.
+					// smwQueryResultKey.value = getTimestamp();
+					// ...
+				} )
+				.fail(function() {
+					showLoader.value = false;
+					console.log( "Query failed..." );
+					smwQueryResults.value = {};
+					smwQueryResultKey.value = getTimestamp();
+				});
+			}
 		}
 
 		// Transform query elements to syntax required for API
@@ -292,12 +335,24 @@ module.exports = defineComponent( {
 			return today.getDay() + today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
 		}
 
+		const wrapper = ref(null);
+		defineExpose({ wrapper });
+		const scrollMarginTop = ref("0px");
+		if ( typeof props.configData?.scrollmargintop !== "undefined" ) {
+			scrollMarginTop.value = props.configData.scrollmargintop;
+		}
+		function scrollIntoView() {
+			wrapper.value.scrollIntoView({ behavior: "smooth" });
+		}
+
 		const debug = ref( false );
 		if( typeof props.configData.debug !== "undefined" && props.configData.debug == "true" ) {
 			debug.value = true;
 		}
 
 		return {
+			templateResult,
+
 			facets,
 			apiUrl,
 
@@ -313,6 +368,9 @@ module.exports = defineComponent( {
 			maxPages,
 
 			getTimestamp,
+			wrapper,
+			scrollMarginTop,
+			scrollIntoView,
 			debug
 		}
 	}
@@ -332,6 +390,11 @@ module.exports = defineComponent( {
 	.recon-results {
 		padding: 1rem;
 		/* ... */
+	}
+}
+@media (max-width: 768px) {
+	.recon-faceted-search {
+		grid-template-columns: auto;
 	}
 }
 
@@ -360,6 +423,25 @@ module.exports = defineComponent( {
   justify-content: end;
   font-size: .8rem;
   margin-bottom: .5rem;
+}
+
+.cdx-input-chip {
+	border-radius: .5rem;
+}
+/* May not fit otherwise */
+.cdx-input-chip__text {
+  white-space: wrap;
+}
+
+/* Fix for min-width/sudden flicker in codex select */
+.cdx-select-vue {
+	width:100%;
+}
+.cdx-select-vue__handle {
+	min-width:200px;
+}
+.cdx-chip-input__chips {
+	min-width:200px;
 }
 
 </style>

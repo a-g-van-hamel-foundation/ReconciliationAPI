@@ -1,11 +1,6 @@
 <template>
 	<span class="loader" v-if="showLoader"></span>
 
-	<details v-if="debug">
-		<summary>Query result details</summary>
-		<pre style="color:olive">{{ smwResult }}</pre>
-	</details>
-
 	<div v-if="template" v-html="formattedHtml" class="faceted-query-list"></div>
 	<div v-else class="faceted-query-list">
 		<div v-for="f in formattedResults" :key="f.key" class="faceted-query-result">
@@ -25,10 +20,15 @@ module.exports = defineComponent( {
 	props: {
 		smwResult: { type: "Object", default: {} },
 		template: { type: "String", default: null },
-		valueSep: { type: "String" },
-		debug: { type: "Boolean", default: false }
+		valueSep: { type: "String" }
 	},
 	setup(props, context) {
+		/**
+		 * In a previous version, the ask API result could 
+		 * be translated to a template call = now abandoned in
+		 * favour of parsing the #ask pf directly.
+		 * The relevant code is deprecated but has not been removed yet.
+		 */
 		const formattedResults = reactive( [] );
 		const formattedHtml = ref( "" );
 		const showLoader = ref( false );
@@ -36,15 +36,16 @@ module.exports = defineComponent( {
 		watch( props.smwResult, (n) => {
 			//console.log( "smwResult, new value", n );
 			if ( props.template !== null ) {
+				/* @deprecated, at least for now
 				var wikitemplateSyntax = formatResultsForTemplate(n);
 				parseWikitemplateSyntax( wikitemplateSyntax );
+				*/
 			} else {
 				// default output without template
 				formatResultsForDefaultOutput(n);
 			}
 		}, { deep: true, immediate: true } );
 
-		//
 		function formatResultsForTemplate( res ) {
 			//console.log( "object keys", Object.keys(res) );
 			var wikitemplateSyntax = "";
