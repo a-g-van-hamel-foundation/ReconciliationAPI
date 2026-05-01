@@ -482,7 +482,7 @@ class SMWQueryBuilder {
 	}
 
 	private function getPagesForQueryResult( QueryResult $queryRes ) {
-		// Get array of SMWDIWikiPage objects
+		// Get array of SMW\DIWikiPage objects
 		$diWikiPages = $queryRes->getResults();
 		$pageNames = [];
 		foreach ( $diWikiPages as $diWikiPage ) {

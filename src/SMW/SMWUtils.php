@@ -7,19 +7,25 @@
 
 namespace Recon\SMW;
 
-use MediaWiki\MediaWikiServices;
+//use MediaWiki\MediaWikiServices;
 use Title;
 use SMW\StoreFactory;
 use SMW\SQLStore\SQLStore;
 use SMW\SQLStore\SQLStoreFactory;
-use SMW\DIWikiPage as SMWDIWikiPage;
+use SMW\Services\ServicesFactory;
+use SMW\DIWikiPage;
 use SMW\DIProperty;
 use SMWDIUri;
+// => SMW\DataItems\Uri in SMW 7
+use SMWDIError;
+// => SMW\DataItems\Error in SMW 7
 use SMW\DataValueFactory;
 use SMW\DataValues\TypesValue;
 use SMWQueryProcessor;
+// => SMW\Query\QueryProcessor in SMW 7
+use SMW\RequestOptions;
 use Recon\MW\MWUtils;
-use Recon\Localisation\ReconLocalisation;
+//use Recon\Localisation\ReconLocalisation;
 use Recon\SMW\SMWQuerySyntaxConverters;
 
 class SMWUtils {
@@ -251,7 +257,7 @@ class SMWUtils {
 	 * @param Store $store
 	 * @param Title $subject
 	 * @param string $propID
-	 * @param SMWRequestOptions|null $requestOptions
+	 * @param SMW\RequestOptions|null $requestOptions
 	 * @return array
 	 * @suppress PhanUndeclaredTypeParameter For Store
 	 */
@@ -262,10 +268,10 @@ class SMWUtils {
 		$requestOptions = null
 	): array {
 		// If SMW is not installed, exit out.
-		if ( !class_exists( 'SMWDIWikiPage' ) ) {
+		if ( !class_exists( 'SMW\DIWikiPage' ) ) {
 			return [];
 		}
-		$page = ( $subject === null ) ? null : SMWDIWikiPage::newFromTitle( $subject );
+		$page = ( $subject === null ) ? null : DIWikiPage::newFromTitle( $subject );
 		$property = DIProperty::newFromUserLabel( $propID );
 
 		$res = $store->getPropertyValues( $page, $property, $requestOptions );
@@ -273,7 +279,7 @@ class SMWUtils {
 		foreach ( $res as $value ) {
 			if ( $value instanceof SMWDIUri ) {
 				$values[] = $value->getURI();
-			} elseif ( $value instanceof SMWDIWikiPage ) {
+			} elseif ( $value instanceof DIWikiPage ) {
 				$realValue = str_replace( '_', ' ', $value->getDBKey() );
 				if ( $value->getNamespace() != 0 ) {
 					$realValue = MWUtils::getCanonicalNamespaceName( $value->getNamespace() ) . ":$realValue";
