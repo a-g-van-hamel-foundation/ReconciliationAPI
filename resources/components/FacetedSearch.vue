@@ -18,7 +18,7 @@
 			<button @click="submitQuery(0)" class="btn-submit">Show results</button>
 
 		</div>
-		<div class="recon-results">
+		<div class="recon-results" ref="resultsWrapper">
 			<section v-if="debug">
 				<div style="margin-bottom:.5rem;">
 				<i>Profile: {{ configData.profile }}</i></div>
@@ -40,7 +40,7 @@
 					:key="`result-` + smwQueryResultKey"
 					:smw-result="smwQueryResults"
 					:template="configData.template ?? null"
-					:value-sep="configData.valueSep"
+					:value-sep="valueSep"
 				></faceted-search-result>
 			</template>
 
@@ -49,7 +49,10 @@
 					<span>{{ resultCount }} <span v-if="resultCount==1">result</span><span v-else>results</span>
 					</span>
 				</div>
-				<div v-html="templateResult" class="faceted-query-list"></div>
+				<div
+					v-html="templateResult"
+					class="faceted-query-list"
+				></div>
 			</template>
 
 			<nav class="recon-pagination-wrapper">
@@ -68,7 +71,7 @@
 </template>
 
 <script>
-const { defineComponent, computed, ref, reactive, defineExpose, watch } = require("vue");
+const { defineComponent, computed, ref, reactive, defineExpose, watch, onMounted, nextTick } = require("vue");
 const Facet = require("./Facet.vue");
 const FacetedSearchResult = require("./FacetedSearchResult.vue");
 const Pagination = require("./Pagination.vue");
@@ -89,7 +92,12 @@ module.exports = defineComponent( {
 		const query = reactive( {} );
 		// Not yet used but essential if we want to support dynamic facets:
 		const smwQueryObj = reactive( {} );
-
+		// Parameters for #ask 
+		const askParams = ref( JSON.parse(props.configData.askParams) );
+		const valueSep = ref(";");
+		if (askParams.value.valuesep !== undefined) {
+			valueSep.value = askParams.value.valuesep;
+		}
 		const facets = reactive( props.profile?.facets ?? [] );
 
 		const apiUrl = ref( mw.config.get("wgServer") + (mw.config.get("wgScriptPath") || "") + "/api.php" );
@@ -101,7 +109,7 @@ module.exports = defineComponent( {
 			var k = facet.name ?? facet.smwproperty;
 			query[k] = facet.inputType == "multiselect" ? [] : "";
 		} );
-		const offset = ref( 0 );
+		const offset = ref(0);
 		function updateOffset(n) {
 			// submitQuery will adjust the offset
 			submitQuery(n);
@@ -122,28 +130,58 @@ module.exports = defineComponent( {
 
 			// Build the query
 			var smwQuery = buildQuery();
-			//console.log( "smw query", smwQuery );
 
 			setResultCount( smwQuery );
+			
+			// Transfer any additional #ask parameters from the config
+			//var askParams = JSON.parse( props.configData.askParams );
+			if ( typeof askParams.value !== "undefined" ) {
+				for (const [k,v] of Object.entries(askParams.value)) {
+					smwQuery += `|${k}=${v} `;
+				}
+			}
+
+			// Create full #ask query syntax
+			var askPF = null;
+			var format = props.configData.resultFormat ?? "plainlist";
+
+			if ( format == "plainlist" && props.configData.template ) {
+				var askPF = `{{#ask: ${smwQuery} |format=${format} |template=${props.configData.template} |link=none |?=Page |namedargs=true |searchlabel= |valuesep=${valueSep.value} }}`;
+			} else if(format == "table" || format == "broadtable") {
+				var askPF = `{{#ask: ${smwQuery} |class=table |format=${format} |valuesep=${valueSep.value} |searchlabel= }}`;
+			} else if(format == "datatables") {
+				// Not yet working
+				var askPF = `{{#ask: ${smwQuery} |format=${format} |searchlabel= |valuesep=${valueSep.value} }}`;
+			} else if(format == "gallery") {
+				var askPF = `{{#ask: ${smwQuery} |format=${format} |searchlabel= |valuesep=${valueSep.value} }}`;
+			} else if(format !== "") {
+				var askPF = `{{#ask: ${smwQuery} |format=${format} |searchlabel= |valuesep=${valueSep.value} |template=${props.configData.template} }}`;
+			}
 
 			// Run the query
-			if ( props.configData.template ) {
-				// Parse the full {{#ask:...}}
-				var format = props.configData.resultFormat ?? "plainlist";
-				var userParam = props.configData.userParam ?? "";
-				var askPF = `{{#ask: ${smwQuery} |format=${format} |template=${props.configData.template} |link=none |namedargs=true |searchlabel= |userparam=${userParam} }}`;
+			if ( askPF !== null ) {
+				// Parse the full #ask syntax
 				console.log( "#ask", askPF );
 
 				showLoader.value = true;
 
 				new mw.Api().parse( askPF )
 				.done(function(rawData) {
-					showLoader.value = false;
 					templateResult.value = rawData;
+					showLoader.value = false;
+					var formatsWithRLModules = [ "datatables", "gallery", "iiif-annotation-gallery", "iiif-canvas-viewer" ];
+					//console.log(`rawData for ${format}`, rawData );
+	
+					if ( formatsWithRLModules.includes(format) ) {
+						console.log( "Format with RL modules detected:", format);
+						handleModulesForApiResponse(format);
+						// not yet working for 'datatables'
+						// may be in part for 'gallery'
+					}
 				})
 				.fail(function() {
 					showLoader.value = false;
-					console.log( "Parsing failed..." );
+					console.error( "Parsing failed..." );
 				});
 			} else {
 				// Get results from SMW's ask API
@@ -171,10 +209,84 @@ module.exports = defineComponent( {
 				} )
 				.fail(function() {
 					showLoader.value = false;
-					console.log( "Query failed..." );
+					console.error( "Query failed..." );
 					smwQueryResults.value = {};
 					smwQueryResultKey.value = getTimestamp();
 				});
+			}
+		}
+
+		/**
+		 * Handles ResourceLoader modules for result formats that rely on those modules to function properly (e.g. datatables, gallery).
+		 * Uses nextTick() to ensure that the DOM is updated first.
+		 * Uses mw.hook 'wikipage.content' to enforce enhancement of the new content after modules are loaded.
+		 * A bit hacky but seems to be the only way to ensure that the relevant module is loaded and the content rendered after receiving the API response.
+		 */
+		async function handleModulesForApiResponse(format) {
+			await nextTick();
+			console.log( "init handleModulesForApiResponse() defining modules for format", format );
+
+			// Define modules required for each format
+			var modules = null;
+			switch(format) {
+				case "datatables":
+					var modules = ["ext.srf.datatables.v2.format"];
+					/*
+					// datatables:
+					var datatablesContainer = resultsWrapper.value.querySelector(".datatables-container");
+					// ...
+					*/
+				break;
+				case "gallery":
+					// (1) Gallery format
+					var modules = ["mediawiki.page.gallery.styles"];
+					var widget = askParams.value.widget ?? "overlay";
+					switch(widget) {
+						case "overlay":
+							modules.push( "ext.srf.gallery.overlay" );
+						break;
+						case "carousel":
+							// Relies on MMV
+							modules.push( "ext.srf.gallery.carousel" );
+						break;
+						case "slideshow":
+							modules.push( "ext.srf.gallery.slideshow" );
+						break;
+					}
+					// (2) MultimediaViewer not working reliably. Takes multiple clicks (or escapes) to close the modal.
+					//modules.push( "mmv", "mmv.bootstrap", "mmv.ui.reuse");
+				break;
+				case "iiif-annotation-gallery":
+					// Works
+					var modules = ["ext.iiif.styles", "ext.iiif.resultformat.annotationgallery" ];
+				break;
+				case "iiif-canvas-viewer":
+					// Issue with Ace editor?
+					//"ext.iiif.lib.ace","ext.iiif.lib.ace.utils"
+					var modules = [ "ext.iiif.resultformat.canvasviewer", "ext.iiif.styles" ];
+					//"ext.iiif.lib.ace", "ext.iiif.lib.ace.utils" 
+					//modules.push([ "ext.iiif.lib.ace", "ext.iiif.lib.ace.utils" ]);
+				break;
+			}
+
+			if ( modules !== null ) {
+				modules.forEach( (mod) => {
+					// Check module state before loading
+					var state = mw.loader.getState(mod);
+					console.log( `Module load state BEFORE loading: ${mod}`, state );
+
+					// Abort if unregistered
+					if ( mw.loader.getState(mod) === null ) {
+						console.warn( `Module ${mod} is not registered in ResourceLoader.` );
+						return;
+					}
+
+					// Works only for modules that allow multiple loads
+					// especially dynamically added content
+					mw.loader.using( mod ).then( function () {
+						mw.hook( 'wikipage.content' ).fire( $(resultsWrapper.value) );
+					} );
+				} );
 			}
 		}
 
@@ -248,7 +360,7 @@ module.exports = defineComponent( {
 			} );
 
 			smwPrintoutProps.forEach( (prop) => {
-				smwQuery += `|?${prop}\n`;
+				smwQuery += `|?${prop} `;
 			} );
 
 			// options (limit, offset, sort, order)
@@ -336,7 +448,8 @@ module.exports = defineComponent( {
 		}
 
 		const wrapper = ref(null);
-		defineExpose({ wrapper });
+		const resultsWrapper = ref(null);
+		defineExpose({ wrapper, resultsWrapper });
 		const scrollMarginTop = ref("0px");
 		if ( typeof props.configData?.scrollmargintop !== "undefined" ) {
 			scrollMarginTop.value = props.configData.scrollmargintop;
@@ -353,6 +466,9 @@ module.exports = defineComponent( {
 		return {
 			templateResult,
 
+			askParams,
+			valueSep,
+
 			facets,
 			apiUrl,
 
@@ -366,6 +482,8 @@ module.exports = defineComponent( {
 			updateOffset,
 			resultCount,
 			maxPages,
+
+			resultsWrapper,
 
 			getTimestamp,
 			wrapper,

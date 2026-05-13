@@ -22,24 +22,40 @@ class ReconFacetedSearch {
 			"template" => null,
 			// #ask parameters
 			"format" => "plainlist",
-			"valuesep" => ";",
 			"limit" => "10",
 			"sort" => null,
 			"order" => null,
-			"userparam" => null,
 			// pagination
 			"maxpages" => "5",
 			// active if "true":
 			"scrollmargintop" => "0px",
 			"debug" => null
 		];
-		[ $profile, $profileId, $template, $format, $valueSep, $limit, $sort, $order, $userParam, $maxPages, $scrollMarginTop, $debug ] = array_values( ParserFunctionUtils::extractParams( $frame, $args, $paramsAllowed ) );
+		[ $profile, $profileId, $template, $format, $limit, $sort, $order, $maxPages, $scrollMarginTop, $debug ] = array_values( ParserFunctionUtils::extractParams( $frame, $args, $paramsAllowed ) );
+
+		// SMW parameters 
+		$askParams = [];
+		foreach( $args as $k => $arg ) {
+			$paramExpanded = $frame->expand( $arg );
+			$keyValPair = explode('=', $paramExpanded, 2);
+			$paramName = trim( $keyValPair[0] );
+			$paramValue = trim( $keyValPair[1] ?? "" );
+			// Skip allowed parameters and empty keys
+			if ( array_key_exists( $paramName, $paramsAllowed ) || $paramValue == "" ) {
+				continue;
+			}
+			$askParams[$paramName] = trim( $keyValPair[1] );
+		}
+
+		// Load RL modules
 		$parser->getOutput()->addModuleStyles( [ 
 			"recon.general.styles"
 		] );
-		$parser->getOutput()->addModules( [
-			"ext.recon.facetedsearch"
-		] );
+		$rlModules = [ "ext.recon.facetedsearch" ];
+		if ( $format && $format === "iiif-canvas-viewer" ) {
+			$rlModules[] = "ext.iiif.ace";
+		}
+		$parser->getOutput()->addModules( $rlModules );
 
 		global $smwgDefaultStore;
 		global $smwgEnabledFulltextSearch;
@@ -51,13 +67,15 @@ class ReconFacetedSearch {
 			"data-smw-fts" => $smwgEnabledFulltextSearch ? "1" : "0",
 			"data-smw-elastic" => $smwgDefaultStore == "SMW\Elastic\ElasticStore" ? "1" : "0",
 			"data-smw-fts-mintokensize" => $smwgFulltextSearchMinTokenSize,
+
+			// smw
 			"data-result-format" => $format,
 			"data-template" => $template,
-			"data-value-sep" => $valueSep,
 			"data-limit" => $limit,
 			"data-sort" => $sort,
 			"data-order" => $order,
-			"data-userparam" => $userParam,
+			"data-ask-params" => json_encode( $askParams, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ),
+
 			"data-maxpages" => $maxPages,
 			"data-scrollmargintop" => $scrollMarginTop,
 			"data-debug" => $debug
