@@ -34,7 +34,7 @@
 			</section>
 
 			<span class="loader" v-if="showLoader"></span>
-			<template v-if="smwQueryResults && smwQueryResults !== null">
+			<template v-if="smwQueryResults && smwQueryResults !== null && !templateResult">
 				<faceted-search-result
 					v-if="`false`"
 					:key="`result-` + smwQueryResultKey"
@@ -123,7 +123,7 @@ module.exports = defineComponent( {
 		const templateResult = ref( null );
 		const showLoader = ref( false );
 		function submitQuery(newOffset) {
-			offset.value = newOffset;
+			offset.value = newOffset ?? 0;
 			smwQueryResults.value = null;
 			showLoader.value = true;
 			// query, apiUrl
@@ -143,19 +143,34 @@ module.exports = defineComponent( {
 
 			// Create full #ask query syntax
 			var askPF = null;
-			var format = props.configData.resultFormat ?? "plainlist";
+			var format = props.configData.resultFormat
+				?? ( props.configData.template ? "plainlist" : null );
 
-			if ( format == "plainlist" && props.configData.template ) {
+			if (format === null || format === "") {
+				// askPF=null = do not parse #ask query
+				// Leave formatting to FacetedSearchResult
+			} else if ( format == "plainlist" && props.configData.template ) {
 				var askPF = `{{#ask: ${smwQuery} |format=${format} |template=${props.configData.template} |link=none |?=Page |namedargs=true |searchlabel= |valuesep=${valueSep.value} }}`;
 			} else if(format == "table" || format == "broadtable") {
-				var askPF = `{{#ask: ${smwQuery} |class=table |format=${format} |valuesep=${valueSep.value} |searchlabel= }}`;
+				// searchlabel= 
+				var askPF = `{{#ask: ${smwQuery} |format=${format} |valuesep=${valueSep.value} |searchlabel= }}`;
 			} else if(format == "datatables") {
 				// Not yet working
-				var askPF = `{{#ask: ${smwQuery} |format=${format} |searchlabel= |valuesep=${valueSep.value} }}`;
+				var askPF = `{{#ask: ${smwQuery}
+				|format=${format} 
+				|valuesep=${valueSep.value} 
+				}}`;
 			} else if(format == "gallery") {
-				var askPF = `{{#ask: ${smwQuery} |format=${format} |searchlabel= |valuesep=${valueSep.value} }}`;
-			} else if(format !== "") {
-				var askPF = `{{#ask: ${smwQuery} |format=${format} |searchlabel= |valuesep=${valueSep.value} |template=${props.configData.template} }}`;
+				var askPF = `{{#ask: ${smwQuery} 
+				|format=${format} 
+				|valuesep=${valueSep.value}
+				}}`;
+			} else {
+				var askPF = `{{#ask: ${smwQuery} 
+				|format=${format} 
+				|valuesep=${valueSep.value} 
+				|template=${props.configData.template} 
+				}}`;
 			}
 
 			// Run the query
@@ -175,8 +190,6 @@ module.exports = defineComponent( {
 					if ( formatsWithRLModules.includes(format) ) {
 						console.log( "Format with RL modules detected:", format);
 						handleModulesForApiResponse(format);
-						// not yet working for 'datatables'
-						// may be in part for 'gallery'
 					}
 				})
 				.fail(function() {
@@ -221,6 +234,7 @@ module.exports = defineComponent( {
 		 * Uses nextTick() to ensure that the DOM is updated first.
 		 * Uses mw.hook 'wikipage.content' to enforce enhancement of the new content after modules are loaded.
 		 * A bit hacky but seems to be the only way to ensure that the relevant module is loaded and the content rendered after receiving the API response.
+		 * Not yet working for 'datatables'; may be in part for 'gallery'
 		 */
 		async function handleModulesForApiResponse(format) {
 			await nextTick();

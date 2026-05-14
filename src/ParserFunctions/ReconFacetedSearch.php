@@ -21,7 +21,7 @@ class ReconFacetedSearch {
 			// wiki template:
 			"template" => null,
 			// #ask parameters
-			"format" => "plainlist",
+			"format" => null,
 			"limit" => "10",
 			"sort" => null,
 			"order" => null,
@@ -46,6 +46,8 @@ class ReconFacetedSearch {
 			}
 			$askParams[$paramName] = trim( $keyValPair[1] );
 		}
+		// Force searchlabel to empty value (easily overlooked)
+		$askParams["searchlabel"] = "";
 
 		// Load RL modules
 		$parser->getOutput()->addModuleStyles( [ 
