@@ -14,7 +14,7 @@ The API module (<code>recon</code>, <code>recon-suggest-entity</code>, etc.) rea
 === Identifiers ===
 <pre>
 {
-	"type": "Profile",
+	"type": "ReconciliationProfile",
 	"name": "Search plants and animals",
 	"source": "smw",
 	...
@@ -23,7 +23,7 @@ The API module (<code>recon</code>, <code>recon-suggest-entity</code>, etc.) rea
 
 <div class="recon-data-item">
 	<div><code>type</code></div>
-	<div>Just 'Profile'.</div>
+	<div>Just 'ReconciliationProfile'.</div>
 </div>
 <div class="recon-data-item">
 	<div><code>name</code></div>

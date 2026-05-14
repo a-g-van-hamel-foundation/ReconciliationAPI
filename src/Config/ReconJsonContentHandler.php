@@ -7,10 +7,12 @@
 
 namespace Recon\Config;
 
-use \MediaWiki\Content\Renderer\ContentParseParams;
-use JsonContentHandler;
-use Title;
-use RequestContext;
+use MediaWiki\Parser\ParserOutput;
+use MediaWiki\Content\Content;
+use MediaWiki\Content\Renderer\ContentParseParams;
+use MediaWiki\Content\JsonContentHandler;
+use MediaWiki\Title\Title;
+use MediaWiki\Context\RequestContext;
 use Recon\Config\ReconJsonContent;
 use Recon\Validation\ReconValidator;
 use Recon\ReconUtils;
@@ -33,6 +35,7 @@ class ReconJsonContentHandler extends JsonContentHandler {
 
 	/**
 	 * Set default text to be used when starting a new page.
+	 * Currently, 'ReconciliationProfile' only.
 	 * {@inheritDoc}
 	 */
 	public function makeEmptyContent() {
@@ -89,31 +92,49 @@ class ReconJsonContentHandler extends JsonContentHandler {
 		return false;
 	}
 
+	/**
+	 * Summary of fillParserOutput
+	 * @param Content $content
+	 * @param ContentParseParams $cpoParams
+	 * @param ParserOutput $parserOutput
+	 * @return void
+	 */
 	protected function fillParserOutput(
-		\Content $content,
-		ContentParseParams $cpoParams,
-		\ParserOutput &$parserOutput
+		$content,
+		$cpoParams,
+		&$parserOutput
 	): void {
 		'@phan-var ReconJsonContent $content';
 		$outputPage = RequestContext::getMain()->getOutput();
 		$title = Title::castFromPageReference( $cpoParams->getPage() );
 		$pageID = $title->getId();
+		// Default:
+		$profileType = "ReconciliationProfile";
 
 		$parserOutput->addModuleStyles( [ 'recon.general.styles' ] );
 
 		if ( $cpoParams->getGenerateHtml() ) {
 			if ( $content->isValid() ) {
-				
-				// Validation
 				$jsonObj = json_decode( $content->getText(), false );
+
+				// Possibly replace default profile type
+				if ( property_exists( $jsonObj, "type" ) && $jsonObj->type === "FacetedSearchProfile" ) {
+					$profileType = "FacetedSearchProfile";
+				}
+
+				// Validation (none available for FacetedSearchProfile just yet)
 				$reconValidator = new ReconValidator();
-				$validationMsg = $reconValidator->validateProfile( $jsonObj );
+				$validationMsg = $profileType === "ReconciliationProfile"
+					? $reconValidator->validateProfile( $jsonObj )
+					: "";
 
 				// Use tabular representation
 				$jsonContent = $content->rootValueTable( $content->getData()->getValue() );
 				// Custom additions to the wiki page
 				$header = $this->buildHeader( $title, $outputPage );
-				$footer = $this->buildFooter( $title, $validationMsg );
+				$footer = $profileType === "ReconciliationProfile"
+					? $this->buildFooter( $title, $validationMsg )
+					: "";
 
 				$parserOutput->setText( $header . $jsonContent . $footer );
 			} else {
@@ -125,8 +146,10 @@ class ReconJsonContentHandler extends JsonContentHandler {
 			$parserOutput->setText( null );
 		}
 
-		$wikiWidget = $this->createWidget( $pageID );
-		$outputPage->addWikiTextAsContent( $wikiWidget );
+		if ( $profileType === "ReconciliationProfile" ) {
+			$wikiWidget = $this->createWidget( $pageID );
+			$outputPage->addWikiTextAsContent( $wikiWidget );
+		}
 	}
 
 	private function buildHeader( Title $title, $outputPage ) {
