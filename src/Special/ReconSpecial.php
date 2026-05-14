@@ -274,6 +274,12 @@ class ReconSpecial extends SpecialPage {
 				"menutitle" => "Testbench",
 				"file" => "testbench.wiki"
 			],
+			"faceted" => [
+				"type" => "page",
+				"menutitle" => "Faceted search",
+				"pagetitle" => "Faceted search",
+				"file" => "faceted-search.wiki"
+			],
 			"guide" => [
 				"type" => "page",
 				"menutitle" => "Additional usage guide",

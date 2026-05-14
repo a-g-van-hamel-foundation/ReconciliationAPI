@@ -1,0 +1,242 @@
+<p class="recon-summary">This extension comes with an experimental version of faceted search for Semantic MediaWiki. It is a customisable widget that uses fixed filters to let users narrow down search results. It is enabled through a parser function <code>#recon-faceted-search</code>, which takes most of its instructions from a user-provided configuration profile in JSON. For any API-based facet, it relies on reconciliation profiles whose page IDs only need to be referenced in a faceted search profile.</p>
+
+== Parser function <code>#recon-faceted-search</code> ==
+To add faceted search to a wiki page, add an instance of the <code>#recon-faceted-search</code> parser function : 
+
+<pre>
+{{#recon-faceted-search:
+|profile= // Mandatory
+|valuesep=
+|template=
+|limit=
+|sort=
+|order=
+|maxpages=
+|scrollmargintop=
+|debug=
+}}
+</pre>
+
+* '''profile''' - Pagename of your config profile (mandatory)
+* <code>#ask</code> parameters:
+** '''template''' - The wiki template to use to format query results. Currently works for properties of datatype Text, Page and Date. Without "template", a minimal presentation will be used instead.
+** '''valuesep''' (default: ;) - the delimiter for property values.
+** '''sort''' - Optionally, the property by which to sort the #ask query. SMW's default is to sort by page sortkey or pagename.
+** '''order''' - asc/ascending (SMW's default) or desc/descending
+** '''limit'''  (default: 10) - maximum number of results to show at a time
+* Pagination options:
+** '''maxpages''' (default: 5) - maximum number of pages to show in the pagination widget, with the possible exception of a first and last number.
+** '''scrollmargintop''' - When you use the pagination widget at the bottom of your search results, the page will automatically scroll up to the top. If your site happens to use a fixed header, the unfortunate side-effect is that the very top of the widget will then be buried under the header. To remedy this, set 'scrollmargintop' to the height of your header, including a unit such as 'px' or 'em'.
+* '''debug''' - If set to "true", some additional info about your query and query results will be shown to help you debug any possible issues.
+
+== Configuration profile ("FacetedSearchProfile") ==
+Remember the <code>profile</code> parameter above? The parser function requires a configuration profile in JSON in which you have defined the base query that should always apply, the facets you want to use and a list of properties to print to the query result. This profile, like the reconciliation profile, is best saved as a wiki page in the <code>Recon</code> namespace. Try to be consistent when naming your profile pages (e.g. <code>Recon:FacetedSearch/Recipes</code>, <code>Recon:FacetedSearch/Events</code>, etc.). 
+
+=== General structure ===
+What follows is the general structure of a profile. The inline comments below are just there to guide you and should never be included.
+
+<pre>
+{
+	// General:
+	"type": "FacetedSearchProfile",
+	"source": "smw",
+	"baseQuery": "...", // Base query that should always apply, e.g. [[Category:artists]] or [[Class::artist]]
+
+	// Facets, more on which below:
+	"facets": [
+		// See 'Facet types' below
+		{
+			"name": "keyword",
+			"smwproperty": "Has keyword",
+			"label": "Keyword",
+			"inputType": "text"
+		},
+		{
+			"name": "occupation",
+			"smwproperty": "Has occupation",
+			"label": "Occupation",
+			"inputType": "select",
+			"profileid": "2342"
+		},
+		// etc.
+	],
+
+	// Printout 
+	"printout": {
+		"properties": [
+			"#=Page",
+			"Has occupation",
+			"Display title of"
+		]
+	}
+}
+</pre>
+
+=== Define your facets ===
+The following JSON keys are available for configuring a facet. Their usage will be explained in more detail below.
+
+* '''inputType''' - either "select", "multiselect" or "text"
+* '''label''' - the visible label associated with a facet
+* '''name''' - unique name (see below)
+* '''smwproperty''' - the property to be used in the query, or an inverse query, or a property chain
+* '''subquery''' - optionally, a subquery to be used for 'smwproperty', without q tags and with @@@ as placeholder for the selected value. 
+* Data source options:
+** '''profileid'''
+** '''valuesFromProperty'''
+** '''options'''
+** '''mapOptions'''
+
+==== Use unique keys ====
+It is important that each facet is identifiable by a unique key. This key will be taken from <code>name</code>, if it is provided; or if it isn't, from <code>smwproperty</code>. This means that <code>name</code> is usually optional '''unless''' :
+* (a) multiple facets have the same value for <code>smwproperty</code> and so need to be disambiguated
+* or (b) <code>smwproperty</code> is absent.
+When in doubt, just add a value to <code>name</code>.
+
+==== Choose your input type ====
+
+===== (1) input type 'text' =====
+A text input is commonly used once at the top of all facets to perform partial matching on the title and other essential keywords.
+
+;single-page restriction
+Single-page restriction is assumed if you do not provide a property to `smwproperty`.
+
+<pre>
+{
+	"label": "Page name",
+	"inputType": "text",
+}
+</pre>
+
+===== (2) Dropdown input types: 'select' and 'multiselect' =====
+<code>inputType</code> 
+* Use 'select' if users should be allowed to select single items only.
+* Use 'multiselect' if they are allowed to select more than one.
+
+Both types allow for the use of predefined lists as well as API-provided data sets.
+
+==== Choose your data source ====
+In order that a facet can offer any items for users to select, you can either use a dataset returned by the API or a pre-defined list of options :
+
+;Fetching data from the API :
+* To fetch '''entities''', use <code>profileid</code> and reference the page ID of the preferred reconciliation profile. This approach relies on the <code>recon-suggest-entity</code> module.
+* To fetch '''property values''' (especially values with data type "Text"), use <code>valuesFromProperty</code> and point to a semantic property in <code>valuesFromProperty</code>. This approach relies on the <code>recon-suggest-propvalue</code> module.
+
+;Fetching data from a list of options :
+* Use <code>options</code> to define pairs of values and labels as selectable options.
+* Use <code>mapOptions</code> to associate a selected value directly with a query condition.
+
+See below for usage details.
+
+===== (1) <code>profileid</code> =====
+Point <code>profileid</code> to the page id of the reconciliation profile that you want to use for setting up autocomplete suggestions.
+
+Example:
+
+<pre>
+{
+	"label": "Genre",
+	"smwproperty": "Has genre",
+	"inputType": "select",
+	"profileid": "238" // = page id of the reconciliation profile
+}
+</pre>
+
+===== (2) <code>valuesFromProperty</code> =====
+Using <code>valuesFromProperty</code>, you can point to a semantic property and have it return values from that property. This approach relies on the <code>recon-suggest-propvalue</code> module.
+
+To users of Page Forms: this is similar to 'values from property'.
+
+<pre>
+{
+	"label": "...",
+	"name": "...",
+	"inputType": "multiselect",
+	"smwproperty": "Has tag",
+	"valuesFromProperty": "Has tag"
+}
+</pre>
+
+===== (3) <code>options</code> =====
+This key lets you define a fixed list of options in the form of values and labels. For example:
+
+<pre>
+{
+	"label": "",
+	"name": "",
+	"inputType": "select",
+	"options": [
+		{ "value": "", "label: "" },
+		{ "value": "", "label: "" },
+		{ "value": "", "label: "" }
+	]
+}
+</pre>
+
+===== (4) <code>mapOptions</code> =====
+You can also directly associate options with part of a condition in an #ask query. Instead of <code>options</code>, use <code>mapOptions</code> with an array like the following, where <code>option</code> represents the label visible to users and <code>where</code> the associated query condition:
+
+<pre>
+{
+	"label": "Century",
+	"name": "Century",
+	"inputType": "select",
+	"mapOptions": [
+		{
+			"option": "Not defined",
+			"where": "[[Has status::No date defined]]"
+		},
+		{
+			"option": "17th century",
+			"where": "[[Earliest possible date::<1699]] [[Latest possible date::>1600]]"
+		},
+		{
+			"option": "18th century",
+			"where": "[[Earliest possible date::<1799]] [[Latest possible date::>1700]]"
+		}
+	]
+}
+</pre>
+
+==== Map facet data to query conditions ====
+When a facet receives a value by user selection or typing, that value needs to be mapped to a sensible query condition. 
+
+;(1) with smwproperty
+In the most common use case, you would probably use <code>smwproperty</code> to define the property for the selected values. Properties, inverse property statements and chained properties are supported, at least to the extent that Semantic MediaWiki itself sufficiently supports their usage.
+
+<pre>
+{
+	"label": "Ingredient",
+	"smwproperty": "Has ingredient",
+	"inputType": "select",
+	//...
+}
+</pre>
+
+If "sugar" were selected, the query condition (part of the larger query argument) would become
+<pre>[[Has ingredient::sugar]]</pre>
+
+;(2) with smwproperty and subquery (advanced)
+
+Sometimes your intended query condition may be more complex than simply having a selected value assigned to your 'smwproperty' (e.g. <code>MyProperty::propertyValue</code>. If what goes after the double colon should be a <strong>subquery</strong>, add it to <code>subquery</code> and make sure that you :
+* Omit the q tags. The extension will add them for you.
+* Write <code>@@@</code> where the selected value is expected to go. The extension will replace this variable.
+
+Example:
+
+<pre>
+{
+	"label": "Keyword",
+	"inputType": "select",
+	"smwproperty": "-Belongs to",
+	"subquery": "[[Category:People]] [[Has nationality::@@@]]",
+}
+</pre>
+
+If 'Colombian' were selected, the query condition would become:
+<pre>[[-Belongs to::<q>[[Category:People]] [[Has nationality::Colombian]]</q>]]</pre>
+
+Just be aware that subqueries are known to be relatively expensive computationally and are probably best used sparingly.
+
+;(3) with mapOptions
+
+See above.
