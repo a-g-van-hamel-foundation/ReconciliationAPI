@@ -33,6 +33,24 @@
 				</details>
 			</section>
 
+			<!-- Top section with result count -->
+			<div class="recon-results-top">
+				<div class="recon-result-count">
+					<span>{{ resultCount }} <span v-if="resultCount==1">result</span><span v-else>results</span>
+					</span>
+				</div>
+				<!-- Reserved for sorter -->
+				<sort-order 
+					class="reson-sort"
+					v-model:sort="sort"
+					:sort-options="sortOptions"
+					@update-sort="updateSort"
+					v-model:order="order"
+					@update-order="updateOrder"
+				></sort-order>
+			</div>
+
+			<!-- Using Vue to format query results -->
 			<span class="loader" v-if="showLoader"></span>
 			<template v-if="smwQueryResults && smwQueryResults !== null && !templateResult">
 				<faceted-search-result
@@ -43,17 +61,12 @@
 					:value-sep="valueSep"
 				></faceted-search-result>
 			</template>
-
-			<template v-if="templateResult">
-				<div class="recon-result-count">
-					<span>{{ resultCount }} <span v-if="resultCount==1">result</span><span v-else>results</span>
-					</span>
-				</div>
-				<div
-					v-html="templateResult"
-					class="faceted-query-list"
-				></div>
-			</template>
+			
+			<!-- Query parsed -->
+			<div v-if="templateResult"
+				v-html="templateResult"
+				class="faceted-query-list"
+			></div>
 
 			<nav class="recon-pagination-wrapper">
 				<pagination
@@ -74,6 +87,7 @@
 const { defineComponent, computed, ref, reactive, defineExpose, watch, onMounted, nextTick } = require("vue");
 const Facet = require("./Facet.vue");
 const FacetedSearchResult = require("./FacetedSearchResult.vue");
+const SortOrder = require("./SortOrder.vue");
 const Pagination = require("./Pagination.vue");
 // const { CdxButton, CdxButtonGroup, CdxToggleButtonGroup, CdxIcon, CdxTabs, CdxTab, CdxTextInput, CdxLookup, CdxField, CdxRadio, CdxCheckbox, CdxSearchInput } = require( "@wikimedia/codex" );
 
@@ -82,6 +96,7 @@ module.exports = defineComponent( {
 	components: {
 		Facet,
 		FacetedSearchResult,
+		SortOrder,
 		Pagination
 	},
 	props: {
@@ -109,6 +124,31 @@ module.exports = defineComponent( {
 			var k = facet.name ?? facet.smwproperty;
 			query[k] = facet.inputType == "multiselect" ? [] : "";
 		} );
+
+		// sort and order
+		const sort = ref("");
+		if (typeof props.configData.sort !== "undefined" ) {
+			sort.value = props.configData.sort;
+		}
+		const sortOptions = ref( [] );
+		if ( props.profile?.sort !== undefined ) {
+			sortOptions.value = props.profile?.sort;
+		}
+		function updateSort(n) {
+			console.log("updateSort", n);
+			submitQuery(0, n, order.value );
+		}
+		const order = ref("asc");
+		if (typeof props.configData.order !== "undefined" ) {
+			order.value = props.configData.order;
+		};
+		console.log( "order now", order.value );
+		function updateOrder(n) {
+			console.log("updateOrder", n);
+			submitQuery(offset.value, sort.value, n);
+		}
+
+		// offset
 		const offset = ref(0);
 		function updateOffset(n) {
 			// submitQuery will adjust the offset
@@ -122,11 +162,17 @@ module.exports = defineComponent( {
 
 		const templateResult = ref( null );
 		const showLoader = ref( false );
-		function submitQuery(newOffset) {
+		function submitQuery(newOffset, newSort, newOrder) {
 			offset.value = newOffset ?? 0;
 			smwQueryResults.value = null;
 			showLoader.value = true;
 			// query, apiUrl
+			if (newSort !== undefined) {
+				sort.value = newSort;
+			}
+			if (newOrder !== undefined) {
+				order.value = newOrder;
+			}
 
 			// Build the query
 			var smwQuery = buildQuery();
@@ -381,8 +427,8 @@ module.exports = defineComponent( {
 			var options = {
 				limit: props.configData.limit,
 				offset: offset.value,
-				sort: ( typeof props.configData.sort !== "undefined" ) ? props.configData.sort : null,
-				order: ( typeof props.configData.order !== "undefined" ) ? props.configData.order : null,
+				sort: sort.value,
+				order: order.value
 			};
 			for (const [k,v] of Object.entries(options)) {
 				if ( v !== null ) {
@@ -497,6 +543,12 @@ module.exports = defineComponent( {
 			resultCount,
 			maxPages,
 
+			sort,
+			sortOptions,
+			updateSort,
+			order,
+			updateOrder,
+
 			resultsWrapper,
 
 			getTimestamp,
@@ -550,11 +602,43 @@ module.exports = defineComponent( {
 	}
 }
 
-.recon-result-count {
-  display: flex;
-  justify-content: end;
-  font-size: .8rem;
-  margin-bottom: .5rem;
+.recon-results-top {
+	display: flex;
+	justify-content: space-between;
+	margin-bottom: .5rem;
+	border-left: 1px solid #5A7179;
+	background-color: #f8f8f8;
+	label {
+		padding: 4px 0;
+	}
+	.recon-result-count {
+		display: flex;
+		justify-content: start;
+		font-size: .8rem;
+		& > span {
+			padding: 4px 8px;
+		}
+	}
+	.recon-sort {
+		display: flex;
+		justify-content: end;
+		gap: .5rem;
+		align-items: normal;
+		font-size: .8rem;
+		.cdx-select-vue__handle {
+			min-width: 125px;
+			min-height: 30px;
+			line-height: inherit;
+		}
+		.recon-order {
+			width:2rem;
+			max-width:2rem;
+		}
+		.cdx-button {
+			font-size: .8rem;
+			min-height: 30px;
+		}
+	}
 }
 
 .cdx-input-chip {

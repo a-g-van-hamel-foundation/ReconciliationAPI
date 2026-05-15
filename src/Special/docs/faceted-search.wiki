@@ -68,7 +68,14 @@ What follows is the general structure of a profile. The inline comments below ar
 			"Has occupation",
 			"Display title of"
 		]
-	}
+	},
+
+	// Sort options
+	"sort": [
+		{ "value": "", "label": "Pagename" },
+		{ "value": "Creation date", "label": "Date created" },
+		{ "value": "Modification date", "label": "Date modified" }
+	]
 }
 </pre>
 
@@ -240,3 +247,15 @@ Just be aware that subqueries are known to be relatively expensive computational
 ;(3) with mapOptions
 
 See above.
+
+=== Define sort options ===
+
+The interface comes with a widget in the upper right corner that lets users change the <code>sort</code> and <code>order</code> (asc/desc) of the query. For instance, if you want your users to be able to sort by pagename, date of page creation and date of latest revision, you could add send something like the following to the profile.
+
+<pre>
+"sort": [
+	{ "value": "", "label": "Pagename" },
+	{ "value": "Creation date", "label": "Date created" },
+	{ "value": "Modification date", "label": "Date modified" }
+]
+</pre>
