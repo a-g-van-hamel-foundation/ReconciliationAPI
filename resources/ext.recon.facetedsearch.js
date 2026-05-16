@@ -35,8 +35,14 @@
 
 	const widgets = document.querySelectorAll(".recon-faceted-search-widget");
 	widgets.forEach( function(item) {
+		// Add listener to fire
+		mw.hook("recon-faceted-fire-module").add( function($module, $el) {
+			mw.loader.using( $module ).then( function () {
+				mw.hook("wikipage.content").fire( $el );
+			} );
+		} );
 		const configData = item.dataset;
-		var App = require( "ext.recon.facetedsearch.components" ).FacetedSearch;
+		var App = require("ext.recon.facetedsearch.components").FacetedSearch;
 		initApp( App, item, configData );
 	});
 

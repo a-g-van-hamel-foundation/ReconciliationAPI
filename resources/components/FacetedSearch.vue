@@ -19,6 +19,7 @@
 
 		</div>
 		<div class="recon-results" ref="resultsWrapper">
+
 			<section v-if="debug">
 				<div style="margin-bottom:.5rem;">
 				<i>Profile: {{ configData.profile }}</i></div>
@@ -135,16 +136,14 @@ module.exports = defineComponent( {
 			sortOptions.value = props.profile?.sort;
 		}
 		function updateSort(n) {
-			console.log("updateSort", n);
+			// console.log("updateSort", n);
 			submitQuery(0, n, order.value );
 		}
 		const order = ref("asc");
 		if (typeof props.configData.order !== "undefined" ) {
 			order.value = props.configData.order;
 		};
-		console.log( "order now", order.value );
 		function updateOrder(n) {
-			console.log("updateOrder", n);
 			submitQuery(offset.value, sort.value, n);
 		}
 
@@ -163,6 +162,7 @@ module.exports = defineComponent( {
 		const templateResult = ref( null );
 		const showLoader = ref( false );
 		function submitQuery(newOffset, newSort, newOrder) {
+			// offset, sort and order
 			offset.value = newOffset ?? 0;
 			smwQueryResults.value = null;
 			showLoader.value = true;
@@ -174,11 +174,12 @@ module.exports = defineComponent( {
 				order.value = newOrder;
 			}
 
-			// Build the query
+			// Build the query, to be completed later
 			var smwQuery = buildQuery();
 
+			// Do result count separately
 			setResultCount( smwQuery );
-			
+
 			// Transfer any additional #ask parameters from the config
 			//var askParams = JSON.parse( props.configData.askParams );
 			if ( typeof askParams.value !== "undefined" ) {
@@ -187,41 +188,19 @@ module.exports = defineComponent( {
 				}
 			}
 
-			// Create full #ask query syntax
-			var askPF = null;
-			var format = props.configData.resultFormat
-				?? ( props.configData.template ? "plainlist" : null );
-
-			if (format === null || format === "") {
-				// askPF=null = do not parse #ask query
-				// Leave formatting to FacetedSearchResult
-			} else if ( format == "plainlist" && props.configData.template ) {
-				var askPF = `{{#ask: ${smwQuery} |format=${format} |template=${props.configData.template} |link=none |?=Page |namedargs=true |searchlabel= |valuesep=${valueSep.value} }}`;
-			} else if(format == "table" || format == "broadtable") {
-				// searchlabel= 
-				var askPF = `{{#ask: ${smwQuery} |format=${format} |valuesep=${valueSep.value} |searchlabel= }}`;
-			} else if(format == "datatables") {
-				// Not yet working
-				var askPF = `{{#ask: ${smwQuery}
-				|format=${format} 
-				|valuesep=${valueSep.value} 
-				}}`;
-			} else if(format == "gallery") {
-				var askPF = `{{#ask: ${smwQuery} 
-				|format=${format} 
-				|valuesep=${valueSep.value}
-				}}`;
-			} else {
-				var askPF = `{{#ask: ${smwQuery} 
-				|format=${format} 
-				|valuesep=${valueSep.value} 
-				|template=${props.configData.template} 
-				}}`;
-			}
+			/* Three 'output' types:
+			 * "ask" - an #ask query is parsed
+			 * "template" - a template that receives the query is parsed
+			 * "basic" - uses child component for basic presentation
+			*/
+			var output = props.configData.output;
 
 			// Run the query
-			if ( askPF !== null ) {
-				// Parse the full #ask syntax
+			if ( output == "ask" ) {
+				var format = props.configData.resultFormat
+				?? ( props.configData.template ? "plainlist" : null );
+
+				var askPF = createAskPF(format, smwQuery);
 				console.log( "#ask", askPF );
 
 				showLoader.value = true;
@@ -230,20 +209,31 @@ module.exports = defineComponent( {
 				.done(function(rawData) {
 					templateResult.value = rawData;
 					showLoader.value = false;
-					var formatsWithRLModules = [ "datatables", "gallery", "iiif-annotation-gallery", "iiif-canvas-viewer" ];
-					//console.log(`rawData for ${format}`, rawData );
-	
-					if ( formatsWithRLModules.includes(format) ) {
-						console.log( "Format with RL modules detected:", format);
-						handleModulesForApiResponse(format);
+					handleModulesForApiResponse(format);
+				})
+				.fail(function() {
+					showLoader.value = false;
+					console.error("Parsing failed...");
+				});
+			} else if(output == "template" && props.configData.template ) {
+				var tpl = `{{${props.configData.template} |query=${smwQuery} }}`;
+				console.log( "template", tpl);
+				new mw.Api().parse( tpl )
+				.done( (rawData) => {
+					templateResult.value = rawData;
+					showLoader.value = false;
+					if ( props.configData.resultFormats !== "" ) {
+						props.configData.resultFormats.split(",").forEach( (f) => {
+							handleModulesForApiResponse(f);
+						});
 					}
 				})
 				.fail(function() {
 					showLoader.value = false;
-					console.error( "Parsing failed..." );
+					console.error("Parsing of the template failed...");
 				});
 			} else {
-				// Get results from SMW's ask API
+				// Basic. Get results from SMW's ask API
 				// and do whatever
 				const smwAskApi = new mw.ForeignApi( apiUrl.value, { anonymous: false } );
 				const smwAskParams = {
@@ -258,7 +248,6 @@ module.exports = defineComponent( {
 					if ( data.query == undefined ) {
 						return;
 					}
-					// console.log( "data.query?.results", data.query?.results );
 					if ( typeof data.query?.results == "object" ) {
 						smwQueryResults.value = data.query?.results;
 					}
@@ -268,11 +257,26 @@ module.exports = defineComponent( {
 				} )
 				.fail(function() {
 					showLoader.value = false;
-					console.error( "Query failed..." );
+					console.error("Query failed...");
 					smwQueryResults.value = {};
 					smwQueryResultKey.value = getTimestamp();
 				});
 			}
+		}
+
+		function createAskPF(format, smwQuery) {
+			if ( format == "plainlist" && props.configData.template ) {
+				var askPF = `{{#ask: ${smwQuery} |format=${format} |template=${props.configData.template ?? ""} |link=none |?=Page |namedargs=true |searchlabel= |valuesep=${valueSep.value} }}`;
+			} else if(format == "table" || format == "broadtable") {
+				// Just because searchlabel= 
+				var askPF = `{{#ask: ${smwQuery} |format=${format} |valuesep=${valueSep.value} |searchlabel= }}`;
+			} else {
+				var askPF = `{{#ask: ${smwQuery} 
+				|format=${format} 
+				|valuesep=${valueSep.value} 
+				|template=${props.configData.template ?? ""} }}`;
+			}
+			return askPF;
 		}
 
 		/**
@@ -284,7 +288,6 @@ module.exports = defineComponent( {
 		 */
 		async function handleModulesForApiResponse(format) {
 			await nextTick();
-			console.log( "init handleModulesForApiResponse() defining modules for format", format );
 
 			// Define modules required for each format
 			var modules = null;
@@ -327,13 +330,15 @@ module.exports = defineComponent( {
 					//"ext.iiif.lib.ace", "ext.iiif.lib.ace.utils" 
 					//modules.push([ "ext.iiif.lib.ace", "ext.iiif.lib.ace.utils" ]);
 				break;
+				case "leaflet":
+					var modules = [ "ext.maps.leaflet.loader" ];
+				break;
 			}
 
 			if ( modules !== null ) {
 				modules.forEach( (mod) => {
 					// Check module state before loading
 					var state = mw.loader.getState(mod);
-					console.log( `Module load state BEFORE loading: ${mod}`, state );
 
 					// Abort if unregistered
 					if ( mw.loader.getState(mod) === null ) {
@@ -341,11 +346,13 @@ module.exports = defineComponent( {
 						return;
 					}
 
-					// Works only for modules that allow multiple loads
-					// especially dynamically added content
+					// Works only for modules that allow for dynamically added content
+					mw.hook("recon-faceted-fire-module").fire( mod, $(resultsWrapper.value) );
+					/* OLD:
 					mw.loader.using( mod ).then( function () {
 						mw.hook( 'wikipage.content' ).fire( $(resultsWrapper.value) );
 					} );
+					*/
 				} );
 			}
 		}

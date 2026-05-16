@@ -18,20 +18,30 @@ class ReconFacetedSearch {
 			// Either profile or profileid is mandatory
 			"profile" => null,
 			"profileid" => null,
-			// wiki template:
-			"template" => null,
-			// #ask parameters
+			"output" => "ask",
+
+			// #ask parameters if 
 			"format" => null,
+			// ! template used for both 'ask' and 'template'
+			"template" => null,
 			"limit" => "10",
 			"sort" => null,
 			"order" => null,
+
+			// additional when output = 'template'
+			"resultformats" => "",
+
 			// pagination
 			"maxpages" => "5",
 			// active if "true":
 			"scrollmargintop" => "0px",
 			"debug" => null
 		];
-		[ $profile, $profileId, $template, $format, $limit, $sort, $order, $maxPages, $scrollMarginTop, $debug ] = array_values( ParserFunctionUtils::extractParams( $frame, $args, $paramsAllowed ) );
+		[ $profile, $profileId, $output, $format, $template, $limit, $sort, $order, $resultFormats, $maxPages, $scrollMarginTop, $debug ] = array_values( ParserFunctionUtils::extractParams( $frame, $args, $paramsAllowed ) );
+		if ( $output === "ask" && $format === null && $template === null ) {
+			// reset
+			$output = "basic";
+		}
 
 		// SMW parameters 
 		$askParams = [];
@@ -70,6 +80,8 @@ class ReconFacetedSearch {
 			"data-smw-elastic" => $smwgDefaultStore == "SMW\Elastic\ElasticStore" ? "1" : "0",
 			"data-smw-fts-mintokensize" => $smwgFulltextSearchMinTokenSize,
 
+			"data-output" => $output,
+
 			// smw
 			"data-result-format" => $format,
 			"data-template" => $template,
@@ -77,6 +89,8 @@ class ReconFacetedSearch {
 			"data-sort" => $sort,
 			"data-order" => $order,
 			"data-ask-params" => json_encode( $askParams, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ),
+
+			"data-result-formats" => $resultFormats,
 
 			"data-maxpages" => $maxPages,
 			"data-scrollmargintop" => $scrollMarginTop,
