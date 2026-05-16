@@ -12,10 +12,9 @@
 				@update:selected="onUpdateSelectedSort"
 			></cdx-select>
 		</template>
-		<template v-else><label>Sort by pagename</label></template>
 
 		<!-- order -->
-		<div class="recon-order">
+		<div class="recon-order" v-if="sortOptions.length > 0">
 			<cdx-button
 				@click="onUpdateSelectedOrder(order)"
 				v-model:selected="order"
