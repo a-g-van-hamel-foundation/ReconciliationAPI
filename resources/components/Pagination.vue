@@ -49,22 +49,24 @@ module.exports = defineComponent( {
 				indicator: "sibling"
 			});
 
-			// Possibly, add first page and ellipsis
-			if ( currPage > middleNumber && pageStart !== 0 ) {
-				paginationList.push(
-					{
-						class: "page-item",
-						targetOffset: 0,
-						text: "1",
-						indicator: "number"
-					},
-					{
-						class: "page-item disabled",
-						targetOffset: null,
-						text: "…",
-						indicator: "ellipsis"
-					}
-				);
+			// Possibly, add first page if not already there
+			if (currPage > middleNumber && pageStart !== 0) {
+				paginationList.push({
+					class: "page-item",
+					targetOffset: 0,
+					text: "1",
+					indicator: "number"
+				});
+			}
+
+			// Possible, add ellipsis
+			if (currPage > (middleNumber+1) && pageStart !== 0) {
+				paginationList.push({
+					class: "page-item disabled",
+					targetOffset: null,
+					text: "…",
+					indicator: "ellipsis"
+				});
 			}
 
 			// Pages
