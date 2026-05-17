@@ -257,11 +257,12 @@ module.exports = defineComponent( {
 }
 
 .recon-radios-horizontal {
-  display: flex;
-  gap: 1rem;
-  .cdx-radio {
-	margin-bottom: 0;
-  }
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+	.cdx-radio {
+		margin-bottom: 0;
+	}
 }
 @media(max-width:767px) {
 	.recon-radios-horizontal {
