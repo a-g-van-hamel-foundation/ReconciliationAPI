@@ -235,10 +235,13 @@ class SMWQueryBuilder {
 			$rawTypeQuery = SMWQuerySyntaxConverters::translateTypesToSMWSyntax( $types );
 			$rawPropValQuery = SMWQuerySyntaxConverters::translatePropValPairsToSMWSyntax( $properties );
 			$queryProp = $this->getQueryProperty( $this->useDisplayTitle );
-			$fromQuery = trim($rawTypeQuery . $rawPropValQuery ) == ""
+			//print_r( $queryProp);
+			if ( trim($rawTypeQuery . $rawPropValQuery ) === "" ) {
 				// @todo should we really restrict to existing pages only?
-				? "[[Modification date::+]]"
-				: $rawTypeQuery . $rawPropValQuery;
+				$fromQuery = "[[Modification date::+]]";
+			} else {
+				$fromQuery = $rawTypeQuery . $rawPropValQuery;
+			}
 			// A fallback though less than ideal.
 			$isSinglePageRestriction = ( $queryProp === false || $useDisplayTitle === false ) ? true : false;
 			$this->substringProcessed = $this->getReplacementString(
@@ -247,6 +250,7 @@ class SMWQueryBuilder {
 				false,
 				$isSinglePageRestriction
 			);
+
 			$this->hideNamespacePrefix = true;
 			if ( $queryProp === false ) {
 				$smwMethod = "SMW query by single page restriction";
@@ -254,7 +258,11 @@ class SMWQueryBuilder {
 				//$rawQuery = "{$fromQuery} [[~*{$this->substringProcessed}]]";
 			} else {
 				$smwMethod = "SMW query by property '$queryProp'";
-				$rawQuery = "{$fromQuery} [[{$queryProp}::~{$this->substringProcessed}]]";
+				// Subtle difference
+				$rawQuery = $this->substringProcessed !== "+"
+					? "{$fromQuery} [[{$queryProp}::~{$this->substringProcessed}]]"
+					: "{$fromQuery} [[{$queryProp}::+]]";
+				//print_r($rawQuery);
 			}
 		}
 
@@ -727,8 +735,8 @@ class SMWQueryBuilder {
 				}
 				*/
 				$newStatements[] = ( $substring === "" && $this->wgReconAPIQueryTrigger === "always" )
-						? ( $base !== "" ? $base : "[[Creation date::+]]" )
-						: $base . " " . implode( " ", $conditionsReplaced );
+					? ( $base !== "" ? $base : "[[Creation date::+]]" )
+					: $base . " " . implode( " ", $conditionsReplaced );
 			}
 			$rawQuery = implode( " OR ", $newStatements );
 		}

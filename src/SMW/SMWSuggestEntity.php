@@ -13,13 +13,13 @@
 
 namespace Recon\SMW;
 
-use \SMW\StoreFactory;
+//use \SMW\StoreFactory;
 use \SMW\StringCondition;
 use Recon\ReconUtils;
 use Recon\StringModification\StringModifier;
 use Recon\SMW\SMWQueryBuilder;
 use Recon\SMW\SMWQuerySyntaxConverters;
-use Recon\SMW\SMWResultFormatter;
+//use Recon\SMW\SMWResultFormatter;
 
 class SMWSuggestEntity {
 
@@ -88,10 +88,11 @@ class SMWSuggestEntity {
 		$types = [],
 		$properties = []
 	) {
-		// Unfortunately, we need to run this query separately from 
-		// the main one
+		// Query for exact matches. Unfortunately, we need to run 
+		// it separately from the main one
 		$exactMatches = $this->runQueryForExactMatch( $substring, $useDisplayTitle, $profileID, $types, $properties, $concept );
 
+		// Prepare SMWQueryBuilder
 		$smwQueryBuilder = new SMWQueryBuilder();
 		$smwQueryBuilder->setOptions(
 			$this->resultOffset,
@@ -102,6 +103,7 @@ class SMWSuggestEntity {
 		}
 		$this->substringPattern = $substringPattern ?? "tokenprefix";
 
+		// And run SMWQueryBuilder to fetch results
 		$qRes = $smwQueryBuilder->run(
 			$substring,
 			$this->substringPattern,
@@ -112,8 +114,10 @@ class SMWSuggestEntity {
 			$types,
 			$properties
 		);
-		$this->computedBatchCount = $qRes["meta"]["resultBatchCount"];
 
+		// Get result batch count, to be corrected later
+		// if exact matches were found
+		$this->computedBatchCount = $qRes["meta"]["resultBatchCount"];
 		if ( count($exactMatches) > 0 && $this->resultOffset === 0 ) {
 			$qRes["result"] = $this->mergeExactMatchIntoQueryResult( $qRes["result"], $exactMatches );
 		} elseif( count($exactMatches) > 0 ) {
@@ -129,14 +133,15 @@ class SMWSuggestEntity {
 				}
 			}
 		}
-
 		// Update batch count
 		$qRes["meta"]["resultBatchCount"] = $this->computedBatchCount;
 
+		// Adapt to Page Forms formatting if requested
 		if ( $this->formatForPageForms ) {
 			return ReconUtils::formatResultForPageForms( $qRes );
 		}
 
+		// Return in canonical format
 		$res = [
 			"result" => $qRes["result"],
 			"meta" => $qRes["meta"]
@@ -165,11 +170,15 @@ class SMWSuggestEntity {
 		}
 		// Assumption: there should be only a single exact match
 
-		// No duplicate found? Remove final item
-		if ( $countRemoved === 0 && count($qResults) > 0 ) {
-			array_splice( $qResults, count($qResults) - 1, 1 );
-			$this->computedBatchCount--;
+		// @todo
+		// Adding exact result but no duplicate found? 
+		// Then the last item might be supernumerous, 
+		// if result batch count = resultLimit + 1
+		if ( $countRemoved === 0 && count($qResults) === $this->resultLimit ) {
+			//array_splice( $qResults, count($qResults) - 1, 1 );
+			//$this->computedBatchCount--;
 		}
+
 		// Add exact match to start
 		array_unshift( $qResults, $exactMatches[0] );
 		$this->computedBatchCount++;
@@ -180,6 +189,7 @@ class SMWSuggestEntity {
 	/**
 	 * Support 6.4: "supplying an entity identifier as prefix 
 	 * should return this entity in the suggest response"
+	 * Query also returns redirect targets.
 	 * @return array
 	 */
 	private function runQueryForExactMatch(
@@ -189,7 +199,10 @@ class SMWSuggestEntity {
 		$types,
 		$properties,
 		$concept = null
-	) {
+	): array {
+		if( trim($substring) === "" ) {
+			return [];
+		}
 		$smwQueryBuilder = new SMWQueryBuilder();
 		$smwQueryBuilder->setOptions(
 			0,
@@ -210,10 +223,16 @@ class SMWSuggestEntity {
 			// Create raw query condition
 			$rawTypeQuery = SMWQuerySyntaxConverters::translateTypesToSMWSyntax( $types );
 			$rawPropValQuery = SMWQuerySyntaxConverters::translatePropValPairsToSMWSyntax( $properties );
-			$fromQuery = trim($rawTypeQuery . $rawPropValQuery ) == ""
-				? "" // "[[Modification date::+]]"
-				: $rawTypeQuery . $rawPropValQuery;
-			$rawQuery = "{$fromQuery} [[{$substring}]]";
+			if ( trim($rawTypeQuery . $rawPropValQuery ) == "" ) {
+				// We rely on 'Modification date' to make sure the page 
+				// exists, has an ID, etc.; on inverse 'Has subobject' in
+				// the rare event the semantic object is a subobject.
+				$rawQuery = "[[Modification date::+]] [[{$substring}]] OR [[-Has subobject::+]] [[{$substring}]]";
+			} else {
+				// @todo create ticket
+				// For some reason [[Concept:Pages]] [[Page]] can return the named page even if it is not part of the concept.
+				$rawQuery = "[[Modification date::+]] {$rawTypeQuery}{$rawPropValQuery} [[{$substring}]] OR [[-Has subobject::+]] {$rawTypeQuery}{$rawPropValQuery} [[{$substring}]]";
+			}
 		}
 
 		// Formatting using printout properties
