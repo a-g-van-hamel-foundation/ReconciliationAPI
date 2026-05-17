@@ -1,4 +1,4 @@
-<p class="recon-summary">This extension comes with an experimental version of faceted search for Semantic MediaWiki. It is a customisable widget that uses fixed filters to let users narrow down search results. It is enabled through a parser function <code>#recon-faceted-search</code>, which takes most of its instructions from a user-provided configuration profile in JSON. For any API-based facet, it relies on reconciliation profiles whose page IDs only need to be referenced in a faceted search profile.</p>
+<p class="recon-summary">This extension comes with an experimental version of faceted search for Semantic MediaWiki. It is a customisable tool that uses fixed filters to let users narrow down search results. It is enabled through a parser function <code>#recon-faceted-search</code>, which takes most of its instructions from a user-provided configuration profile in JSON. For any API-based facet, it relies on reconciliation profiles whose page IDs only need to be referenced in a faceted search profile.</p>
 
 == Parser function <code>#recon-faceted-search</code> ==
 To add faceted search to a wiki page, add an instance of the <code>#recon-faceted-search</code> parser function : 
@@ -6,11 +6,18 @@ To add faceted search to a wiki page, add an instance of the <code>#recon-facete
 <pre>
 {{#recon-faceted-search:
 |profile= // Mandatory
-|valuesep=
+|output= / ask, template or basic
+|resultformats= // only if output=template
+
+// if output=ask
+|format= // result format
 |template=
 |limit=
 |sort=
 |order=
+|valuesep=
+// and other #ask-specific parameters
+
 |maxpages=
 |scrollmargintop=
 |debug=
@@ -18,18 +25,67 @@ To add faceted search to a wiki page, add an instance of the <code>#recon-facete
 </pre>
 
 * '''profile''' - Pagename of your config profile (mandatory)
-* <code>#ask</code> parameters:
-** '''template''' - The wiki template to use to format query results. Currently works for properties of datatype Text, Page and Date. Without "template", a minimal presentation will be used instead.
+* '''output''' - what output method to use for your query results. You can decide between three options :
+** (1) 'ask' (default) - create an <code>#ask</code> query and have that parsed.
+** (2) 'template' - leave it up to a wiki template to run queries and visualise data. The template just receives the query condition along with other dynamic data such as 'offset' and 'sort'. More advanced but also more flexible and useful, for instance, if you want to pair two different visualisations.
+** (3) 'basic' - a minimal presentation will be used instead.
+* '''resultformats''' - used exclusively with output=template to establish which ResourceLoader modules must be loaded. See relevant section below.
+** '''template''' - if output=ask, the wiki template to be used to format query results; if output=template, the wiki template to be used for handling the query.
+* (other) <code>#ask</code> parameters:
 ** '''valuesep''' (default: ;) - the delimiter for property values.
 ** '''sort''' - Optionally, the property by which to sort the #ask query. SMW's default is to sort by page sortkey or pagename.
 ** '''order''' - asc/ascending (SMW's default) or desc/descending
 ** '''limit'''  (default: 10) - maximum number of results to show at a time
+** You can use any other <code>#ask</code> parameter.
 * Pagination options:
 ** '''maxpages''' (default: 5) - maximum number of pages to show in the pagination widget, with the possible exception of a first and last number.
 ** '''scrollmargintop''' - When you use the pagination widget at the bottom of your search results, the page will automatically scroll up to the top. If your site happens to use a fixed header, the unfortunate side-effect is that the very top of the widget will then be buried under the header. To remedy this, set 'scrollmargintop' to the height of your header, including a unit such as 'px' or 'em'.
 * '''debug''' - If set to "true", some additional info about your query and query results will be shown to help you debug any possible issues.
 
+=== Result formats and ResourceLoader modules ===
+Result formats such as 'plainlist' (with template) and 'table'/'broadtable' should be usable out of the box. To be fully functional, many more advanced result formats require one or multiple ResourceLoader modules to be loaded. Unfortunately, many of them have not been written to support deferred DOM updates by third-party tools such as ours. Known exceptions are those that have up set up a listener in their code:
+
+* <code>leaflet</code>, part of the Maps extension
+* <code>iiif-annotation-gallery</code>, part of the IIIF extension
+* <code>iiif-canvas-viewer</code>, also part of the IIIF extension
+
+<code>gallery</code>, without the use of any widgets or overlays, is at least supported.
+
+If you are using 'template' as your 'output' mode and your template uses any result format, then add a comma-separated list of these formats to '''resultformats'''. For instance, if you add 'leaflet', this extension makes sure the required ResourceLoader module is available in time for the map to initialise.
+
+=== Examples ===
+
+;ask
+<pre>{{#recon-faceted-search:
+|profile=Recon:FacetedSearch/Recipes
+|output=ask
+|format=plainlist
+|template=Show recipe
+|link=none
+|named args=true
+|valuesep=;
+|limit=10
+|maxpages=5
+}}</pre>
+
+;template
+<pre>{{#recon-faceted-search:
+|profile=Recon:FacetedSearch/Recipes
+|output=template
+|template=RecipeSearch
+|resultformats=leaflet
+|maxpages=5
+}}</pre>
+
+;basic
+<pre>{{#recon-faceted-search:
+|output=basic
+|profile=Recon:FacetedSearch/Recipes
+|maxpages=5
+}}</pre>
+
 == Configuration profile ("FacetedSearchProfile") ==
+
 Remember the <code>profile</code> parameter above? The parser function requires a configuration profile in JSON in which you have defined the base query that should always apply, the facets you want to use and a list of properties to print to the query result. This profile, like the reconciliation profile, is best saved as a wiki page in the <code>Recon</code> namespace. Try to be consistent when naming your profile pages (e.g. <code>Recon:FacetedSearch/Recipes</code>, <code>Recon:FacetedSearch/Events</code>, etc.). 
 
 === General structure ===
@@ -87,7 +143,7 @@ The following JSON keys are available for configuring a facet. Their usage will 
 * '''name''' - unique name (see below)
 * '''smwproperty''' - the property to be used in the query, or an inverse query, or a property chain
 * '''subquery''' - optionally, a subquery to be used for 'smwproperty', without q tags and with @@@ as placeholder for the selected value. 
-* Data source options:
+* Data source options, each of which will be explained below :
 ** '''profileid'''
 ** '''valuesFromProperty'''
 ** '''options'''
@@ -105,12 +161,25 @@ When in doubt, just add a value to <code>name</code>.
 A text input is commonly used once at the top of all facets to perform partial matching on the title and other essential keywords.
 
 ;single-page restriction
-Single-page restriction is assumed if you do not provide a property to `smwproperty`.
+Single-page restriction is assumed if you omit <code>smwproperty</code>.
 
 <pre>
 {
 	"label": "Page name",
+	"inputType": "text"
+}
+</pre>
+
+;exact match
+By default, this input type assumes the property value will be fed to a wildcard match when the query is run. If you strictly need an exact match instead, set "smwpropertyMatch" to "exact", as below.
+
+<pre>
+{
+	"label": "Identifier",
+	"name": "Identifier",
 	"inputType": "text",
+	"smwproperty": "Has identifier number",
+	"smwpropertyMatch": "exact"
 }
 </pre>
 

@@ -212,7 +212,7 @@ class ReconSpecial extends SpecialPage {
 			],
 			"recon" => [
 				"type" => "page",
-				"pagename" => "Reconciliation API modules: <code>recon</code>",
+				"pagetitle" => "Reconciliation API modules: <code>recon</code>",
 				"menutitle" => "recon",
 				"file" => "recon.wiki"
 			],
