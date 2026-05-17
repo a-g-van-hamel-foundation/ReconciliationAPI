@@ -59,9 +59,11 @@ class SMWQueryHelperForFTS {
 		string $substring,
 		bool $isSinglePageRestriction = false,
 		mixed $substrPattern = "tokenprefix"
-	) {
-		// Replace foll. characters with special meaning in FTS
-		$substring = str_replace( [ "+", "-", "*" ], " ", $substring );
+	): string {
+		// Replace foll. characters with special meaning in
+		// FTS (+, -, *) and others that can cause a
+		// RuntimeException ( :, ' ) with a space
+		$substring = str_replace( [ "+", "-", "*", ":", "'" ], " ", $substring );
 
 		// Important! Non-tokens can throw RuntimeExceptions
 		// e.g. with MATCH (*) IN BOOLEAN MODE
@@ -69,7 +71,11 @@ class SMWQueryHelperForFTS {
 		$sanitizerFactory = new SanitizerFactory();
 		$textSanitizer = new TextSanitizer( $sanitizerFactory );
 
-		// Separate all phrases between double quotes ("...") from the substring
+		// Prepare string for division into units, i.e. 
+		// phrases in quotes and tokens
+
+		// Phrases between double quotes ("...") from the substring
+		// get special treatment and should be separated first.
 		$pattern = '`"([^"]*)"`';
 		$phrasesInQuotes = [];
 		$substring = preg_replace_callback(
@@ -83,7 +89,7 @@ class SMWQueryHelperForFTS {
 				} elseif( iconv_strlen( $match[0] ) >= $this->smwgFulltextSearchMinTokenSize + 2 ) {
 					$phrasesInQuotes[] = "+" . $match[0];
 				} else {
-					// Avoid RuntimeException
+					// Guard against RuntimeException
 					$phrasesInQuotes[] = $match[0];
 				}
 				return "";
@@ -92,25 +98,27 @@ class SMWQueryHelperForFTS {
 		);
 
 		// Apply syntax to tokens
-		$tokens = explode( " ", trim( $substring ) );
-
-		$phraseCount = count( $phrasesInQuotes ) + count( $tokens );
 		$newTokens = [];
+		$tokens = explode( " ", trim( $substring ) );
+		$phraseCount = count( $phrasesInQuotes ) + count( $tokens );
+
 		// @todo should we look at entire substring length, too?
-		// e.g. [[~Ab*]] - might work better if switching back to like:
+		// e.g. [[~Ab*]] - might work better if switching back to 'like:'
 		foreach( $tokens as $token) {
+			// Get string for countable bytes
 			// @todo support apostrophes like O'B, O'Br => internal error
 			// beware of multi-byte characters
 			//$countableToken = StringModifier::flattenString( trim( $token ) );
 			$countableToken = $textSanitizer->sanitize( $token, false );
-			//$countableToken = trim( $token );
+
 			if ( $isSinglePageRestriction ) {
 				// e.g. [[~Aa* Ba*]] may be fine but tokenisation is limited.
 				// stringprefix: ...*; tokenprefix: fall back to stringprefix; allchars: *...*
 				$newTokens[] = $substrPattern === "allchars" ? "*{$token}*" : "{$token}*";
-			} elseif( iconv_strlen( $countableToken ) >= $this->smwgFulltextSearchMinTokenSize ) {
+			} elseif( iconv_strlen($countableToken) >= $this->smwgFulltextSearchMinTokenSize ) {
 				// Add + boolean operator to each individual token
-				// to create an AND relationship (unsafe for non-tokens)
+				// to create an AND relationship
+				// Unsafe for non-tokens
 				if ( $token !== "..." ) {
 					$newTokens[] = "+{$token}*";
 				}
@@ -118,9 +126,16 @@ class SMWQueryHelperForFTS {
 				// No boolean '+' for shorter strings
 				// and append asterisk only if a single token is used
 				// or else we'll get a fatal error RunTimeException
-				$newTokens[] = ( $phraseCount === 1 ) ? "{$token}*" : $token;
-			} else {				
-				$newTokens[] = $token;
+				$newTokens[] = $phraseCount === 1 ? "{$token}*" : $token;
+			} else {
+				if( count($tokens) == 1 && count( $phrasesInQuotes ) == 0 ) {
+					// Standard SQLStore asterisk. Safe to add
+					// (1) if we have a single unit
+					// (2) if phrase quotes are unused
+					$newTokens[] = "{$token}*";
+				} else {
+					$newTokens[] = "{$token}";
+				}
 			}
 		}
 

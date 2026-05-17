@@ -170,11 +170,11 @@ class SMWSuggestEntity {
 		}
 		// Assumption: there should be only a single exact match
 
-		// @todo
 		// Adding exact result but no duplicate found? 
 		// Then the last item might be supernumerous, 
 		// if result batch count = resultLimit + 1
 		if ( $countRemoved === 0 && count($qResults) === $this->resultLimit ) {
+			// @todo
 			//array_splice( $qResults, count($qResults) - 1, 1 );
 			//$this->computedBatchCount--;
 		}
