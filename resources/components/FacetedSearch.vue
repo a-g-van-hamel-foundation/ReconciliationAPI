@@ -395,7 +395,7 @@ module.exports = defineComponent( {
 							smwQueryObj[k] = mapOption.where;
 						} else {
 							// API
-							var newQ = assignToProperty( facet.smwproperty, query[k], facet.subquery );
+							var newQ = assignToProperty( facet.smwproperty, query[k], facet.subquery, facet );
 							smwQuery += newQ + ` `;
 							smwQueryObj[k] = newQ;
 						}
@@ -415,12 +415,32 @@ module.exports = defineComponent( {
 						var substr = sanitiseString(query[k]);
 						if ( typeof facet.smwproperty !== "undefined" ) {
 							// @todo - no comprehensive checks yet
-							smwQuery += getReplacementString(substr, facet.smwproperty, usesTokens, minTokenSize) + ` `;
-							smwQueryObj[k] = getReplacementString(substr, facet.smwproperty, usesTokens, minTokenSize);
+							var q = ``;
+							switch( facet.smwpropertyMatch ?? "tokenprefix" ) {
+								// 'contains'?
+								case "tokenprefix":
+									var q = getReplacementString(substr, facet.smwproperty, usesTokens, minTokenSize);
+								break;
+								case "exact":
+									var q = `[[${facet.smwproperty}::${substr}]]`;
+								break;
+							}
+							smwQuery += q + ` `;
+							smwQueryObj[k] = q;
 						} else {
 							// Assuming single-page restriction
-							smwQuery += `[[~${substr}*]] `;
-							smwQueryObj[k] = `[[~${substr}*]]`;
+							var q = ``;
+							switch( facet.smwpropertyMatch ?? "tokenprefix" ) {
+								// 'contains'?
+								case "tokenprefix":
+									var q = `[[~${substr}*]]`;
+								break;
+								case "exact":
+									var q = `[[${substr}]]`;
+								break;
+							}
+							smwQuery += q + ` `;
+							smwQueryObj[k] = q;
 						}
 					break;
 				}
@@ -476,7 +496,8 @@ module.exports = defineComponent( {
 					if ( count >= minTokenSize ) {
 						newStr += `+${str}* `;
 					} else {
-						// ?
+						// @todo: ${str} vs ${str}* ?
+						console.log("small token size");
 						newStr += `${str} `;
 					}
 				} );
