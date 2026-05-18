@@ -374,6 +374,7 @@ module.exports = defineComponent( {
 				switch(facet.inputType) {
 					case "select":
 					case "lookup":
+					case "radio":
 						// = codex select or lookup
 						smwQueryObj[k] = "";
 						/*if ( facet.subquery !== undefined ) {
@@ -674,7 +675,7 @@ module.exports = defineComponent( {
 }
 /* May not fit otherwise */
 .cdx-input-chip__text {
-  white-space: wrap;
+	white-space: wrap;
 }
 
 /* Fix for min-width/sudden flicker in codex select */

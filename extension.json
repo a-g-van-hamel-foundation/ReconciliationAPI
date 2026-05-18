@@ -157,7 +157,7 @@
 				"@wikimedia/codex"
 			],
 			"codexComponents": [
-				"CdxTextInput", "CdxSelect", "CdxLookup", "CdxMultiselectLookup", "CdxIcon"
+				"CdxTextInput", "CdxSelect", "CdxLookup", "CdxMultiselectLookup", "CdxIcon", "CdxRadio"
 			]
 		}
 	},

@@ -66,6 +66,11 @@ class ReconFacetedSearch {
 		$rlModules = [ "ext.recon.facetedsearch" ];
 		if ( $format && $format === "iiif-canvas-viewer" ) {
 			$rlModules[] = "ext.iiif.ace";
+		} elseif( $format && $format === "gallery" ) {
+			// MMV buggy - needs to know images upfront?
+			//$rlModules[] = "mmv";
+			//$rlModules[] = "mmv.carousel";
+			//$rlModules[] = "mmv.ui.beta";
 		}
 		$parser->getOutput()->addModules( $rlModules );
 

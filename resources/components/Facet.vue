@@ -47,9 +47,6 @@
 					@focus="onMultiselectInput('')"
 					@keyup.enter="onEnter()"
 				>
-				<!--
-				query[name]
-				  -->
 				</cdx-multiselect-lookup>
 			</div>
 		</div>
@@ -67,19 +64,43 @@
 			</div>
 		</div>
 	</template>
+	<template v-else-if="componentType === 'radio'">
+		<div class="form-group form-group-v">
+			<div><label>{{ label }}</label></div>
+			<div class="recon-radio-group" role="radiogroup">
+				<cdx-radio
+					v-for="(radio, index) in selectList"
+					:key="'radio-' + radio.name + radio.value + index"
+					v-model="query[name]"
+					:name="name"
+					:input-value="radio.value"
+					@update:model-value="onUpdateSelected"
+				>
+					<span v-html="radio.label"></span>
+				</cdx-radio>
+				<!-- CdxButton -->
+				<a v-if="hasFurtherResults"
+					@click="requestAdditionalRadioOptions"
+				>
+					<cdx-icon :icon="cdxIconDownTriangle" size="x-small"></cdx-icon> More&hellip;
+				</a>
+			</div>
+		</div>
+	</template>
 
 </template>
 
 <script>
 const { defineComponent, computed, ref, reactive, watch } = require("vue");
-const { CdxTextInput, CdxSelect, CdxLookup, CdxMultiselectLookup } = require( "@wikimedia/codex" );
+const { CdxTextInput, CdxSelect, CdxLookup, CdxMultiselectLookup, CdxRadio, CdxIcon } = require( "@wikimedia/codex" );
+const { cdxIconDownTriangle } = require( './icons.json' );
 
 module.exports = defineComponent( {
 	name: "Facet",
 	components: {
-		//CdxButton, CdxIcon,
-		CdxTextInput, CdxSelect, CdxLookup, CdxMultiselectLookup
-		// CdxField, CdxRadio, CdxSearchInput
+		//CdxButton
+		CdxTextInput, CdxSelect, CdxLookup, CdxMultiselectLookup, CdxRadio, CdxIcon,
+		// CdxField, CdxSearchInput
 	},
 	props: {
 		name: { type: "String", default: "" },
@@ -117,12 +138,15 @@ module.exports = defineComponent( {
 		const lookupInput = ref( "" );
 		// const lookupInputs = ref( [] );
 
+		const hasFurtherResults = ref(false);
+		const nextOffset = ref(0);
+
 		// Menu list
 		const selectList = ref( [] );
 		initSelectList();
 		function initSelectList() {
-			if ( componentType.value == "select" ) {
-				// 'select' (but not 'multiselect'): start with dummy value
+			if ( componentType.value == "select" || componentType.value == "radio" ) {
+				// Start with dummy value
 				selectList.value.push({
 					value: "",
 					label: "---"
@@ -160,13 +184,16 @@ module.exports = defineComponent( {
 			}, 200);
 		}
 
-		function requestEntity(term) {
+
+		function requestEntity(term, offset, action) {
 			const actionApi = new mw.ForeignApi( props.apiUrl, { anonymous: false } );
 			const apiUrlParams = {
 				action: "recon-suggest-entity",
 				format: "json",
 				formatversion: "2",
 				source: "smw",
+				limit: props.configData.resultLimit ?? "25",
+				offset: offset ?? 0,
 				prefix: term
 			};
 			if ( profileId.value !== null ) {
@@ -177,16 +204,57 @@ module.exports = defineComponent( {
 				if ( data.result == undefined ) {
 					return;
 				}
-				selectList.value = data.result.map( (res) => ( {
+				var newSelectList = data.result.map( (res) => ( {
 					value: res.id,
 					label: res.name,
 					description: res.description ?? ""
 				} ) );
+				if ( action && action === "append" ) {
+					// Used for radio options
+					// console.log( "Append options to list" );
+					selectList.value.push( ...newSelectList );
+				} else {
+					// replace
+					selectList.value = newSelectList;
+					// add dummy in again
+					if ( componentType.value == "radio" ) {
+						selectList.value.unshift({
+							value: "",
+							label: "---"
+						});
+					}
+				}
+				// Suggest more options for radio group
+				signalFurtherResults(data.meta?.nextOffset);
 			} );
 		}
 
-		function requestPropertyValue(term) {
-			console.log("requestPropertyValue",term);
+		// Currently radio only
+		function requestAdditionalRadioOptions() {
+			if (profileId.value !== null) {
+				requestEntity("", nextOffset.value, "append" );
+			} else if(valuesFromProperty.value !== null) {
+				requestPropertyValue("", nextOffset.value, "append" );
+			}
+		}
+
+		// Used for radio buttons
+		function signalFurtherResults(nextOffsetFromAPI) {
+			if ( componentType.value == "radio" ) {
+				if ( nextOffsetFromAPI > 0 ) {
+					// add 
+					//console.log( "More results..." );
+					hasFurtherResults.value = true;
+					nextOffset.value = nextOffsetFromAPI;
+				} else {
+					hasFurtherResults.value = false;
+					nextOffset.value = 0;
+				}
+			}
+		}
+
+		function requestPropertyValue(term, offset, action) {
+			// console.log("requestPropertyValue",term);
 			const actionApi = new mw.ForeignApi( props.apiUrl, { anonymous: false } );
 			const apiUrlParams = {
 				action: "recon-suggest-propvalue",
@@ -194,25 +262,45 @@ module.exports = defineComponent( {
 				formatversion: "2",
 				source: "smw",
 				property: valuesFromProperty.value,
-				prefix: term
+				prefix: term,
+				offset: offset ?? 0
 			};
 			actionApi.get(apiUrlParams)
 			.done( function ( data ) {
 				if ( data.result == undefined ) {
 					return;
 				}
-				selectList.value = data.result.map( (res) => ( {
+				var newSelectList = data.result.map( (res) => ( {
 					value: res.id,
 					label: res.name,
 					description: res.description ?? ""
 				} ) );
+				if ( action && action === "append" ) {
+					// Used for radio options
+					//console.log( "Append options to list" );
+					selectList.value.push( ...newSelectList );
+				} else {
+					selectList.value = newSelectList;
+					if ( componentType.value == "radio" ) {
+						selectList.value.unshift({
+							value: "",
+							label: "---"
+						});
+					}
+				}
+				// Suggest more options for radio group
+				signalFurtherResults(data.meta?.nextOffset);
 			} );
 		}
 
-		function onUpdateSelected( v ) {
+		function onUpdateSelected(v) {
+			// Primarily for dev
 			//console.log( "onUpdateSelected", v );
-			if ( componentType.value == "multiselect" ) {
-				//console.log( "name", props.name );
+			switch( componentType.value ) {
+				case "multiselect":
+				break;
+				case "radio":
+				break;
 			}
 		}
 
@@ -220,8 +308,9 @@ module.exports = defineComponent( {
 		const chips = ref( [] );
 		const multiselectConfig = {
 			boldLabel: false,
-			visibleItemLimit: 10
+			visibleItemLimit: 15
 		};
+
 		function onMultiselectInput(value) {
 			//console.log( 'onMultiselectInput', value );
 			if(dataSourceType.value == "api") {
@@ -241,13 +330,30 @@ module.exports = defineComponent( {
 			emit('run-query', 0 );
 		}
 
+		// Fire 'radio' - does not need to wait for a trigger
+		if ( componentType.value === "radio" ) {
+			initRadioGroup();
+		}
+		function initRadioGroup() {
+			if (profileId.value !== null) {
+				requestEntity("");
+			} else if(valuesFromProperty.value !== null) {
+				requestPropertyValue("");
+			}
+		}
+
 		return {
 			componentType,
 			selectList, // Used for select + multiselect
 
+			hasFurtherResults,
+			nextOffset,
+
 			lookupInput,
 			delayTimer,
 			runRequest,
+
+			requestAdditionalRadioOptions,
 
 			// Used for both select and multiselect
 			onUpdateSelected,
@@ -256,11 +362,21 @@ module.exports = defineComponent( {
 			onMultiselectInput,
 			multiselectConfig,
 
-			onEnter
+			onEnter,
+
+			cdxIconDownTriangle
 		}
 	}
 } );
 </script>
 
-<style>
+<style lang="less">
+.recon-radio-group {
+	max-height: 10rem;
+	overflow-y: auto;
+	line-height: 1.5rem;
+	.cdx-radio {
+		margin-bottom: 2px;
+	}
+}
 </style>
