@@ -40,41 +40,15 @@ class ReconJsonContentHandler extends JsonContentHandler {
 	 */
 	public function makeEmptyContent() {
 		// smw
-		$def = [
-			"type" => "Profile",
-			"name" => "Search entities",
-			"source" => "smw",
-			"suggestEntity" => [
-				"smwquery" => [
-					"statement" => [
-						[
-							"from" => "[[Modification date::+]]", 
-							"where" => "[[Display title of::~@@@]]",
-							"substringpattern" => "allchars"
-						]
-					]
-				],
-				"output" => [
-					"name" => [
-						"smwproperty" => "Display title of",
-						"stripNamespacePrefix" => true
-					],
-					"description" => [
-						"smwproperty" => "Has description"
-					],
-					"image" => [
-						"smwproperty" => "Has primary image"
-					]
-				],
-				"redirect" => [
-					"queryPage" => "Special:Search",
-					"query" => [
-						"fulltext" => "1",
-						"search" => ""
-					]
-				]
-			]
-		];
+		$profileType = "ReconciliationProfile";
+		if( isset($_GET["type"]) && $_GET["type"] == "FacetedSearchProfile" ) {
+			$profileType = "FacetedSearchProfile";
+		} elseif( isset($_GET["title"]) && str_starts_with( $_GET["title"], "Recon:FacetedSearch" ) ) {
+			$profileType = "FacetedSearchProfile";
+		}
+		$def = ( $profileType !== "FacetedSearchProfile" ) 
+			? $this->getDefaultContentForReconciliationProfile()
+			: $this->getDefaultContentForFacetedSearchProfile();
 		$json = json_encode( $def, JSON_PRETTY_PRINT );
 		// wfMessage( 'recon-default-content' )->plain()
 		$class = $this->getContentClass();
@@ -208,6 +182,80 @@ class ReconJsonContentHandler extends JsonContentHandler {
 			}}
 			WIKI;
 		return $build;
+	}
+
+	private function getDefaultContentForReconciliationProfile() {
+		$def = [
+			"type" => "ReconciliationProfile",
+			"name" => "Search entities",
+			"source" => "smw",
+			"suggestEntity" => [
+				"smwquery" => [
+					"statement" => [
+						[
+							"from" => "[[Modification date::+]]", 
+							"where" => "[[Display title of::~@@@]]",
+							"substringpattern" => "allchars"
+						]
+					]
+				],
+				"output" => [
+					"name" => [
+						"smwproperty" => "Display title of",
+						"stripNamespacePrefix" => true
+					],
+					"description" => [
+						"smwproperty" => "Has description"
+					],
+					"image" => [
+						"smwproperty" => "Has primary image"
+					]
+				],
+				"redirect" => [
+					"queryPage" => "Special:Search",
+					"query" => [
+						"fulltext" => "1",
+						"search" => ""
+					]
+				]
+			]
+		];
+		return $def;
+	}
+
+	private function getDefaultContentForFacetedSearchProfile() {
+		$def = [
+			"type" => "FacetedSearchProfile",
+			"name" => "Faceted search",
+			"source" => "smw",
+			"baseQuery" => "",
+			"facets" => [
+				[
+					"label" => "",
+					"name" => "Pagename",
+					"inputType" => "text",
+					"smwproperty" => "",
+				],
+				[
+					"label" => "",
+					"name" => "",
+					"inputType" => "select",
+					"profileid" => "",
+				]
+			],
+			"printout" => [
+				"properties" => [
+					"Display title of"
+				]
+			],
+			"sort" => [
+				[
+					"value" => "", 
+					"label" => "Pagename"
+				]
+			]
+		];
+		return $def;
 	}
 
 }

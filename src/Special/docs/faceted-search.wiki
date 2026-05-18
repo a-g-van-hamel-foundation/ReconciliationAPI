@@ -30,7 +30,7 @@ To add faceted search to a wiki page, add an instance of the <code>#recon-facete
 ** (2) 'template' - leave it up to a wiki template to run queries and visualise data. The template just receives the query condition along with other dynamic data such as 'offset' and 'sort'. More advanced but also more flexible and useful, for instance, if you want to pair two different visualisations.
 ** (3) 'basic' - a minimal presentation will be used instead.
 * '''resultformats''' - used exclusively with output=template to establish which ResourceLoader modules must be loaded. See relevant section below.
-** '''template''' - if output=ask, the wiki template to be used to format query results; if output=template, the wiki template to be used for handling the query.
+* '''template''' - if output=ask, the wiki template to be used to format query results; if output=template, the wiki template to be used for handling the query.
 * (other) <code>#ask</code> parameters:
 ** '''valuesep''' (default: ;) - the delimiter for property values.
 ** '''sort''' - Optionally, the property by which to sort the #ask query. SMW's default is to sort by page sortkey or pagename.
@@ -86,7 +86,9 @@ If you are using 'template' as your 'output' mode and your template uses any res
 
 == Configuration profile ("FacetedSearchProfile") ==
 
-Remember the <code>profile</code> parameter above? The parser function requires a configuration profile in JSON in which you have defined the base query that should always apply, the facets you want to use and a list of properties to print to the query result. This profile, like the reconciliation profile, is best saved as a wiki page in the <code>Recon</code> namespace. Try to be consistent when naming your profile pages (e.g. <code>Recon:FacetedSearch/Recipes</code>, <code>Recon:FacetedSearch/Events</code>, etc.). 
+Remember the mandatory <code>profile</code> parameter above? The parser function requires a configuration profile in JSON in which you have defined the base query that should always apply, the facets you want to use, a list of properties to print to the query result and maybe some sort options. This profile, like the reconciliation profile, is best saved as a wiki page in the <code>Recon</code> namespace. Try to be consistent when naming your profile pages (e.g. <code>Recon:FacetedSearch/Recipes</code>, <code>Recon:FacetedSearch/Events</code>, etc.). 
+
+<blockquote>Tip: if you begin a new page whose title starts with 'Recon:FacetedSearch', you will get an appropriate boilerplate configuration, as opposed to the default content, which is boilerplate content for a reconciliation profile. This is just one way to help get you started.</blockquote>
 
 === General structure ===
 What follows is the general structure of a profile. The inline comments below are just there to guide you and should never be included.
@@ -143,6 +145,7 @@ The following JSON keys are available for configuring a facet. Their usage will 
 * '''name''' - unique name (see below)
 * '''smwproperty''' - the property to be used in the query, or an inverse query, or a property chain
 * '''subquery''' - optionally, a subquery to be used for 'smwproperty', without q tags and with @@@ as placeholder for the selected value. 
+* '''smwpropertyMatch''' - if using inputType=text, set to 'exact' to make the query match exactly.
 * Data source options, each of which will be explained below :
 ** '''profileid'''
 ** '''valuesFromProperty'''
@@ -316,6 +319,10 @@ Just be aware that subqueries are known to be relatively expensive computational
 ;(3) with mapOptions
 
 See above.
+
+;(4) with smwpropertyMatch
+
+See the section on the 'text' input type.
 
 === Define sort options ===
 
