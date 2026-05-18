@@ -316,7 +316,10 @@ class SMWQueryBuilder {
 			"resultBatchCount" => $this->resultbatchcount,
 			"resultLimit" => $this->resultLimit,
 			"resultOffset" => $this->resultOffset,
-			"nextOffset" => $this->hasFurtherResults ? ( 25 + $this->resultOffset ) : 0
+			"nextOffset" => $this->hasFurtherResults
+				? ( $this->resultOffset + $this->resultLimit )
+				// @todo ?
+				: 0
 		];
 
 		if ( !empty( $this->comment ) ) {
