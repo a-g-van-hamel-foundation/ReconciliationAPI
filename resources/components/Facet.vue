@@ -6,7 +6,7 @@
 				<cdx-lookup
 					:name="name"
 					v-model:selected="query[name]"
-					v-model:input-value="lookupInput"
+					v-model:input-value="selectInput"
 					:menu-items="selectList"
 					@update:input-value="runRequest"
 					@focus="runRequest('')"
@@ -24,10 +24,10 @@
 				<cdx-select
 					v-model:selected="query[name]"
 					:menu-items="selectList || []"
-					default-label="Select"
-					:placeholder="label"
 					:multiple="multiple || false"
 					@update:selected="onUpdateSelected"
+					default-label="Select"
+					:placeholder="label"
 				></cdx-select>
 			</div>
 		</div>
@@ -41,11 +41,11 @@
 					v-model:selected="query[name]"
 					:menu-items="selectList || []"
 					:menu-config="multiselectConfig"
-					aria-label="..."
 					@update:selected="onUpdateSelected"
 					@input="onMultiselectInput"
 					@focus="onMultiselectInput('')"
 					@keyup.enter="onEnter()"
+					aria-label="Select one or multiple items"
 				>
 				</cdx-multiselect-lookup>
 			</div>
@@ -81,6 +81,7 @@
 				<!-- CdxButton -->
 				<a v-if="hasFurtherResults"
 					@click="requestAdditionalRadioOptions"
+					class="recon-further-results"
 				>
 					<cdx-icon :icon="cdxIconDownTriangle" size="x-small"></cdx-icon> More&hellip;
 				</a>
@@ -135,17 +136,11 @@ module.exports = defineComponent( {
 				componentType.value = props.inputType;
 		}
 
-		const lookupInput = ref( "" );
-		// const lookupInputs = ref( [] );
-
-		const hasFurtherResults = ref(false);
-		const nextOffset = ref(0);
-
 		// Menu list
 		const selectList = ref( [] );
 		initSelectList();
 		function initSelectList() {
-			if ( componentType.value == "select" || componentType.value == "radio" ) {
+			if (componentType.value == "select" || componentType.value == "radio") {
 				// Start with dummy value
 				selectList.value.push({
 					value: "",
@@ -166,26 +161,43 @@ module.exports = defineComponent( {
 
 		// Either init requestEntity or requestPropertyValue, with minor delay
 		let delayTimer = 0;
-		function runRequest(term) {
+		/**
+		 * Run API request for 'term'
+		 * @param {String} [term]
+		 * @param {String} [action] see requestEntity() and requestPropertyValue()
+		 */
+		function runRequest(term, action) {
 			if ( dataSourceType.value !== "api" ) {
 				return;
 			} else if ( !term ) {
-				// reset
-				//selectList.value = [];
-				//return;
+				// reset?
+				// selectList.value = [];
+				// return;
 			}
 			clearTimeout(delayTimer);
 			delayTimer = setTimeout(function() {
 				if (profileId.value !== null) {
-					requestEntity(term);
+					requestEntity(term, 0)
+					.then( (data) => {
+						handleEntityResponse(data, action);
+					});
 				} else if(valuesFromProperty.value !== null) {
-					requestPropertyValue(term);
+					requestPropertyValue(term, 0)
+					.then( (data) => {
+						handlePropertyValueResponse(data, action);
+					});
 				}
 			}, 200);
 		}
 
-
-		function requestEntity(term, offset, action) {
+		/**
+		 * Request entities from API
+		 * @param {String} [term]
+		 * @param {Number} [offset]
+		 * @param {String} [action] What to do with the retrieved data: replace (default; replace selectList), append (append to selectList)
+		 * @return Promise
+		 */
+		function requestEntity(term, offset) {
 			const actionApi = new mw.ForeignApi( props.apiUrl, { anonymous: false } );
 			const apiUrlParams = {
 				action: "recon-suggest-entity",
@@ -199,46 +211,75 @@ module.exports = defineComponent( {
 			if ( profileId.value !== null ) {
 				apiUrlParams["profile"] = profileId.value;
 			}
-			actionApi.get(apiUrlParams)
-			.done( function ( data ) {
-				if ( data.result == undefined ) {
-					return;
-				}
-				var newSelectList = data.result.map( (res) => ( {
-					value: res.id,
-					label: res.name,
-					description: res.description ?? ""
-				} ) );
-				if ( action && action === "append" ) {
-					// Used for radio options
-					// console.log( "Append options to list" );
-					selectList.value.push( ...newSelectList );
-				} else {
-					// replace
-					selectList.value = newSelectList;
-					// add dummy in again
-					if ( componentType.value == "radio" ) {
-						selectList.value.unshift({
-							value: "",
-							label: "---"
-						});
-					}
-				}
-				// Suggest more options for radio group
-				signalFurtherResults(data.meta?.nextOffset);
-			} );
+
+			return new Promise((resolve, reject) => {
+				actionApi.get(apiUrlParams)
+				.done(response => resolve(response))
+				.fail(error => reject(error));
+			});
 		}
 
-		// Currently radio only
-		function requestAdditionalRadioOptions() {
-			if (profileId.value !== null) {
-				requestEntity("", nextOffset.value, "append" );
-			} else if(valuesFromProperty.value !== null) {
-				requestPropertyValue("", nextOffset.value, "append" );
+		function handleEntityResponseForInitialValues(data) {
+			if ( data.result == undefined || data.result.length == 0 ) {
+				return null;
+			}
+			var firstItem = data.result[0];
+			return {
+				value: firstItem.id,
+				label: firstItem.name,
+				description: firstItem.description ?? ""
 			}
 		}
 
-		// Used for radio buttons
+		function handleEntityResponse(data, action) {
+			if ( data.result == undefined ) {
+				return;
+			}
+			var newSelectList = data.result.map( (res) => ( {
+				value: res.id,
+				label: res.name,
+				description: res.description ?? ""
+			} ) );
+
+			// What to with the data?
+			if ( action && action === "append" ) {
+				// Used for radio options
+				// console.log( "Append options to list" );
+				selectList.value.push( ...newSelectList );
+			} else {
+				// replace
+				selectList.value = newSelectList;
+				// add dummy in again
+				if ( componentType.value == "radio" ) {
+					selectList.value.unshift({
+						value: "",
+						label: "---"
+					});
+				}
+			}
+			// Suggest more options for radio group
+			signalFurtherResults(data.meta?.nextOffset);
+		}
+
+		const hasFurtherResults = ref(false);
+		const nextOffset = ref(0);
+
+		// Currently type 'radio' only
+		function requestAdditionalRadioOptions() {
+			if (profileId.value !== null) {
+				requestEntity("", nextOffset.value )
+				.then( (data) => {
+					handleEntityResponse(data, "append");
+				});
+			} else if(valuesFromProperty.value !== null) {
+				requestPropertyValue("", nextOffset.value)
+				.then( (data) => {
+					handlePropertyValueResponse(data, "append");
+				});
+			}
+		}
+
+		// Currently used for radio buttons
 		function signalFurtherResults(nextOffsetFromAPI) {
 			if ( componentType.value == "radio" ) {
 				if ( nextOffsetFromAPI > 0 ) {
@@ -253,8 +294,7 @@ module.exports = defineComponent( {
 			}
 		}
 
-		function requestPropertyValue(term, offset, action) {
-			// console.log("requestPropertyValue",term);
+		function requestPropertyValue(term, offset) {
 			const actionApi = new mw.ForeignApi( props.apiUrl, { anonymous: false } );
 			const apiUrlParams = {
 				action: "recon-suggest-propvalue",
@@ -265,54 +305,137 @@ module.exports = defineComponent( {
 				prefix: term,
 				offset: offset ?? 0
 			};
-			actionApi.get(apiUrlParams)
-			.done( function ( data ) {
-				if ( data.result == undefined ) {
-					return;
+
+			return new Promise((resolve, reject) => {
+				actionApi.get(apiUrlParams)
+				.done(response => resolve(response))
+				.fail(error => reject(error));
+			});
+		}
+
+		function handlePropertyValueResponseForInitialValues(data) {
+			if ( data.result == undefined || data.result.length == 0 ) {
+				return null;
+			}
+			var firstItem = data.result[0];
+			return {
+				value: firstItem.id,
+				label: firstItem.name,
+				description: firstItem.description ?? ""
+			}
+		}
+
+		// Handles response from requestPropertyValue
+		function handlePropertyValueResponse(data, action) {
+			if ( data.result == undefined ) {
+				return;
+			}
+			var newSelectList = data.result.map( (res) => ( {
+				value: res.id,
+				label: res.name,
+				description: res.description ?? ""
+			} ) );
+			if ( action && action === "append" ) {
+				// Append options to list. Used for radio options
+				selectList.value.push( ...newSelectList );
+			} else {
+				selectList.value = newSelectList;
+				if ( componentType.value == "radio" ) {
+					selectList.value.unshift({
+						value: "",
+						label: "---"
+					});
 				}
-				var newSelectList = data.result.map( (res) => ( {
-					value: res.id,
-					label: res.name,
-					description: res.description ?? ""
-				} ) );
-				if ( action && action === "append" ) {
-					// Used for radio options
-					//console.log( "Append options to list" );
-					selectList.value.push( ...newSelectList );
-				} else {
-					selectList.value = newSelectList;
-					if ( componentType.value == "radio" ) {
-						selectList.value.unshift({
-							value: "",
-							label: "---"
-						});
-					}
-				}
-				// Suggest more options for radio group
-				signalFurtherResults(data.meta?.nextOffset);
-			} );
+			}
+			// Suggest more options for radio group
+			signalFurtherResults(data.meta?.nextOffset);
 		}
 
 		function onUpdateSelected(v) {
-			// Primarily for dev
-			//console.log( "onUpdateSelected", v );
-			switch( componentType.value ) {
-				case "multiselect":
+			//
+		}
+
+		// 
+		// type 'multiselect' - init chips
+		// 
+		const selectInput = ref( "" );
+		const chips = ref( [] );
+		if (props.query[props.name]) {
+			handleInitialValues();
+		}
+		/**
+		 * Handle initial values for both API-based input and fixed options
+		 */
+		function handleInitialValues() {
+			var target = null;
+			switch(componentType.value) {
+				case "select":
+				case "lookup":
+					var target = "selectInput";
 				break;
-				case "radio":
+				case "multiselect":
+					var target = "chips"
+				break;
+			}
+			if ( target == null ) {
+				return;
+			}
+
+			// For any initial value, get value/label pair
+			const initialValues = ( typeof props.query[props.name] == "string" )
+				? [ props.query[props.name] ]
+				: props.query[props.name];
+			
+			switch( dataSourceType.value ) {
+				case "api":
+					initialValues.forEach( (v) => {
+						if ( props.profileId !== null ) {
+							// Run request against API
+							requestEntity(v, 0).then( (data) => {
+								let firstResult = handleEntityResponseForInitialValues(data);
+								if( target == "chips" ) {	
+									chips.value.push( firstResult ?? { value: v, label: v } );
+								} else {
+									selectInput.value = firstResult['label'] ?? v;
+								}
+							});
+						} else if(valuesFromProperty.value !== null) {
+							// @todo pages with display titles
+							requestPropertyValue(v, 0).then( (data) => {
+								let firstResult = handlePropertyValueResponseForInitialValues(data, v);
+								if( target == "chips" ) {
+									chips.value.push( firstResult ?? { value: v, label: v } );
+								} else {
+									selectInput.value = firstResult['label'] ?? v;
+								}
+							});
+						}
+					});
+				break;
+				case "options":
+					// Fixed options or mapped options
+					const initialOptions = props.configData.options ?? props.configData.mapOptions ?? [];
+					initialValues.forEach( (v) => {
+						initialOptions.find( (opt) => {
+							if (opt['value'] == v ) {
+								if( target == "chips" ) {
+									chips.value.push(opt);
+								} else {
+									selectInput.value = opt['label'];
+								}
+							}
+						});
+					} );
 				break;
 			}
 		}
 
-		// multiselect
-		const chips = ref( [] );
 		const multiselectConfig = {
 			boldLabel: false,
 			visibleItemLimit: 15
 		};
 
 		function onMultiselectInput(value) {
-			//console.log( 'onMultiselectInput', value );
 			if(dataSourceType.value == "api") {
 				runRequest( value );
 				// 
@@ -324,43 +447,48 @@ module.exports = defineComponent( {
 			}
 		}
 
-		function onEnter() {
-			//console.log( "enter!" );
-			// Let the parent initiate query on enter
-			emit('run-query', 0 );
-		}
-
-		// Fire 'radio' - does not need to wait for a trigger
-		if ( componentType.value === "radio" ) {
+		// type 'radio' - init, no trigger needed
+		if (componentType.value === "radio") {
 			initRadioGroup();
 		}
 		function initRadioGroup() {
 			if (profileId.value !== null) {
-				requestEntity("");
+				requestEntity("")
+				.then( (data) => {
+					handleEntityResponse(data);
+				});
 			} else if(valuesFromProperty.value !== null) {
-				requestPropertyValue("");
+				requestPropertyValue("")
+				.then( (data) => {
+					handlePropertyValueResponse(data);
+				});
 			}
+		}
+
+		// type 'text', 'multiselect'
+		function onEnter() {
+			// Let the parent initiate query on enter
+			emit('run-query', 0 );
 		}
 
 		return {
 			componentType,
 			selectList, // Used for select + multiselect
 
-			hasFurtherResults,
-			nextOffset,
-
-			lookupInput,
-			delayTimer,
 			runRequest,
+			requestEntity,
 
-			requestAdditionalRadioOptions,
-
-			// Used for both select and multiselect
 			onUpdateSelected,
 
+			selectInput,
 			chips,
 			onMultiselectInput,
 			multiselectConfig,
+
+			requestAdditionalRadioOptions,
+
+			hasFurtherResults,
+			nextOffset,
 
 			onEnter,
 
@@ -379,4 +507,11 @@ module.exports = defineComponent( {
 		margin-bottom: 2px;
 	}
 }
+
+.recon-further-results {
+	display:block;
+	width: 100%;
+	font-variant: all-small-caps;
+}
+
 </style>

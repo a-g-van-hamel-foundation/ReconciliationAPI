@@ -25,8 +25,9 @@
 				<i>Profile: {{ configData.profile }}</i></div>
 				<details>
 					<summary>Query details</summary>
-					<pre>{{ query }}</pre>
-					<pre style="color:red; font-size: .7rem;">{{ smwQueryObj }}</pre>
+					<pre>query: {{ query }}</pre>
+					<pre>queryData: {{ queryData }}</pre>
+					<pre style="color:red; font-size: .7rem;">smwQueryObj: {{ smwQueryObj }}</pre>
 				</details>
 				<details v-if="smwQueryResults && smwQueryResults !== null">
 					<summary>Query result details</summary>
@@ -51,23 +52,24 @@
 				></sort-order>
 			</div>
 
-			<!-- Using Vue to format query results -->
 			<span class="loader" v-if="showLoader"></span>
-			<template v-if="smwQueryResults && smwQueryResults !== null && !templateResult">
+
+			<!-- 'basic' -->
+			<template v-if="configData.output == 'basic' && smwQueryResults && smwQueryResults !== null">
 				<faceted-search-result
-					v-if="`false`"
 					:key="`result-` + smwQueryResultKey"
 					:smw-result="smwQueryResults"
 					:template="configData.template ?? null"
 					:value-sep="valueSep"
 				></faceted-search-result>
 			</template>
-			
-			<!-- Query parsed -->
-			<div v-if="templateResult"
-				v-html="templateResult"
-				class="faceted-query-list"
-			></div>
+			<template v-else>
+				<!-- 'ask' or 'template': query parsed -->
+				<div v-if="templateResult"
+					v-html="templateResult"
+					class="faceted-query-list"
+				></div>
+			</template>
 
 			<nav class="recon-pagination-wrapper">
 				<pagination
@@ -136,7 +138,6 @@ module.exports = defineComponent( {
 			sortOptions.value = props.profile?.sort;
 		}
 		function updateSort(n) {
-			// console.log("updateSort", n);
 			submitQuery(0, n, order.value );
 		}
 		const order = ref("asc");
@@ -156,6 +157,64 @@ module.exports = defineComponent( {
 		const maxPages = Number( props.configData.maxpages ?? 5 );
 
 		const smwPrintoutProps = reactive( props.profile?.printout?.properties ?? [] );
+
+		// queryData encapsulates what's submitted + options
+		// Can be used for bookmarking a query.
+		const queryData = ref( {} );
+		function updateQueryData(query) {
+			queryData.value = {
+				query: query,
+				options: {
+					offset: offset.value,
+					sort: sort.value,
+					order: order.value
+				}
+			};
+			// Optionally, add to URL string for bookmarking
+			if ( props.configData.updateUrl && props.configData.updateUrl == "true" ) {
+				const baseUrl = window.location.origin + window.location.pathname;
+				const urlParams = new URLSearchParams(window.location.search);
+				urlParams.set("filters", JSON.stringify(queryData.value));
+				history.replaceState( null, "", baseUrl + "?" + urlParams );
+			}
+		}
+
+		// @todo
+		// If updateurl=true in the parser function,
+		// read parameters from url, update query and run
+		if ( props.configData.updateUrl === "true" ) {
+			fetchFiltersFromUrlParams();
+		}
+		function fetchFiltersFromUrlParams() {
+			// if props.configData.updateUrl = true
+			//let params = new URLSearchParams(document.location.search);
+			let profileJsonStr = new URLSearchParams(document.location.search).get("filters");
+			if ( profileJsonStr == null ) {
+				return;
+			}
+			try {
+				var profile = JSON.parse(profileJsonStr);
+			} catch (e) {
+        		console.error("The URL's search string could not be read.", e);
+				return;
+    		}
+
+			for (const [k,v] of Object.entries(profile.query)) {
+				query[k] = v;
+			}
+			offset.value = profile.options.offset ?? 0;
+			sort.value = profile.options.sort ?? props.configData.sort;
+			order.value = profile.options.order ?? props.configData.order;
+
+			//? updateQueryData();
+			let delayTimer = 0;
+			clearTimeout(delayTimer);
+			delayTimer = setTimeout(function() {
+				submitQuery(offset.value, sort.value, order.value);
+			}, 150);
+		}
+
+		//
 		const smwQueryResults = ref( {} );
 		const smwQueryResultKey = ref( "" );
 
@@ -207,6 +266,7 @@ module.exports = defineComponent( {
 
 				new mw.Api().parse( askPF )
 				.done(function(rawData) {
+					updateQueryData(query);
 					templateResult.value = rawData;
 					showLoader.value = false;
 					handleModulesForApiResponse(format);
@@ -220,6 +280,7 @@ module.exports = defineComponent( {
 				console.log( "template", tpl);
 				new mw.Api().parse( tpl )
 				.done( (rawData) => {
+					updateQueryData(query);
 					templateResult.value = rawData;
 					showLoader.value = false;
 					if ( props.configData.resultFormats !== "" ) {
@@ -244,12 +305,16 @@ module.exports = defineComponent( {
 				};
 				smwAskApi.post(smwAskParams)
 				.done( function(data) {
+					updateQueryData(query);
 					showLoader.value = false;
 					if ( data.query == undefined ) {
+						console.warn("Query undefined");
 						return;
 					}
 					if ( typeof data.query?.results == "object" ) {
 						smwQueryResults.value = data.query?.results;
+					} else {
+						console.warn("Data not an object");
 					}
 					// Messes up pagination because the key is used to trigger the child component's reactivity, which is needed when the same query is run again with a different offset - but it also means that the results are reset when the query changes, which is not ideal.
 					// smwQueryResultKey.value = getTimestamp();
@@ -258,7 +323,8 @@ module.exports = defineComponent( {
 				.fail(function() {
 					showLoader.value = false;
 					console.error("Query failed...");
-					smwQueryResults.value = {};
+					// smwQueryResults.value = {};
+					smwQueryResults.value = null;
 					smwQueryResultKey.value = getTimestamp();
 				});
 			}
@@ -380,7 +446,6 @@ module.exports = defineComponent( {
 						/*if ( facet.subquery !== undefined ) {
 							// work in progress; API only
 							var newQ = `[[${facet.smwproperty}::` + `<q>` + facet.subquery.replaceAll( "@@@", query[k] ) + `</q>` + `]]`;
-							console.log( "test Q", newQ);
 							smwQuery += newQ + ` `;
 							smwQueryObj[k] = newQ;
 						}*/
@@ -498,7 +563,7 @@ module.exports = defineComponent( {
 						newStr += `+${str}* `;
 					} else {
 						// @todo: ${str} vs ${str}* ?
-						console.log("small token size");
+						// console.log("small token size");
 						newStr += `${str} `;
 					}
 				} );
@@ -517,7 +582,6 @@ module.exports = defineComponent( {
 			// a bit of a hack, sadly, but the API (still) does 
 			// not return this info.
 			var countQuery = `{{#ask: ${smwQuery} |format=count }}`;
-			//console.log( "countQuery", countQuery);
 			new mw.Api().parse( countQuery )
 			.done(function(rawData) {
 				// strip html from the result
@@ -526,7 +590,6 @@ module.exports = defineComponent( {
 				resultCount.value = Number(tmp.textContent||tmp.innerText);
 				// enforce..
 				smwQueryResultKey.value = getTimestamp();
-				//console.log( "count", resultCount.value );
 			});
 		}
 
@@ -563,6 +626,10 @@ module.exports = defineComponent( {
 
 			query,
 			smwQueryObj,
+
+			queryData,
+			updateQueryData,
+
 			smwQueryResults,
 			smwQueryResultKey,
 			showLoader,

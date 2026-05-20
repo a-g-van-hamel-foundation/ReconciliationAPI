@@ -18,7 +18,7 @@ module.exports = defineComponent( {
 	components: {
 	},
 	props: {
-		smwResult: { type: "Object", default: {} },
+		smwResult: { type: "Object", default: null },
 		template: { type: "String", default: null },
 		valueSep: { type: "String" }
 	},
@@ -34,6 +34,9 @@ module.exports = defineComponent( {
 		const showLoader = ref( false );
 
 		watch( props.smwResult, (n) => {
+			if ( n == null ) {
+				return;
+			}
 			//console.log( "smwResult, new value", n );
 			if ( props.template !== null ) {
 				/* @deprecated, at least for now

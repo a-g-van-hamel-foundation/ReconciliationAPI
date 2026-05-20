@@ -20,6 +20,7 @@ To add faceted search to a wiki page, add an instance of the <code>#recon-facete
 
 |maxpages=
 |scrollmargintop=
+|updateurl=
 |debug=
 }}
 </pre>
@@ -72,6 +73,10 @@ To add faceted search to a wiki page, add an instance of the <code>#recon-facete
 <div class="recon-data-item">
 <div><code>scrollmargintop</code></div>
 <div>When you use the pagination widget at the bottom of your search results, the page will automatically scroll up to the top. If your site happens to use a fixed header, the unfortunate side-effect is that the very top of the widget will then be buried under the header. To remedy this, set 'scrollmargintop' to the height of your header, including a unit such as 'px' or 'em'.</div>
+</div>
+<div class="recon-data-item">
+<div><code>updateurl</code></div>
+<div>False by default. Set to true if for each new query submitted, the URL's search parameters should be updated to create bookmarkable URLs for reference or sharing. Do not use this feature for more than one instance of faceted search on the page.</div>
 </div>
 <div class="recon-data-item">
 <div><code>debug</code></div>
@@ -370,7 +375,7 @@ See the section on the 'text' input type.
 
 === Define sort options ===
 
-The interface comes with a widget in the upper right corner that lets users change the <code>sort</code> and <code>order</code> (asc/desc) of the query. For instance, if you want your users to be able to sort by pagename, date of page creation and date of latest revision, you could add send something like the following to the profile.
+The interface comes with a widget in the upper right corner that lets users change the <code>sort</code> and <code>order</code> (asc/desc) of the query. For instance, if you want your users to be able to sort by pagename, date of page creation and date of latest revision, you could add something like the following to the profile :
 
 <pre>
 "sort": [
