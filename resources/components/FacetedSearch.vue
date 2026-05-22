@@ -162,56 +162,21 @@ module.exports = defineComponent( {
 		// Can be used for bookmarking a query.
 		const queryData = ref( {} );
 		function updateQueryData(query) {
+			let cleanQuery = getCleanObject(query);
+
 			queryData.value = {
-				query: query,
+				query: cleanQuery,
 				options: {
 					offset: offset.value,
 					sort: sort.value,
 					order: order.value
 				}
 			};
+
 			// Optionally, add to URL string for bookmarking
-			if ( props.configData.updateUrl && props.configData.updateUrl == "true" ) {
-				const baseUrl = window.location.origin + window.location.pathname;
-				const urlParams = new URLSearchParams(window.location.search);
-				urlParams.set("filters", JSON.stringify(queryData.value));
-				history.replaceState( null, "", baseUrl + "?" + urlParams );
+			if ( props.configData.updateUrl == "search" || props.configData.updateUrl == "fragment" ) {
+				updateUrlString();
 			}
-		}
-
-		// @todo
-		// If updateurl=true in the parser function,
-		// read parameters from url, update query and run
-		if ( props.configData.updateUrl === "true" ) {
-			fetchFiltersFromUrlParams();
-		}
-		function fetchFiltersFromUrlParams() {
-			// if props.configData.updateUrl = true
-			//let params = new URLSearchParams(document.location.search);
-			let profileJsonStr = new URLSearchParams(document.location.search).get("filters");
-			if ( profileJsonStr == null ) {
-				return;
-			}
-			try {
-				var profile = JSON.parse(profileJsonStr);
-			} catch (e) {
-        		console.error("The URL's search string could not be read.", e);
-				return;
-    		}
-
-			for (const [k,v] of Object.entries(profile.query)) {
-				query[k] = v;
-			}
-			offset.value = profile.options.offset ?? 0;
-			sort.value = profile.options.sort ?? props.configData.sort;
-			order.value = profile.options.order ?? props.configData.order;
-
-			//? updateQueryData();
-			let delayTimer = 0;
-			clearTimeout(delayTimer);
-			delayTimer = setTimeout(function() {
-				submitQuery(offset.value, sort.value, order.value);
-			}, 150);
 		}
 
 		//
@@ -610,6 +575,179 @@ module.exports = defineComponent( {
 			wrapper.value.scrollIntoView({ behavior: "smooth" });
 		}
 
+		/*** URL handlers for faceted bookmarking ***/
+
+		// If enabled with "search" or "fragment" (see 'updateurl'),
+		// read parameters from url, update query and run
+		const urlSegmentToUpdate = ref( null );
+		// Whether filters are provided as url parameters
+		// ("parameters") or a JSON-encoded 'blob' ("json").
+		// JSON being perhaps too byte-hungry, the latter is 
+		// likely become obsolete.
+		const urlStructure = ref("parameters");
+		if ( props.configData.updateUrl === "search" || props.configData.updateUrl === "fragment" ) {
+			urlSegmentToUpdate.value = props.configData.updateUrl;
+			fetchFiltersFromUrlAndSubmit();
+		}
+
+		function updateUrlString() {
+			const baseUrl = window.location.origin + window.location.pathname;
+
+			let urlParams = new URLSearchParams();
+			if (urlStructure.value == "parameters") {
+				urlParams = getFiltersForUrl();
+			} else if (urlStructure.value == "json") {
+				urlParams.set("filters", JSON.stringify(queryData.value));
+			}
+
+			history.replaceState( null, "",
+				(urlSegmentToUpdate.value == "fragment")
+					? baseUrl + "#" + urlParams.toString() 
+					: baseUrl + "?" + urlParams.toString()
+			);
+		}
+
+		/**
+		 * Helper method to remove unnecessary entries
+		 * from an object.
+		 */
+		function getCleanObject(obj) {
+			if ( obj == undefined ) {
+				return {};
+			}
+			var newObj = {};
+			for (const [k,v] of Object.entries(obj)) {
+				if ( typeof v !== 'undefined' && v !== null && v.length !== 0 ) {
+					newObj[k] = v;
+				}
+			}
+			return newObj;
+		}
+
+		function getFiltersForUrl() {
+			let cleanQuery = getCleanObject(query);
+			console.log("cleanQuery", cleanQuery);
+
+			// only if
+			let options = getCleanObject({
+				qOffset: offset.value ?? null,
+				qSort: sort.value ?? null,
+				qOrder: order.value ?? null,
+			});
+			let merged = { ...cleanQuery, ...options };
+
+			const searchParams = new URLSearchParams();
+			for (const [k,v] of Object.entries(merged)) {
+				if ( v.length == 0 ) {
+					continue;
+				}
+				if ( Array.isArray(v) ) {
+					v.forEach( (item) => {
+						// We add php-type '[]' so we can easily 
+						// identify arrays later on
+						searchParams.append(k + "[]", item);
+					} );
+				} else if( typeof v == "string" || typeof v == "number" ) {
+					searchParams.append(k, v);
+				} else {
+					console.warn( `Unexpected data type for ${k}: ` + typeof v);
+				}
+			}
+			return searchParams;
+		}
+
+		/**
+		 * Get filters from URL, update query and submit.
+		 */
+		function fetchFiltersFromUrlAndSubmit() {
+			let filterStr = null;
+			if( urlStructure.value == "parameters" ) {
+				// Get search params
+				var searchParams = urlSegmentToUpdate.value == "search"
+					? new URLSearchParams(document.location.search)
+					// hash must be removed
+					: new URLSearchParams( document.location.hash.substring(1) );
+				// Remove "title", which belongs to MediaWiki
+				searchParams.delete("title");
+
+				// Extract and set options first
+				let options = getCleanObject({
+					offset: searchParams.get("qOffset"),
+					sort: searchParams.get("qSort"),
+					order: searchParams.get("qOrder")
+				});
+				searchParams.delete("qOffset");
+				searchParams.delete("qSort");
+				searchParams.delete("qOrder");
+				for (const [k,v] of Object.entries(options)) {
+					if (k == "offset") {
+						offset.value = v;
+					} else if(k == "sort") {
+						sort.value = v;
+					} else if(k == "order") {
+						order.value = v;
+					}
+				}
+
+				// Update 'query'
+				for (const [k,v] of searchParams) {
+					if (k.endsWith("[]")) {
+						// array
+						query[ k.replace("[]", "") ].push(v);
+					} else {
+						query[k] = v;
+					}
+				}
+			} else if ( urlStructure.value == "json" ) {
+				switch(urlSegmentToUpdate.value) {
+					case "search":
+						filterStr = new URLSearchParams(document.location.search).get("filters");
+					break;
+					case "fragment":
+						filterStr = fetchFilterJsonStringFromUrlFragment();
+					break;
+				}
+				if ( filterStr == null ) {
+					return;
+				}
+				try {
+					var profile = JSON.parse(filterStr);
+				} catch (e) {
+					console.error("The URL's search string could not be encoded.", e);
+					return;
+				}
+
+				for (const [k,v] of Object.entries(profile.query)) {
+					query[k] = v;
+				}
+
+				offset.value = profile.options.offset ?? 0;
+				sort.value = profile.options.sort ?? props.configData.sort;
+				order.value = profile.options.order ?? props.configData.order;
+			}
+
+			// Submit query
+			let delayTimer = 0;
+			clearTimeout(delayTimer);
+			delayTimer = setTimeout(function() {
+				submitQuery(offset.value, sort.value, order.value);
+			}, 150);
+		}
+
+		function fetchFilterJsonStringFromUrlFragment() {
+			var hash = window.location.hash.substring(1);
+			if(!hash || !hash.startsWith("filters=") ) {
+				return null;
+			}
+			let filterStr = new URLSearchParams(hash).get("filters");
+			if ( filterStr == null ) {
+				console.warn( "No filters fetched");
+				return null;
+			}
+			return filterStr;
+		}
+
+		/* Debug handling */
 		const debug = ref( false );
 		if( typeof props.configData.debug !== "undefined" && props.configData.debug == "true" ) {
 			debug.value = true;
@@ -651,6 +789,10 @@ module.exports = defineComponent( {
 			wrapper,
 			scrollMarginTop,
 			scrollIntoView,
+
+			urlStructure,
+			urlSegmentToUpdate,
+
 			debug
 		}
 	}

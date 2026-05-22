@@ -76,7 +76,11 @@ To add faceted search to a wiki page, add an instance of the <code>#recon-facete
 </div>
 <div class="recon-data-item">
 <div><code>updateurl</code></div>
-<div>False by default. Set to true if for each new query submitted, the URL's search parameters should be updated to create bookmarkable URLs for reference or sharing. Do not use this feature for more than one instance of faceted search on the page.</div>
+<div>By default, running a query will not update the URL with your filter values. The URL remains untouched. If you want to enable faceted navigation or bookmarking for reference and sharing, set <code>updateurl</code> to one of the following values:
+* 'search' - adds the filter parameters to the query part of the URL, after the question mark (<code>?</code>).
+* 'fragment' - adds the filter parameters to the URI fragment, after the hash (<code>#</code>). Consider this option if you think that on your wiki, the traditional query option ('search') is prone to abuse by crawlers. For additional guidance on this topic, [https://developers.google.com/crawling/docs/faceted-navigation#prevent-crawling-of-faceted-navigation-urls see these recommendations by Google].
+Because there is only one URL, you should not enable this feature for more than one instance of the parser function on the page.
+</div>
 </div>
 <div class="recon-data-item">
 <div><code>debug</code></div>

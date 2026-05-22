@@ -514,4 +514,8 @@ module.exports = defineComponent( {
 	font-variant: all-small-caps;
 }
 
+.recon-faceted-search .cdx-menu-item__text__description {
+	font-size: .8rem;
+}
+
 </style>
