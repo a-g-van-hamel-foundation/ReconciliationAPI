@@ -295,6 +295,15 @@ module.exports = defineComponent( {
 			}
 		}
 
+		function submitQueryInDeferredMode() {
+			let delayTimer = 0;
+			clearTimeout(delayTimer);
+			delayTimer = setTimeout(function() {
+				submitQuery(offset.value, sort.value, order.value);
+			}, 150);
+		}
+
+
 		function createAskPF(format, smwQuery) {
 			if ( format == "plainlist" && props.configData.template ) {
 				var askPF = `{{#ask: ${smwQuery} |format=${format} |template=${props.configData.template ?? ""} |link=none |?=Page |namedargs=true |searchlabel= |valuesep=${valueSep.value} }}`;
@@ -497,6 +506,14 @@ module.exports = defineComponent( {
 			return smwQuery;
 		}
 
+		// Helper function for default values
+		function convertToArray(v, sep) {
+			if ( Array.isArray(v) ) {
+				return v;
+			}
+			return v.split(sep).map( (item) => item.trim());
+		}
+
 		// Helper function for buildQuery
 		function assignToProperty( propertyName, selectedValue, subQuery ) {
 			if ( typeof subQuery == "undefined" ) {
@@ -585,9 +602,33 @@ module.exports = defineComponent( {
 		// JSON being perhaps too byte-hungry, the latter is 
 		// likely become obsolete.
 		const urlStructure = ref("parameters");
-		if ( props.configData.updateUrl === "search" || props.configData.updateUrl === "fragment" ) {
+		if (props.configData.updateUrl === "search" || props.configData.updateUrl === "fragment") {
 			urlSegmentToUpdate.value = props.configData.updateUrl;
 			fetchFiltersFromUrlAndSubmit();
+		} else if(props.configData.defaults && props.configData.defaults !== "" ) {
+			setDefaultFilters();
+			submitQueryInDeferredMode();
+		} else if( props.configData.runOnLoad && props.configData.runOnLoad == "true" ) {			
+			submitQueryInDeferredMode();
+		}
+
+		function setDefaultFilters() {
+			if ( props.configData.defaults && props.configData.defaults !== "" ) {
+				let defaults = props.configData.defaults.split("---");
+				defaults.forEach( (def) => {
+					let kvPair = def.split("=");
+					let keyName = kvPair[0].trim();
+					let inputType = findInputTypeForFacetByName(keyName);
+					let val = (kvPair[1] ?? "").trim();
+					if (inputType == "multiselect") {
+						// multiselect requires arrays
+						val = convertToArray(kvPair[1] ?? "", valueSep.value ?? ";");
+					}
+					query[keyName] = val;
+				} );
+			} else {
+				console.log("defaults?",props.configData.defaults );
+			}
 		}
 
 		function updateUrlString() {
@@ -664,9 +705,10 @@ module.exports = defineComponent( {
 			if( urlStructure.value == "parameters" ) {
 				// Get search params
 				var searchParams = urlSegmentToUpdate.value == "search"
-					? new URLSearchParams(document.location.search)
+					? new URLSearchParams( document.location.search )
 					// hash must be removed
 					: new URLSearchParams( document.location.hash.substring(1) );
+
 				// Remove "title", which belongs to MediaWiki
 				searchParams.delete("title");
 
@@ -681,11 +723,11 @@ module.exports = defineComponent( {
 				searchParams.delete("qOrder");
 				for (const [k,v] of Object.entries(options)) {
 					if (k == "offset") {
-						offset.value = v;
+						offset.value = stripHtml(v);
 					} else if(k == "sort") {
-						sort.value = v;
+						sort.value = stripHtml(v);
 					} else if(k == "order") {
-						order.value = v;
+						order.value = stripHtml(v);
 					}
 				}
 
@@ -693,9 +735,9 @@ module.exports = defineComponent( {
 				for (const [k,v] of searchParams) {
 					if (k.endsWith("[]")) {
 						// array
-						query[ k.replace("[]", "") ].push(v);
+						query[ k.replace("[]", "") ].push(stripHtml(v));
 					} else {
-						query[k] = v;
+						query[k] = stripHtml(v);
 					}
 				}
 			} else if ( urlStructure.value == "json" ) {
@@ -711,14 +753,14 @@ module.exports = defineComponent( {
 					return;
 				}
 				try {
-					var profile = JSON.parse(filterStr);
+					var profile = JSON.parse( filterStr );
 				} catch (e) {
 					console.error("The URL's search string could not be encoded.", e);
 					return;
 				}
 
 				for (const [k,v] of Object.entries(profile.query)) {
-					query[k] = v;
+					query[k] = stripHtml(v);
 				}
 
 				offset.value = profile.options.offset ?? 0;
@@ -727,15 +769,11 @@ module.exports = defineComponent( {
 			}
 
 			// Submit query
-			let delayTimer = 0;
-			clearTimeout(delayTimer);
-			delayTimer = setTimeout(function() {
-				submitQuery(offset.value, sort.value, order.value);
-			}, 150);
+			submitQueryInDeferredMode();
 		}
 
 		function fetchFilterJsonStringFromUrlFragment() {
-			var hash = window.location.hash.substring(1);
+			let hash = window.location.hash.substring(1);
 			if(!hash || !hash.startsWith("filters=") ) {
 				return null;
 			}
@@ -747,10 +785,28 @@ module.exports = defineComponent( {
 			return filterStr;
 		}
 
+		/*** ***/
+
+		function stripHtml(html) {
+			let tmp = document.createElement("div");
+			tmp.innerHTML = html;
+			return tmp.textContent || tmp.innerText || "";
+		}
+
 		/* Debug handling */
 		const debug = ref( false );
 		if( typeof props.configData.debug !== "undefined" && props.configData.debug == "true" ) {
 			debug.value = true;
+		}
+
+		function findInputTypeForFacetByName(name) {
+			let found = null;
+			props.profile?.facets.forEach( (facet) => {
+				if(facet.name.trim() === name.trim()) {
+					found = facet.inputType;
+				}
+			});
+			return found;
 		}
 
 		return {

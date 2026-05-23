@@ -18,9 +18,11 @@ To add faceted search to a wiki page, add an instance of the <code>#recon-facete
 |valuesep=
 // and other #ask-specific parameters
 
+|defaults=
 |maxpages=
 |scrollmargintop=
 |updateurl=
+|runonload=
 |debug=
 }}
 </pre>
@@ -67,6 +69,10 @@ To add faceted search to a wiki page, add an instance of the <code>#recon-facete
 <div>With output=ask, you can use any other <code>#ask</code> parameter.</div>
 </div>
 <div class="recon-data-item">
+<div><code>defaults</code></div>
+<div>Optionally, a list of preset filters to be used when the page loads. The list separator is three consecutive hyphens (<code>---</code>) and each filter should be given in the format <code><nowiki><name here>=value</nowiki></code>, where the first part corresponds to the <code>name</code> of the facet. To list multiple values for the multiselect input, use the value of <code>valuesep</code> as your separator. For example: <pre>defaults=term=cocktail --- ingredients=maraschino cherry;pineapple juice</pre></div>
+</div>
+<div class="recon-data-item">
 <div><code>maxpages</code></div>
 <div>(default: 5) - maximum number of pages to show in the pagination widget, with the possible exception of a first and last number.</div>
 </div>
@@ -76,11 +82,15 @@ To add faceted search to a wiki page, add an instance of the <code>#recon-facete
 </div>
 <div class="recon-data-item">
 <div><code>updateurl</code></div>
-<div>By default, running a query will not update the URL with your filter values. The URL remains untouched. If you want to enable faceted navigation or bookmarking for reference and sharing, set <code>updateurl</code> to one of the following values:
+<div>By default, the URL remains untouched whenever a new query is run. It will not include your filter values. If you want to enable faceted navigation or bookmarking for reference and sharing, set <code>updateurl</code> to one of the following values:
 * 'search' - adds the filter parameters to the query part of the URL, after the question mark (<code>?</code>).
 * 'fragment' - adds the filter parameters to the URI fragment, after the hash (<code>#</code>). Consider this option if you think that on your wiki, the traditional query option ('search') is prone to abuse by crawlers. For additional guidance on this topic, [https://developers.google.com/crawling/docs/faceted-navigation#prevent-crawling-of-faceted-navigation-urls see these recommendations by Google].
 Because there is only one URL, you should not enable this feature for more than one instance of the parser function on the page.
 </div>
+</div>
+<div class="recon-data-item">
+<div><code>runonload</code></div>
+<div>Whether the base query should be run on page load. The default behaviour is 'false', meaning we should wait for the user to interact. Set to 'true' if you want results for the base query to be immediately visible. This option and <code>updateurl</code> are mutually exclusive. </div>
 </div>
 <div class="recon-data-item">
 <div><code>debug</code></div>
@@ -185,9 +195,9 @@ What follows is the general structure of a profile. The inline comments below ar
 === Define your facets ===
 The following JSON keys are available for configuring a facet. Their usage will be explained in more detail below.
 
-* '''inputType''' - either "select", "multiselect", "radio" or "text"
+* '''inputType''' (mandatory) - either "select", "multiselect", "radio" or "text"
 * '''label''' - the visible label associated with a facet
-* '''name''' - unique name (see below)
+* '''name''' (mandatory) - unique name. It is essential that each facet is identifiable by a unique name.
 * '''smwproperty''' - the property to be used in the query, or an inverse query, or a property chain
 * '''subquery''' - optionally, a subquery to be used for 'smwproperty', without q tags and with @@@ as placeholder for the selected value. 
 * '''smwpropertyMatch''' - if using inputType=text, set to 'exact' to make the query match exactly.
@@ -197,12 +207,6 @@ The following JSON keys are available for configuring a facet. Their usage will 
 ** '''options'''
 ** '''mapOptions'''
 * '''resultLimit''' - optionally, the maximum number of possible values ( default: 25) that can be shown in a facet if data is retrieved over the API. This can be useful, for instance, if you need to accommodate more items in a 'radio' button group.
-
-==== Use unique keys ====
-It is important that each facet is identifiable by a unique key. This key will be taken from <code>name</code>, if it is provided; or if it isn't, from <code>smwproperty</code>. This means that <code>name</code> is usually optional '''unless''' :
-* (a) multiple facets have the same value for <code>smwproperty</code> and so need to be disambiguated
-* or (b) <code>smwproperty</code> is absent.
-When in doubt, just add a value to <code>name</code>.
 
 ==== Choose your input type ====
 
@@ -215,6 +219,7 @@ Single-page restriction is assumed if you omit <code>smwproperty</code>.
 <pre>
 {
 	"label": "Page name",
+	"name": "Page name",
 	"inputType": "text"
 }
 </pre>
@@ -358,6 +363,7 @@ Example:
 <pre>
 {
 	"label": "Keyword",
+	"name": "Keyword",
 	"inputType": "select",
 	"smwproperty": "-Belongs to",
 	"subquery": "[[Category:People]] [[Has nationality::@@@]]",
