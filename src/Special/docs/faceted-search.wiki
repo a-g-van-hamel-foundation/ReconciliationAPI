@@ -218,7 +218,7 @@ The following JSON keys are available for configuring a facet. Their usage will 
 ** '''options'''
 ** '''mapOptions'''
 * '''resultLimit''' - optionally, the maximum number of possible values ( default: 25) that can be shown in a facet if data is retrieved over the API. This can be useful, for instance, if you need to accommodate more items in a 'radio' button group.
-* '''allowEmpty''' - whether to prepend an empty option (true by default). See info on radio buttons below.
+* '''allowEmpty''' - Used for 'radio' and 'select' inputs. Whether to prepend an empty option ('true' by default). Set to 'false' to disable it. See info on radio buttons below.
 
 ==== Choose your input type ====
 

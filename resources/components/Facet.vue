@@ -125,6 +125,11 @@ module.exports = defineComponent( {
 			dataSourceType.value = "api";
 		}
 
+		const allowEmpty = ref(true);
+		if( props.configData.allowEmpty !== undefined && props.configData.allowEmpty == false ) {
+			allowEmpty.value = false;
+		}
+
 		// 'componentType' represents component type on an implementation level
 		// whereas 'inputType' is user-oriented and more abstract
 		const componentType = ref( "" );
@@ -140,7 +145,7 @@ module.exports = defineComponent( {
 		const selectList = ref( [] );
 		initSelectList();
 		function initSelectList() {
-			if (componentType.value == "select" || componentType.value == "radio") {
+			if ((componentType.value == "select" || componentType.value == "radio") && allowEmpty.value ) {
 				// Start with dummy value
 				selectList.value.push({
 					value: "",
@@ -242,7 +247,7 @@ module.exports = defineComponent( {
 			} ) );
 
 			// What to with the data?
-			if ( action && action === "append" ) {
+			if (action && action === "append") {
 				// Used for radio options
 				// console.log( "Append options to list" );
 				selectList.value.push( ...newSelectList );
@@ -250,7 +255,7 @@ module.exports = defineComponent( {
 				// replace
 				selectList.value = newSelectList;
 				// add dummy in again
-				if ( componentType.value == "radio" ) {
+				if ( componentType.value == "radio" && allowEmpty.value ) {
 					selectList.value.unshift({
 						value: "",
 						label: "---"
@@ -340,7 +345,8 @@ module.exports = defineComponent( {
 				selectList.value.push( ...newSelectList );
 			} else {
 				selectList.value = newSelectList;
-				if ( componentType.value == "radio" ) {
+				// dummy
+				if ( componentType.value == "radio" && allowEmpty.value ) {
 					selectList.value.unshift({
 						value: "",
 						label: "---"
@@ -474,6 +480,9 @@ module.exports = defineComponent( {
 		return {
 			componentType,
 			selectList, // Used for select + multiselect
+
+			// dataSourceType?,
+			allowEmpty,
 
 			runRequest,
 			requestEntity,
