@@ -18,7 +18,7 @@ To add faceted search to a wiki page, add an instance of the <code>#recon-facete
 |valuesep=
 // and other #ask-specific parameters
 
-|defaults=
+|defaultfilters=
 |maxpages=
 |scrollmargintop=
 |updateurl=
@@ -69,8 +69,8 @@ To add faceted search to a wiki page, add an instance of the <code>#recon-facete
 <div>With output=ask, you can use any other <code>#ask</code> parameter.</div>
 </div>
 <div class="recon-data-item">
-<div><code>defaults</code></div>
-<div>Optionally, a list of preset filters to be used when the page loads. The list separator is three consecutive hyphens (<code>---</code>) and each filter should be given in the format <code><nowiki><name here>=value</nowiki></code>, where the first part corresponds to the <code>name</code> of the facet. To list multiple values for the multiselect input, use the value of <code>valuesep</code> as your separator. For example: <pre>defaults=term=cocktail --- ingredients=maraschino cherry;pineapple juice</pre></div>
+<div><code>defaultfilters</code></div>
+<div>Optionally, a list of preset filters to be used when the page loads. The list separator is three consecutive hyphens (<code>---</code>) and each filter should be given in the format <code><nowiki><name here>=value</nowiki></code>, where the first part corresponds to the <code>name</code> of the facet. To list multiple values for the multiselect input, use the value of <code>valuesep</code> as your separator. For example: <pre>defaultfilters=term=cocktail --- ingredients=maraschino cherry;pineapple juice</pre></div>
 </div>
 <div class="recon-data-item">
 <div><code>maxpages</code></div>
@@ -82,15 +82,15 @@ To add faceted search to a wiki page, add an instance of the <code>#recon-facete
 </div>
 <div class="recon-data-item">
 <div><code>updateurl</code></div>
-<div>By default, the URL remains untouched whenever a new query is run. It will not include your filter values. If you want to enable faceted navigation or bookmarking for reference and sharing, set <code>updateurl</code> to one of the following values:
+<div>By default, the URL remains clean and untouched whenever a new query is run. You can also enable faceted navigation or bookmarking for reference and sharing. Filter values will be pre-loaded when a user later visits a URL that's been enriched with filters. To enable it, set <code>updateurl</code> to one of the following values:
 * 'search' - adds the filter parameters to the query part of the URL, after the question mark (<code>?</code>).
 * 'fragment' - adds the filter parameters to the URI fragment, after the hash (<code>#</code>). Consider this option if you think that on your wiki, the traditional query option ('search') is prone to abuse by crawlers. For additional guidance on this topic, [https://developers.google.com/crawling/docs/faceted-navigation#prevent-crawling-of-faceted-navigation-urls see these recommendations by Google].
-Because there is only one URL, you should not enable this feature for more than one instance of the parser function on the page.
+Because there is only one URL at a time, you should not enable this feature for more than a single instance of the parser function on the page.
 </div>
 </div>
 <div class="recon-data-item">
 <div><code>runonload</code></div>
-<div>Whether the base query should be run on page load. The default behaviour is 'false', meaning we should wait for the user to interact. Set to 'true' if you want results for the base query to be immediately visible. This option and <code>updateurl</code> are mutually exclusive. </div>
+<div>Whether the query should be run and its results shown when the page loads. This is the default behaviour. If instead you want to wait for the user to interact, you can opt out by setting <code>runonload=false</code>. </div>
 </div>
 <div class="recon-data-item">
 <div><code>debug</code></div>
@@ -98,7 +98,7 @@ Because there is only one URL, you should not enable this feature for more than 
 </div>
 
 === Result formats and ResourceLoader modules ===
-Result formats such as 'plainlist' (with template) and 'table'/'broadtable' should be usable out of the box. To be fully functional, many more advanced result formats require one or multiple ResourceLoader modules to be loaded. Unfortunately, many of them have not been written to support deferred DOM updates by third-party tools such as ours. Known exceptions are those that have up set up a listener ('wikipage.content') in their code:
+Result formats such as 'plainlist' (with template) and 'table' or 'broadtable' should be usable out of the box. To be fully functional, many more advanced result formats require one or multiple ResourceLoader modules to be loaded. Unfortunately, many result formats have not been written to support deferred DOM updates by third-party tools such as ours. Known exceptions are those that have up set up a listener (through the 'wikipage.content' hook) in their code:
 
 * <code>leaflet</code>, part of the Maps extension
 * <code>iiif-annotation-gallery</code>, part of the IIIF extension
@@ -138,6 +138,17 @@ If you are using 'template' as your 'output' mode and your template uses any res
 |profile=Recon:FacetedSearch/Recipes
 |maxpages=5
 }}</pre>
+
+=== Initialisation options ===
+==== Preset filters ====
+There are two ways in which you can load the interface with preset filters.
+# through <code>updateurl</code> : gets filters from the URL's query string or fragment.
+# through <code>defaultfilters</code>: gets filters through the parser function.
+
+Both options are explained in more detail above. If these options are used together, <code>updateurl</code> takes precedence over <code>defaultfilters</code>. If no URL filters are found, and only then, an additional check for the presence of default filters will be made before updating the query.
+
+==== Run query on page load ====
+When the page loads, the default behaviour is to run the query and show its results, with or without predefined filters. You can opt out by setting <code>runonload=false</code> in the parser function.
 
 == Configuration profile ("FacetedSearchProfile") ==
 
@@ -207,6 +218,7 @@ The following JSON keys are available for configuring a facet. Their usage will 
 ** '''options'''
 ** '''mapOptions'''
 * '''resultLimit''' - optionally, the maximum number of possible values ( default: 25) that can be shown in a facet if data is retrieved over the API. This can be useful, for instance, if you need to accommodate more items in a 'radio' button group.
+* '''allowEmpty''' - whether to prepend an empty option (true by default). See info on radio buttons below.
 
 ==== Choose your input type ====
 
@@ -250,6 +262,8 @@ If users should be allowed to select single values only, you can also use a radi
 That said, many values are handled as follows :
 * The result limit is 25 by default and can be manually set using <code>resultLimit</code>. 
 * If the total number of results exceeds the result limit, you can click a link at the bottom of the list ("more") to fetch further options. At intervals equal to the result limit (which again, is customisable), this continues until there's nothing left to show.
+
+The default behaviour is to add an empty option at the start of the list so that users can always clear their choice. You can opt out by setting <code>allowEmpty</code> (in the faceted search profile) to <code>false</code>.
 
 ==== Choose your data source ====
 In order that a facet can offer any items for users to select, you can either use a dataset returned by the API or a pre-defined list of options :

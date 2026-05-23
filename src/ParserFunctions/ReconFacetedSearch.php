@@ -30,17 +30,17 @@ class ReconFacetedSearch {
 
 			// additional when output = 'template'
 			"resultformats" => "",
-			"defaults" => "",
+			"defaultfilters" => "",
 
 			// pagination
 			"maxpages" => "5",
 			// active if "true":
 			"scrollmargintop" => "0px",
 			"updateurl" => "false",
-			"runonload" => "false",
+			"runonload" => "true",
 			"debug" => null
 		];
-		[ $profile, $profileId, $output, $format, $template, $limit, $sort, $order, $resultFormats, $defaults, $maxPages, $scrollMarginTop, $updateUrl, $runOnLoad, $debug ] = array_values( ParserFunctionUtils::extractParams( $frame, $args, $paramsAllowed ) );
+		[ $profile, $profileId, $output, $format, $template, $limit, $sort, $order, $resultFormats, $defaultFilters, $maxPages, $scrollMarginTop, $updateUrl, $runOnLoad, $debug ] = array_values( ParserFunctionUtils::extractParams( $frame, $args, $paramsAllowed ) );
 		if ( $output === "ask" && $format === null && $template === null ) {
 			// reset
 			$output = "basic";
@@ -100,7 +100,7 @@ class ReconFacetedSearch {
 
 			"data-result-formats" => $resultFormats,
 
-			"data-defaults" => $defaults,
+			"data-default-filters" => $defaultFilters,
 
 			"data-maxpages" => $maxPages,
 			"data-scrollmargintop" => $scrollMarginTop,

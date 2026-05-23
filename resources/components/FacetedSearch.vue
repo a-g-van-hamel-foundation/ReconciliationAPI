@@ -303,7 +303,6 @@ module.exports = defineComponent( {
 			}, 150);
 		}
 
-
 		function createAskPF(format, smwQuery) {
 			if ( format == "plainlist" && props.configData.template ) {
 				var askPF = `{{#ask: ${smwQuery} |format=${format} |template=${props.configData.template ?? ""} |link=none |?=Page |namedargs=true |searchlabel= |valuesep=${valueSep.value} }}`;
@@ -430,7 +429,6 @@ module.exports = defineComponent( {
 							smwQueryObj[k] = newQ;
 						} else if ( facet.mapOptions !== undefined ) {	
 							var mapOption = facet.mapOptions.find( (opt) => opt['option'] == query[k] );
-							//console.log( "mapOption", mapOption );
 							smwQuery += mapOption.where;
 							smwQueryObj[k] = mapOption.where;
 						} else {
@@ -524,13 +522,6 @@ module.exports = defineComponent( {
 			return newQ;
 		}
 
-		function sanitiseString( substr ) {
-			return substr
-				.replaceAll(/[^a-z0-9áéíóúñü \.,_-]/gim, "")
-				.replaceAll( /\*|\+|-/g, "" )
-				.trim();
-		}
-
 		function getReplacementString( substr, property, usesTokens, minTokenSize ) {
 			var newStr = "";
 			var strings = substr.split( " " );
@@ -596,26 +587,42 @@ module.exports = defineComponent( {
 
 		// If enabled with "search" or "fragment" (see 'updateurl'),
 		// read parameters from url, update query and run
-		const urlSegmentToUpdate = ref( null );
+		const urlSegmentToUpdate = ref(null);
 		// Whether filters are provided as url parameters
 		// ("parameters") or a JSON-encoded 'blob' ("json").
 		// JSON being perhaps too byte-hungry, the latter is 
 		// likely become obsolete.
 		const urlStructure = ref("parameters");
+		const runOnLoad = ref(true);
+		if( props.configData.runOnLoad !== undefined && props.configData.runOnLoad == "false" ) {
+			runOnLoad.value = false;
+		}
+
+		// Initialisation process
 		if (props.configData.updateUrl === "search" || props.configData.updateUrl === "fragment") {
+			// Get filters from URL
 			urlSegmentToUpdate.value = props.configData.updateUrl;
-			fetchFiltersFromUrlAndSubmit();
-		} else if(props.configData.defaults && props.configData.defaults !== "" ) {
+			fetchFiltersFromUrl();
+			// Submit query
+			if (runOnLoad.value) {
+				submitQueryInDeferredMode();
+			}
+		} else if(props.configData.defaultFilters && props.configData.defaultFilters !== "" ) {
+			// Get filters from defaults
 			setDefaultFilters();
-			submitQueryInDeferredMode();
-		} else if( props.configData.runOnLoad && props.configData.runOnLoad == "true" ) {			
+			// Submit query
+			if(runOnLoad.value) {
+				submitQueryInDeferredMode();
+			}
+		} else if(runOnLoad.value) {
+			// No filters. Submit with base query
 			submitQueryInDeferredMode();
 		}
 
 		function setDefaultFilters() {
-			if ( props.configData.defaults && props.configData.defaults !== "" ) {
-				let defaults = props.configData.defaults.split("---");
-				defaults.forEach( (def) => {
+			if ( props.configData.defaultFilters && props.configData.defaultFilters !== "" ) {
+				let defaultFilters = props.configData.defaultFilters.split("---");
+				defaultFilters.forEach( (def) => {
 					let kvPair = def.split("=");
 					let keyName = kvPair[0].trim();
 					let inputType = findInputTypeForFacetByName(keyName);
@@ -626,13 +633,11 @@ module.exports = defineComponent( {
 					}
 					query[keyName] = val;
 				} );
-			} else {
-				console.log("defaults?",props.configData.defaults );
 			}
 		}
 
 		function updateUrlString() {
-			const baseUrl = window.location.origin + window.location.pathname;
+			const baseUrl = document.location.origin + document.location.pathname;
 
 			let urlParams = new URLSearchParams();
 			if (urlStructure.value == "parameters") {
@@ -700,7 +705,7 @@ module.exports = defineComponent( {
 		/**
 		 * Get filters from URL, update query and submit.
 		 */
-		function fetchFiltersFromUrlAndSubmit() {
+		function fetchFiltersFromUrl() {
 			let filterStr = null;
 			if( urlStructure.value == "parameters" ) {
 				// Get search params
@@ -708,8 +713,7 @@ module.exports = defineComponent( {
 					? new URLSearchParams( document.location.search )
 					// hash must be removed
 					: new URLSearchParams( document.location.hash.substring(1) );
-
-				// Remove "title", which belongs to MediaWiki
+				// Remove "title", which is reserved by MediaWiki
 				searchParams.delete("title");
 
 				// Extract and set options first
@@ -721,6 +725,13 @@ module.exports = defineComponent( {
 				searchParams.delete("qOffset");
 				searchParams.delete("qSort");
 				searchParams.delete("qOrder");
+
+				// No URL filters? Check for default filters
+				if ( Array.from(searchParams).length == 0 && props.configData.defaultFilters !== "" ) {
+					setDefaultFilters();
+					return;
+				}
+
 				for (const [k,v] of Object.entries(options)) {
 					if (k == "offset") {
 						offset.value = stripHtml(v);
@@ -767,13 +778,10 @@ module.exports = defineComponent( {
 				sort.value = profile.options.sort ?? props.configData.sort;
 				order.value = profile.options.order ?? props.configData.order;
 			}
-
-			// Submit query
-			submitQueryInDeferredMode();
 		}
 
 		function fetchFilterJsonStringFromUrlFragment() {
-			let hash = window.location.hash.substring(1);
+			let hash = document.location.hash.substring(1);
 			if(!hash || !hash.startsWith("filters=") ) {
 				return null;
 			}
@@ -785,7 +793,14 @@ module.exports = defineComponent( {
 			return filterStr;
 		}
 
-		/*** ***/
+		/*** Misc. auxiliary functions ***/
+
+		function sanitiseString( substr ) {
+			return substr
+				.replaceAll(/[^a-z0-9áéíóúñü \.,_-]/gim, "")
+				.replaceAll( /\*|\+|-/g, "" )
+				.trim();
+		}
 
 		function stripHtml(html) {
 			let tmp = document.createElement("div");
