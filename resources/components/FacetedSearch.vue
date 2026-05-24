@@ -107,8 +107,9 @@ module.exports = defineComponent( {
 		profile: { type: Object, default: {} }
 	},
 	setup(props, context) {
+		// Object which encapsulates filters in use
 		const query = reactive( {} );
-		// Not yet used but essential if we want to support dynamic facets:
+		// Object which encapsulates SMW query (sub)conditions
 		const smwQueryObj = reactive( {} );
 		// Parameters for #ask 
 		const askParams = ref( JSON.parse(props.configData.askParams) );
@@ -130,18 +131,18 @@ module.exports = defineComponent( {
 
 		// sort and order
 		const sort = ref("");
-		if (typeof props.configData.sort !== "undefined" ) {
+		if (typeof props.configData.sort !== "undefined") {
 			sort.value = props.configData.sort;
 		}
 		const sortOptions = ref( [] );
-		if ( props.profile?.sort !== undefined ) {
+		if (props.profile?.sort !== undefined) {
 			sortOptions.value = props.profile?.sort;
 		}
 		function updateSort(n) {
-			submitQuery(0, n, order.value );
+			submitQuery(0, n, order.value);
 		}
 		const order = ref("asc");
-		if (typeof props.configData.order !== "undefined" ) {
+		if (typeof props.configData.order !== "undefined") {
 			order.value = props.configData.order;
 		};
 		function updateOrder(n) {
@@ -154,16 +155,15 @@ module.exports = defineComponent( {
 			// submitQuery will adjust the offset
 			submitQuery(n);
 		}
-		const maxPages = Number( props.configData.maxpages ?? 5 );
+		const maxPages = Number(props.configData.maxpages ?? 5);
 
 		const smwPrintoutProps = reactive( props.profile?.printout?.properties ?? [] );
 
-		// queryData encapsulates what's submitted + options
+		// queryData contains the submitted 'query' + options
 		// Can be used for bookmarking a query.
 		const queryData = ref( {} );
-		function updateQueryData(query) {
+		function updateQueryData() {
 			let cleanQuery = getCleanObject(query);
-
 			queryData.value = {
 				query: cleanQuery,
 				options: {
@@ -174,7 +174,7 @@ module.exports = defineComponent( {
 			};
 
 			// Optionally, add to URL string for bookmarking
-			if ( props.configData.updateUrl == "search" || props.configData.updateUrl == "fragment" ) {
+			if (props.configData.updateUrl == "search" || props.configData.updateUrl == "fragment") {
 				updateUrlString();
 			}
 		}
@@ -202,11 +202,11 @@ module.exports = defineComponent( {
 			var smwQuery = buildQuery();
 
 			// Do result count separately
-			setResultCount( smwQuery );
+			setResultCount(smwQuery);
 
 			// Transfer any additional #ask parameters from the config
 			//var askParams = JSON.parse( props.configData.askParams );
-			if ( typeof askParams.value !== "undefined" ) {
+			if (typeof askParams.value !== "undefined") {
 				for (const [k,v] of Object.entries(askParams.value)) {
 					smwQuery += `|${k}=${v} `;
 				}
@@ -220,18 +220,17 @@ module.exports = defineComponent( {
 			var output = props.configData.output;
 
 			// Run the query
-			if ( output == "ask" ) {
-				var format = props.configData.resultFormat
-				?? ( props.configData.template ? "plainlist" : null );
+			if (output == "ask") {
+				let format = props.configData.resultFormat ?? (props.configData.template ? "plainlist" : null);
 
-				var askPF = createAskPF(format, smwQuery);
+				let askPF = createAskPF(format, smwQuery);
 				console.log( "#ask", askPF );
 
 				showLoader.value = true;
 
-				new mw.Api().parse( askPF )
+				new mw.Api().parse(askPF)
 				.done(function(rawData) {
-					updateQueryData(query);
+					updateQueryData();
 					templateResult.value = rawData;
 					showLoader.value = false;
 					handleModulesForApiResponse(format);
@@ -240,15 +239,19 @@ module.exports = defineComponent( {
 					showLoader.value = false;
 					console.error("Parsing failed...");
 				});
-			} else if(output == "template" && props.configData.template ) {
-				var tpl = `{{${props.configData.template} |query=${smwQuery} }}`;
-				console.log( "template", tpl);
-				new mw.Api().parse( tpl )
+			} else if(output == "template" && props.configData.template) {
+				// Create full template string to be parsed
+				let filtersUsed = getFiltersUsed();				
+				let tpl = `{{${props.configData.template} |query=${smwQuery} ${filtersUsed}}}`;
+				console.log("template", tpl);
+
+				// parse, etc.
+				new mw.Api().parse(tpl)
 				.done( (rawData) => {
-					updateQueryData(query);
+					updateQueryData();
 					templateResult.value = rawData;
 					showLoader.value = false;
-					if ( props.configData.resultFormats !== "" ) {
+					if (props.configData.resultFormats !== "") {
 						props.configData.resultFormats.split(",").forEach( (f) => {
 							handleModulesForApiResponse(f);
 						});
@@ -261,7 +264,7 @@ module.exports = defineComponent( {
 			} else {
 				// Basic. Get results from SMW's ask API
 				// and do whatever
-				const smwAskApi = new mw.ForeignApi( apiUrl.value, { anonymous: false } );
+				const smwAskApi = new mw.ForeignApi(apiUrl.value, { anonymous: false });
 				const smwAskParams = {
 					action: "ask",
 					format: "json",
@@ -270,13 +273,13 @@ module.exports = defineComponent( {
 				};
 				smwAskApi.post(smwAskParams)
 				.done( function(data) {
-					updateQueryData(query);
+					updateQueryData();
 					showLoader.value = false;
-					if ( data.query == undefined ) {
+					if (data.query == undefined) {
 						console.warn("Query undefined");
 						return;
 					}
-					if ( typeof data.query?.results == "object" ) {
+					if (typeof data.query?.results == "object") {
 						smwQueryResults.value = data.query?.results;
 					} else {
 						console.warn("Data not an object");
@@ -304,8 +307,9 @@ module.exports = defineComponent( {
 		}
 
 		function createAskPF(format, smwQuery) {
-			if ( format == "plainlist" && props.configData.template ) {
-				var askPF = `{{#ask: ${smwQuery} |format=${format} |template=${props.configData.template ?? ""} |link=none |?=Page |namedargs=true |searchlabel= |valuesep=${valueSep.value} }}`;
+			let filtersUsed = getFiltersUsed();
+			if (format == "plainlist" && props.configData.template) {
+				var askPF = `{{#ask: ${smwQuery} |format=${format} |template=${props.configData.template ?? ""} |link=none |?=Page |named args=yes |searchlabel= |valuesep=${valueSep.value} }}`;
 			} else if(format == "table" || format == "broadtable") {
 				// Just because searchlabel= 
 				var askPF = `{{#ask: ${smwQuery} |format=${format} |valuesep=${valueSep.value} |searchlabel= }}`;
@@ -316,6 +320,25 @@ module.exports = defineComponent( {
 				|template=${props.configData.template ?? ""} }}`;
 			}
 			return askPF;
+		}
+
+		/** 
+		 * Get filters used and create string that adds
+		 * them as parameters to a wiki template.
+		 * Format `|filter-{name}=... |filter-{name}=...`
+		 * @return string
+		 */
+		function getFiltersUsed() {
+			let filtersUsed = ``;
+			for (const [k,v] of Object.entries(query)) {
+				if (v == null || v == "") {
+					continue;
+				}
+				filtersUsed += Array.isArray(v)
+					? `|filter-${k}=` + v.join(valueSep.value)
+					: `|filter-${k}=${v}`;
+			}
+			return filtersUsed;
 		}
 
 		/**
@@ -345,14 +368,14 @@ module.exports = defineComponent( {
 					var widget = askParams.value.widget ?? "overlay";
 					switch(widget) {
 						case "overlay":
-							modules.push( "ext.srf.gallery.overlay" );
+							modules.push("ext.srf.gallery.overlay");
 						break;
 						case "carousel":
 							// Relies on MMV
-							modules.push( "ext.srf.gallery.carousel" );
+							modules.push("ext.srf.gallery.carousel");
 						break;
 						case "slideshow":
-							modules.push( "ext.srf.gallery.slideshow" );
+							modules.push("ext.srf.gallery.slideshow");
 						break;
 					}
 					// (2) MultimediaViewer not working reliably. Takes multiple clicks (or escapes) to close the modal.
@@ -374,19 +397,19 @@ module.exports = defineComponent( {
 				break;
 			}
 
-			if ( modules !== null ) {
+			if (modules !== null) {
 				modules.forEach( (mod) => {
 					// Check module state before loading
 					var state = mw.loader.getState(mod);
 
 					// Abort if unregistered
-					if ( mw.loader.getState(mod) === null ) {
-						console.warn( `Module ${mod} is not registered in ResourceLoader.` );
+					if (mw.loader.getState(mod) === null) {
+						console.warn(`Module ${mod} is not registered in ResourceLoader.`);
 						return;
 					}
 
 					// Works only for modules that allow for dynamically added content
-					mw.hook("recon-faceted-fire-module").fire( mod, $(resultsWrapper.value) );
+					mw.hook("recon-faceted-fire-module").fire(mod, $(resultsWrapper.value));
 					/* OLD:
 					mw.loader.using( mod ).then( function () {
 						mw.hook( 'wikipage.content' ).fire( $(resultsWrapper.value) );
@@ -406,7 +429,7 @@ module.exports = defineComponent( {
 
 			props.profile?.facets.forEach( (facet) => {
 				var k = facet.name ?? facet.smwproperty;
-				if ( query[k] == undefined || query[k] == null || query[k] == "" || query[k] == [] ) {
+				if (query[k] == undefined || query[k] == null || query[k] == "" || query[k].length == 0) {
 					return;
 				}
 
@@ -422,39 +445,39 @@ module.exports = defineComponent( {
 							smwQuery += newQ + ` `;
 							smwQueryObj[k] = newQ;
 						}*/
-						if ( facet.options !== undefined ) {
-							var option = facet.options.find( (opt) => opt['value'] == query[k] );
-							var newQ = assignToProperty( facet.smwproperty, option.value, facet.subquery );
+						if (facet.options !== undefined) {
+							var option = facet.options.find((opt) => opt['value'] == query[k]);
+							var newQ = assignToProperty(facet.smwproperty, option.value, facet.subquery);
 							smwQuery += newQ;
 							smwQueryObj[k] = newQ;
-						} else if ( facet.mapOptions !== undefined ) {	
-							var mapOption = facet.mapOptions.find( (opt) => opt['option'] == query[k] );
+						} else if (typeof facet.mapOptions !== 'undefined') {	
+							var mapOption = facet.mapOptions.find((opt) => opt['option'] == query[k]);
 							smwQuery += mapOption.where;
 							smwQueryObj[k] = mapOption.where;
 						} else {
 							// API
-							var newQ = assignToProperty( facet.smwproperty, query[k], facet.subquery, facet );
+							var newQ = assignToProperty(facet.smwproperty, query[k], facet.subquery, facet);
 							smwQuery += newQ + ` `;
 							smwQueryObj[k] = newQ;
 						}
 					break;
 					case "multiselect":
 						smwQueryObj[k] = [];
-						if ( facet.options !== undefined ) {
+						if (facet.options !== undefined) {
 							// No need to check I think
 						}
 						query[k].forEach( (v) => {
-							var newQ = assignToProperty( facet.smwproperty, v, facet.subquery );
+							var newQ = assignToProperty(facet.smwproperty, v, facet.subquery);
 							smwQuery += newQ;
 							smwQueryObj[k].push(newQ);
 						});
 					break;
 					case "text":
 						var substr = sanitiseString(query[k]);
-						if ( typeof facet.smwproperty !== "undefined" ) {
+						if (typeof facet.smwproperty !== "undefined") {
 							// @todo - no comprehensive checks yet
 							var q = ``;
-							switch( facet.smwpropertyMatch ?? "tokenprefix" ) {
+							switch(facet.smwpropertyMatch ?? "tokenprefix") {
 								// 'contains'?
 								case "tokenprefix":
 									var q = getReplacementString(substr, facet.smwproperty, usesTokens, minTokenSize);
@@ -468,7 +491,7 @@ module.exports = defineComponent( {
 						} else {
 							// Assuming single-page restriction
 							var q = ``;
-							switch( facet.smwpropertyMatch ?? "tokenprefix" ) {
+							switch(facet.smwpropertyMatch ?? "tokenprefix") {
 								// 'contains'?
 								case "tokenprefix":
 									var q = `[[~${substr}*]]`;
@@ -484,9 +507,11 @@ module.exports = defineComponent( {
 				}
 			} );
 
-			smwPrintoutProps.forEach( (prop) => {
-				smwQuery += `|?${prop} `;
-			} );
+			if (props.configData.output == "ask") {
+				smwPrintoutProps.forEach( (prop) => {
+					smwQuery += `|?${prop} `;
+				} );
+			}
 
 			// options (limit, offset, sort, order)
 			var options = {
@@ -496,7 +521,7 @@ module.exports = defineComponent( {
 				order: order.value
 			};
 			for (const [k,v] of Object.entries(options)) {
-				if ( v !== null ) {
+				if (v !== null) {
 					smwQuery += `|${k}=${v}`;
 				}
 			}
@@ -506,33 +531,33 @@ module.exports = defineComponent( {
 
 		// Helper function for default values
 		function convertToArray(v, sep) {
-			if ( Array.isArray(v) ) {
+			if (Array.isArray(v)) {
 				return v;
 			}
 			return v.split(sep).map( (item) => item.trim());
 		}
 
 		// Helper function for buildQuery
-		function assignToProperty( propertyName, selectedValue, subQuery ) {
-			if ( typeof subQuery == "undefined" ) {
+		function assignToProperty(propertyName, selectedValue, subQuery) {
+			if (typeof subQuery == "undefined") {
 				var newQ = `[[${propertyName}::${selectedValue}]]`;
 			} else {
-				var newQ = `[[${propertyName}::` + `<q>` + subQuery.replaceAll( "@@@", selectedValue ) + `</q>` + `]]`;
+				var newQ = `[[${propertyName}::` + `<q>` + subQuery.replaceAll("@@@", selectedValue) + `</q>` + `]]`;
 			}
 			return newQ;
 		}
 
-		function getReplacementString( substr, property, usesTokens, minTokenSize ) {
+		function getReplacementString(substr, property, usesTokens, minTokenSize) {
 			var newStr = "";
-			var strings = substr.split( " " );
+			var strings = substr.split(" ");
 
-			if( usesTokens ) {
+			if(usesTokens) {
 				// Token-based (FTS or Elasticsearch)
 				strings.forEach( (str) => {
 					// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/length
 					// @dev note: use Intl.Segmenter when widely available
 					var count = [...str].length;
-					if ( count >= minTokenSize ) {
+					if (count >= minTokenSize) {
 						newStr += `+${str}* `;
 					} else {
 						// @todo: ${str} vs ${str}* ?
@@ -555,7 +580,7 @@ module.exports = defineComponent( {
 			// a bit of a hack, sadly, but the API (still) does 
 			// not return this info.
 			var countQuery = `{{#ask: ${smwQuery} |format=count }}`;
-			new mw.Api().parse( countQuery )
+			new mw.Api().parse(countQuery)
 			.done(function(rawData) {
 				// strip html from the result
 				var tmp = document.createElement("DIV");
@@ -576,7 +601,7 @@ module.exports = defineComponent( {
 		const resultsWrapper = ref(null);
 		defineExpose({ wrapper, resultsWrapper });
 		const scrollMarginTop = ref("0px");
-		if ( typeof props.configData?.scrollmargintop !== "undefined" ) {
+		if (typeof props.configData?.scrollmargintop !== "undefined") {
 			scrollMarginTop.value = props.configData.scrollmargintop;
 		}
 		function scrollIntoView() {
@@ -594,7 +619,7 @@ module.exports = defineComponent( {
 		// likely become obsolete.
 		const urlStructure = ref("parameters");
 		const runOnLoad = ref(true);
-		if( props.configData.runOnLoad !== undefined && props.configData.runOnLoad == "false" ) {
+		if(props.configData.runOnLoad !== undefined && props.configData.runOnLoad == "false") {
 			runOnLoad.value = false;
 		}
 
@@ -607,7 +632,7 @@ module.exports = defineComponent( {
 			if (runOnLoad.value) {
 				submitQueryInDeferredMode();
 			}
-		} else if(props.configData.defaultFilters && props.configData.defaultFilters !== "" ) {
+		} else if(props.configData.defaultFilters && props.configData.defaultFilters !== "") {
 			// Get filters from defaults
 			setDefaultFilters();
 			// Submit query
@@ -620,7 +645,7 @@ module.exports = defineComponent( {
 		}
 
 		function setDefaultFilters() {
-			if ( props.configData.defaultFilters && props.configData.defaultFilters !== "" ) {
+			if (props.configData.defaultFilters && props.configData.defaultFilters !== "") {
 				let defaultFilters = props.configData.defaultFilters.split("---");
 				defaultFilters.forEach( (def) => {
 					let kvPair = def.split("=");
@@ -658,12 +683,12 @@ module.exports = defineComponent( {
 		 * from an object.
 		 */
 		function getCleanObject(obj) {
-			if ( obj == undefined ) {
+			if (obj == undefined) {
 				return {};
 			}
 			var newObj = {};
 			for (const [k,v] of Object.entries(obj)) {
-				if ( typeof v !== 'undefined' && v !== null && v.length !== 0 ) {
+				if (typeof v !== 'undefined' && v !== null && v.length !== 0) {
 					newObj[k] = v;
 				}
 			}
@@ -684,16 +709,16 @@ module.exports = defineComponent( {
 
 			const searchParams = new URLSearchParams();
 			for (const [k,v] of Object.entries(merged)) {
-				if ( v.length == 0 ) {
+				if (v.length == 0) {
 					continue;
 				}
-				if ( Array.isArray(v) ) {
+				if (Array.isArray(v)) {
 					v.forEach( (item) => {
 						// We add php-type '[]' so we can easily 
 						// identify arrays later on
 						searchParams.append(k + "[]", item);
 					} );
-				} else if( typeof v == "string" || typeof v == "number" ) {
+				} else if(typeof v == "string" || typeof v == "number") {
 					searchParams.append(k, v);
 				} else {
 					console.warn( `Unexpected data type for ${k}: ` + typeof v);
@@ -707,12 +732,12 @@ module.exports = defineComponent( {
 		 */
 		function fetchFiltersFromUrl() {
 			let filterStr = null;
-			if( urlStructure.value == "parameters" ) {
+			if(urlStructure.value == "parameters") {
 				// Get search params
 				var searchParams = urlSegmentToUpdate.value == "search"
-					? new URLSearchParams( document.location.search )
+					? new URLSearchParams(document.location.search)
 					// hash must be removed
-					: new URLSearchParams( document.location.hash.substring(1) );
+					: new URLSearchParams(document.location.hash.substring(1));
 				// Remove "title", which is reserved by MediaWiki
 				searchParams.delete("title");
 
@@ -727,7 +752,7 @@ module.exports = defineComponent( {
 				searchParams.delete("qOrder");
 
 				// No URL filters? Check for default filters
-				if ( Array.from(searchParams).length == 0 && props.configData.defaultFilters !== "" ) {
+				if (Array.from(searchParams).length == 0 && props.configData.defaultFilters !== "") {
 					setDefaultFilters();
 					return;
 				}
@@ -751,7 +776,7 @@ module.exports = defineComponent( {
 						query[k] = stripHtml(v);
 					}
 				}
-			} else if ( urlStructure.value == "json" ) {
+			} else if (urlStructure.value == "json") {
 				switch(urlSegmentToUpdate.value) {
 					case "search":
 						filterStr = new URLSearchParams(document.location.search).get("filters");
@@ -760,11 +785,11 @@ module.exports = defineComponent( {
 						filterStr = fetchFilterJsonStringFromUrlFragment();
 					break;
 				}
-				if ( filterStr == null ) {
+				if (filterStr == null) {
 					return;
 				}
 				try {
-					var profile = JSON.parse( filterStr );
+					var profile = JSON.parse(filterStr);
 				} catch (e) {
 					console.error("The URL's search string could not be encoded.", e);
 					return;
@@ -782,11 +807,11 @@ module.exports = defineComponent( {
 
 		function fetchFilterJsonStringFromUrlFragment() {
 			let hash = document.location.hash.substring(1);
-			if(!hash || !hash.startsWith("filters=") ) {
+			if(!hash || !hash.startsWith("filters=")) {
 				return null;
 			}
 			let filterStr = new URLSearchParams(hash).get("filters");
-			if ( filterStr == null ) {
+			if (filterStr == null) {
 				console.warn( "No filters fetched");
 				return null;
 			}
@@ -795,7 +820,7 @@ module.exports = defineComponent( {
 
 		/*** Misc. auxiliary functions ***/
 
-		function sanitiseString( substr ) {
+		function sanitiseString(substr) {
 			return substr
 				.replaceAll(/[^a-z0-9áéíóúñü \.,_-]/gim, "")
 				.replaceAll( /\*|\+|-/g, "" )
@@ -810,7 +835,7 @@ module.exports = defineComponent( {
 
 		/* Debug handling */
 		const debug = ref( false );
-		if( typeof props.configData.debug !== "undefined" && props.configData.debug == "true" ) {
+		if(typeof props.configData.debug !== "undefined" && props.configData.debug == "true") {
 			debug.value = true;
 		}
 
