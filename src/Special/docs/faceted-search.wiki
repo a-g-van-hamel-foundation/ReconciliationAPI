@@ -397,6 +397,41 @@ See above.
 
 See the section on the 'text' input type.
 
+==== Map facet data to query conditions: more complex queries ====
+So far we have dealt with a single base query, which should be sufficient for most users. You can also define two or more base queries: each base query will become part of its own query group and filters used will attach themselves to each of them. The OR operator is used to combine these groups. 
+
+In the faceted search profile you would add an object (instead of a string) and assign each base query to a unique identifier. Example :
+
+<pre>
+"baseQuery": {
+  "1": "[[Category:A]]",
+  "2": "[[Category:B]]"
+}
+</pre>
+
+With a filter translated to <code><nowiki>[[Has item::C]]</nowiki></code> (random example), the resulting query would be <code><nowiki>[[Category:A]] [[Has item::C]] OR [[Category:B]] [[Has item::C]]</nowiki></code>. 
+
+The intended use case, however, is not necessarily two distinct base queries. In the case above, it would have been easier to use a concept that combines both categories (<code><nowiki>[[Category:A]] OR [[Category:B]]</nowiki></code>). 
+
+But what if one query group requires that the same filter value is treated differently in the translation to query syntax. In that case, do not use <code>smwproperty</code>, etc., directly, but assign them to a specific condition. This is done under the <code>conditions</code> key of the facet object, as illustrated below. In this example, "1" and "2" represent the identifiers defined for each condition:
+
+<pre>
+{
+    "label": "Term",
+    "name": "term",
+    "inputType": "text",
+    "conditions": {
+      "1": {
+        "smwproperty": "Keyword"
+      },
+      "2": {
+        "smwproperty": "-Is item in",
+        "subquery": "[[Class::Y]] [[Keyword::~\"@@@\"]]"
+      }
+    }
+  },
+</pre>
+
 === Define sort options ===
 
 The interface comes with a widget in the upper right corner that lets users change the <code>sort</code> and <code>order</code> (asc/desc) of the query. For instance, if you want your users to be able to sort by pagename, date of page creation and date of latest revision, you could add something like the following to the profile :

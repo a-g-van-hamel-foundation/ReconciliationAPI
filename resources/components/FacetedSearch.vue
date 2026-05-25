@@ -110,7 +110,10 @@ module.exports = defineComponent( {
 		// Object which encapsulates filters in use
 		const query = reactive( {} );
 		// Object which encapsulates SMW query (sub)conditions
-		const smwQueryObj = reactive( {} );
+		const smwQueryObj = reactive( {
+			baseQueries: {},
+			conditions: {}
+		} );
 		// Parameters for #ask 
 		const askParams = ref( JSON.parse(props.configData.askParams) );
 		const valueSep = ref(";");
@@ -423,9 +426,26 @@ module.exports = defineComponent( {
 		// smwQuery, smwQueryObj, COUNT?
 		function buildQuery() {
 			// set/reset smwQuery and smwQueryObject to initial
-			var smwQuery = props.profile?.baseQuery ?? "";
 			for (var k in smwQueryObj) delete smwQueryObj[k];
-			smwQueryObj["baseQuery"] = smwQuery;
+			smwQueryObj["conditions"] = {};
+			smwQueryObj["baseQuery"] = props.profile?.baseQuery ?? "";
+			smwQueryObj["baseQueries"] = {};
+			// base queries = work in progress
+			if (typeof props.profile?.baseQuery === "string") {
+				smwQueryObj["baseQueries"]["1"] = {
+					baseQuery: props.profile?.baseQuery ?? "",
+					conditions: {}
+				};
+			} else {
+				// multiple conditions to be separated by OR
+				for (const [k,v] of Object.entries(props.profile?.baseQuery)) {
+					smwQueryObj["baseQueries"][k] = {
+						baseQuery: v,
+						conditions: {}
+					};
+				};
+			}
+			console.log("sdfsdf",smwQueryObj);
 
 			props.profile?.facets.forEach( (facet) => {
 				var k = facet.name ?? facet.smwproperty;
@@ -433,79 +453,22 @@ module.exports = defineComponent( {
 					return;
 				}
 
-				switch(facet.inputType) {
-					case "select":
-					case "lookup":
-					case "radio":
-						// = codex select or lookup
-						smwQueryObj[k] = "";
-						/*if ( facet.subquery !== undefined ) {
-							// work in progress; API only
-							var newQ = `[[${facet.smwproperty}::` + `<q>` + facet.subquery.replaceAll( "@@@", query[k] ) + `</q>` + `]]`;
-							smwQuery += newQ + ` `;
-							smwQueryObj[k] = newQ;
-						}*/
-						if (facet.options !== undefined) {
-							var option = facet.options.find((opt) => opt['value'] == query[k]);
-							var newQ = assignToProperty(facet.smwproperty, option.value, facet.subquery);
-							smwQuery += newQ;
-							smwQueryObj[k] = newQ;
-						} else if (typeof facet.mapOptions !== 'undefined') {	
-							var mapOption = facet.mapOptions.find((opt) => opt['option'] == query[k]);
-							smwQuery += mapOption.where;
-							smwQueryObj[k] = mapOption.where;
-						} else {
-							// API
-							var newQ = assignToProperty(facet.smwproperty, query[k], facet.subquery, facet);
-							smwQuery += newQ + ` `;
-							smwQueryObj[k] = newQ;
-						}
-					break;
-					case "multiselect":
-						smwQueryObj[k] = [];
-						if (facet.options !== undefined) {
-							// No need to check I think
-						}
-						query[k].forEach( (v) => {
-							var newQ = assignToProperty(facet.smwproperty, v, facet.subquery);
-							smwQuery += newQ;
-							smwQueryObj[k].push(newQ);
-						});
-					break;
-					case "text":
-						var substr = sanitiseString(query[k]);
-						if (typeof facet.smwproperty !== "undefined") {
-							// @todo - no comprehensive checks yet
-							var q = ``;
-							switch(facet.smwpropertyMatch ?? "tokenprefix") {
-								// 'contains'?
-								case "tokenprefix":
-									var q = getReplacementString(substr, facet.smwproperty, usesTokens, minTokenSize);
-								break;
-								case "exact":
-									var q = `[[${facet.smwproperty}::${substr}]]`;
-								break;
-							}
-							smwQuery += q + ` `;
-							smwQueryObj[k] = q;
-						} else {
-							// Assuming single-page restriction
-							var q = ``;
-							switch(facet.smwpropertyMatch ?? "tokenprefix") {
-								// 'contains'?
-								case "tokenprefix":
-									var q = `[[~${substr}*]]`;
-								break;
-								case "exact":
-									var q = `[[${substr}]]`;
-								break;
-							}
-							smwQuery += q + ` `;
-							smwQueryObj[k] = q;
-						}
-					break;
+				if (!facet.conditions) {
+					// General query condition
+					let subcondition = createSubconditionFromFacet(facet, facet, query[k]);
+					smwQueryObj["conditions"][k] = subcondition;
+				} else if (facet.conditions) {
+					// Conditions specific to one query group
+					for (const [groupKey,sfacet] of Object.entries(facet.conditions)) {
+						let specificSubcondition = createSubconditionFromFacet(facet, sfacet, query[k]);
+						smwQueryObj["baseQueries"][groupKey]["conditions"][k] = specificSubcondition;
+					}
 				}
 			} );
+
+			var smwQuery = convertSmwQueryObjToString();
+			console.log("smwQueryObj", smwQueryObj);
+			console.log("smwQuery",smwQuery);
 
 			if (props.configData.output == "ask") {
 				smwPrintoutProps.forEach( (prop) => {
@@ -529,6 +492,102 @@ module.exports = defineComponent( {
 			return smwQuery;
 		}
 
+		/**
+		 * Helper function for buildQuery
+		 * @param facet {object} containing facet data
+		 * @param smwMap {object} containing SMW mapping data such as smwproperty, smwquery
+		 * @param filterVal {string} filter value
+		 */
+		function createSubconditionFromFacet(facet, smwMap, filterVal) {
+			switch(facet.inputType) {
+				case "select":
+				case "lookup":
+				case "radio":
+					if (facet.options !== undefined) {
+						var option = facet.options.find((opt) => opt['value'] == filterVal);
+						var newQ = assignToProperty(smwMap.smwproperty, option.value, smwMap.subquery);
+					} else if (typeof facet.mapOptions !== 'undefined') {	
+						var mapOption = facet.mapOptions.find((opt) => opt['option'] == filterVal);
+						var newQ = mapOption.where;
+					} else {
+						// API
+						var newQ = assignToProperty(smwMap.smwproperty, filterVal, smwMap.subquery, facet);
+					}
+				break;
+				case "multiselect":
+					if (facet.options !== undefined) {
+						// No need to check I think
+					}
+					var newQ = [];
+					filterVal.forEach( (v) => {
+						var cond = assignToProperty(smwMap.smwproperty, v, smwMap.subquery);
+						newQ.push(cond);
+					});
+				break;
+				case "text":
+					var substr = sanitiseString(filterVal);
+					if (typeof smwMap.smwproperty !== "undefined") {
+						// @todo - no comprehensive checks yet
+						var newQ = ``;
+						switch(smwMap.smwpropertyMatch ?? "tokenprefix") {
+							// 'contains'?
+							case "tokenprefix":
+								var newQ = getReplacementString(substr, smwMap.smwproperty, smwMap.subquery, usesTokens, minTokenSize);
+							break;
+							case "exact":
+								var newQ = assignToProperty(smwMap.smwproperty, substr, smwMap.subquery);
+							break;
+						}
+					} else {
+						// Assuming single-page restriction
+						let newQ = ``;
+						switch(smwMap.smwpropertyMatch ?? "tokenprefix") {
+							// 'contains'?
+							case "tokenprefix":
+								newQ = `[[~${substr}*]]`;
+							break;
+							case "exact":
+								newQ = `[[${substr}]]`;
+							break;
+						}
+					}
+				break;
+			}
+			return newQ;
+		}
+
+		/**
+		 * Helper function for buildQuery
+		 * Converts smwQueryObj to a query string that can
+		 * be used in an #ask query
+		 */
+		function convertSmwQueryObjToString() {
+			// General conditions that go with each base query
+			let generalConditionStr = ``;
+			for (const [k,v] of Object.entries(smwQueryObj["conditions"])) {
+				generalConditionStr += Array.isArray(v)
+					? v.join(` `) + ` `
+					: `${v} `;
+			}
+
+			// queries divided by OR if more more than one
+			let queryGroups = [];
+			for (const [k,v] of Object.entries(smwQueryObj["baseQueries"])) {
+				// Conditions that go with one base query only
+				conditionStr = ``;
+				if (v["conditions"]) {
+					for (const [ck,cv] of Object.entries(v["conditions"])) {
+						conditionStr += Array.isArray(cv) 
+							? cv.join(` `) + ` `
+							: `${cv} `;
+					}
+				}
+				queryGroups.push(`${v["baseQuery"]} ${conditionStr}${generalConditionStr}`);
+			}
+			let str = queryGroups.join(" OR ");
+			return str;
+		}
+
 		// Helper function for default values
 		function convertToArray(v, sep) {
 			if (Array.isArray(v)) {
@@ -539,7 +598,7 @@ module.exports = defineComponent( {
 
 		// Helper function for buildQuery
 		function assignToProperty(propertyName, selectedValue, subQuery) {
-			if (typeof subQuery == "undefined") {
+			if (typeof subQuery == "undefined" || subQuery == null) {
 				var newQ = `[[${propertyName}::${selectedValue}]]`;
 			} else {
 				var newQ = `[[${propertyName}::` + `<q>` + subQuery.replaceAll("@@@", selectedValue) + `</q>` + `]]`;
@@ -547,7 +606,7 @@ module.exports = defineComponent( {
 			return newQ;
 		}
 
-		function getReplacementString(substr, property, usesTokens, minTokenSize) {
+		function getReplacementString(substr, property, subquery, usesTokens, minTokenSize) {
 			var newStr = "";
 			var strings = substr.split(" ");
 
@@ -556,6 +615,7 @@ module.exports = defineComponent( {
 				strings.forEach( (str) => {
 					// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/length
 					// @dev note: use Intl.Segmenter when widely available
+					//smwquery
 					var count = [...str].length;
 					if (count >= minTokenSize) {
 						newStr += `+${str}* `;
@@ -565,12 +625,14 @@ module.exports = defineComponent( {
 						newStr += `${str} `;
 					}
 				} );
-				return `[[${property}::~` + newStr.trim() + `]]`;
+				var res = assignToProperty(property, "~" + newStr.trim(), subquery);
+				return res;
 			} else {
+				var newStrings = [];
 				strings.forEach( (str) => {
-					newStr += `[[${property}::~${str}*]] `;
+					newStrings.push( assignToProperty(property, "~${str}*", subquery));
 				} );
-				return newStr.trim();
+				return newStrings.join(" ").trim();
 			}
 		}
 
@@ -944,6 +1006,7 @@ module.exports = defineComponent( {
 	background-color: #f8f8f8;
 	label {
 		padding: 4px 0;
+		font-variant: all-small-caps;
 	}
 	.recon-result-count {
 		display: flex;
@@ -951,6 +1014,7 @@ module.exports = defineComponent( {
 		font-size: .8rem;
 		& > span {
 			padding: 4px 8px;
+			font-variant: all-small-caps;
 		}
 	}
 	.recon-sort {
