@@ -64,6 +64,7 @@
 			</div>
 		</div>
 	</template>
+
 	<template v-else-if="componentType === 'radio'">
 		<div class="form-group form-group-v">
 			<div><label>{{ label }}</label></div>
@@ -89,12 +90,25 @@
 		</div>
 	</template>
 
+	<template v-else-if="componentType === 'rangetext'">
+		<range-facet
+			:component-type="componentType"
+			v-model:query="query"
+			:name1="name1 ?? null"
+			:name2="name2 ?? null"
+			:label="label"
+			:config-data="configData"
+			@on-enter="onEnter()"
+		></range-facet>
+	</template>
+
 </template>
 
 <script>
 const { defineComponent, computed, ref, reactive, watch } = require("vue");
 const { CdxTextInput, CdxSelect, CdxLookup, CdxMultiselectLookup, CdxRadio, CdxIcon } = require( "@wikimedia/codex" );
-const { cdxIconDownTriangle } = require( './icons.json' );
+const RangeFacet = require( "./RangeFacet.vue" );
+const { cdxIconDownTriangle } = require( "./icons.json" );
 
 module.exports = defineComponent( {
 	name: "Facet",
@@ -102,6 +116,7 @@ module.exports = defineComponent( {
 		//CdxButton
 		CdxTextInput, CdxSelect, CdxLookup, CdxMultiselectLookup, CdxRadio, CdxIcon,
 		// CdxField, CdxSearchInput
+		RangeFacet
 	},
 	props: {
 		name: { type: "String", default: "" },
@@ -109,7 +124,9 @@ module.exports = defineComponent( {
 		inputType: { type: "String", default: "text" },
 		apiUrl: { type: "String", default: "" },
 		query: { type: "Object", default: {} },
-		configData: { type: "Object", default: {} }
+		configData: { type: "Object", default: {} },
+		name1: { type: "String", default: null },
+		name2: { type: "String", default: null },
 	},
 	emits: [ 'run-query' ],
 	setup(props, { emit } ) {

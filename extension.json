@@ -145,6 +145,7 @@
 				"components/FacetedSearch.vue",
 				"components/Facet.vue",
 				"components/FacetedSearchResult.vue",
+				"components/RangeFacet.vue",
 				"components/SortOrder.vue",
 				"components/Pagination.vue",
 				{

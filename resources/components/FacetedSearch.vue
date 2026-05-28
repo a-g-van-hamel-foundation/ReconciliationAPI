@@ -2,11 +2,13 @@
 	<div class="recon-faceted-search" ref="wrapper" :style="`scroll-margin-top:` + scrollMarginTop + `; scroll-snap-margin-top:` + scrollMarginTop + `;`">
 		<div class="recon-facets">
 			<template v-for="facet in facets">
+				<!-- v-model="query[facet.name]" not necessary -->
 				<facet
 					:ref="facet.name"
 					:name="facet.name ?? facet.smwproperty"
+					:name1="facet.name1 ?? null"
+					:name2="facet.name2 ?? null"
 					:label="facet.label ?? facet.name"
-					v-model="query[facet.name]"
 					:input-type="facet.inputType ?? 'text'"
 					v-model:query="query"
 					:api-url="apiUrl"
@@ -125,11 +127,15 @@ module.exports = defineComponent( {
 		const apiUrl = ref( mw.config.get("wgServer") + (mw.config.get("wgScriptPath") || "") + "/api.php" );
 		const usesTokens = props.configData?.smwFts || props.configData?.smwElastic;
 		const minTokenSize = props.configData?.smwFtsMintokensize ?? 3;
+
 		props.profile?.facets.forEach( (facet) => {
 			// Set empty defaults
-			// k MUST be unique; use 'name' if same smwproperty is used more than once
-			var k = facet.name ?? facet.smwproperty;
-			query[k] = facet.inputType == "multiselect" ? [] : "";
+			if (facet.name) {
+				query[facet.name] = (facet.inputType == "multiselect") ? [] : "";
+			} else if (facet.name1 && facet.name1) {
+				query[facet.name1] = "";
+				query[facet.name2] = "";
+			}
 		} );
 
 		// sort and order
@@ -445,25 +451,31 @@ module.exports = defineComponent( {
 					};
 				};
 			}
-			console.log("sdfsdf",smwQueryObj);
 
 			props.profile?.facets.forEach( (facet) => {
-				var k = facet.name ?? facet.smwproperty;
-				if (query[k] == undefined || query[k] == null || query[k] == "" || query[k].length == 0) {
-					return;
-				}
-
-				if (!facet.conditions) {
-					// General query condition
-					let subcondition = createSubconditionFromFacet(facet, facet, query[k]);
-					smwQueryObj["conditions"][k] = subcondition;
-				} else if (facet.conditions) {
-					// Conditions specific to one query group
-					for (const [groupKey,sfacet] of Object.entries(facet.conditions)) {
-						let specificSubcondition = createSubconditionFromFacet(facet, sfacet, query[k]);
-						smwQueryObj["baseQueries"][groupKey]["conditions"][k] = specificSubcondition;
+				let facetKeys = facet.name ? [facet.name]
+					: (facet.name1 && facet.name2)
+						? [facet.name1, facet.name2] : [];
+				facetKeys.forEach( (fkey,indx) => {
+					if (query[fkey] == undefined || query[fkey] == null || query[fkey] == "" || query[fkey].length == 0) {
+						return;
 					}
-				}
+
+					// 
+					if (!facet.conditions) {
+						// General query condition
+						let subcondition = createSubconditionFromFacet(facet, facet, query[fkey], indx);
+						smwQueryObj["conditions"][fkey] = subcondition;
+					} else if (facet.conditions) {
+						// Conditions specific to one query group
+						for (const [groupKey,sfacet] of Object.entries(facet.conditions)) {
+							let specificSubcondition = createSubconditionFromFacet(facet, sfacet, query[fkey], indx);
+							smwQueryObj["baseQueries"][groupKey]["conditions"][fkey] = specificSubcondition;
+						}
+					}
+
+				} );
+
 			} );
 
 			var smwQuery = convertSmwQueryObjToString();
@@ -497,8 +509,10 @@ module.exports = defineComponent( {
 		 * @param facet {object} containing facet data
 		 * @param smwMap {object} containing SMW mapping data such as smwproperty, smwquery
 		 * @param filterVal {string} filter value
+		 * @param inputIndex {integer} used for facets with multiple inputs that must be differentiated ('rangetext')
 		 */
-		function createSubconditionFromFacet(facet, smwMap, filterVal) {
+		function createSubconditionFromFacet(facet, smwMap, filterVal, inputIndex) {
+			var newQ = "";
 			switch(facet.inputType) {
 				case "select":
 				case "lookup":
@@ -540,7 +554,6 @@ module.exports = defineComponent( {
 						}
 					} else {
 						// Assuming single-page restriction
-						let newQ = ``;
 						switch(smwMap.smwpropertyMatch ?? "tokenprefix") {
 							// 'contains'?
 							case "tokenprefix":
@@ -550,6 +563,13 @@ module.exports = defineComponent( {
 								newQ = `[[${substr}]]`;
 							break;
 						}
+					}
+				break;
+				case "rangetext":
+					if (smwMap.smwproperty && inputIndex === 0) {
+						newQ = `[[${smwMap.smwproperty}::>${filterVal}]]`;
+					} else if (smwMap.smwproperty && inputIndex === 1) {
+						newQ = `[[${smwMap.smwproperty}::<${filterVal}]]`;
 					}
 				break;
 			}
