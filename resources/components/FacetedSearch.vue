@@ -131,7 +131,8 @@ module.exports = defineComponent( {
 		props.profile?.facets.forEach( (facet) => {
 			// Set empty defaults
 			if (facet.name) {
-				query[facet.name] = (facet.inputType == "multiselect") ? [] : "";
+				// array
+				query[facet.name] = (facet.inputType == "multiselect" || facet.inputType == "checkboxes") ? [] : "";
 			} else if (facet.name1 && facet.name1) {
 				query[facet.name1] = "";
 				query[facet.name2] = "";
@@ -529,14 +530,21 @@ module.exports = defineComponent( {
 					}
 				break;
 				case "multiselect":
+				case "checkboxes":
 					if (facet.options !== undefined) {
 						// No need to check I think
 					}
+					let smwpropertyMatchLogic = facet.smwpropertyMatchLogic ?? "AND";
 					var newQ = [];
-					filterVal.forEach( (v) => {
-						var cond = assignToProperty(smwMap.smwproperty, v, smwMap.subquery);
+					if ( smwpropertyMatchLogic == "OR" ) {
+						var cond = assignToProperty(smwMap.smwproperty, filterVal.join("||"), smwMap.subquery);
 						newQ.push(cond);
-					});
+					} else {
+						filterVal.forEach( (v) => {
+							var cond = assignToProperty(smwMap.smwproperty, v, smwMap.subquery);
+							newQ.push(cond);
+						});
+					}
 				break;
 				case "text":
 					var substr = sanitiseString(filterVal);
@@ -734,8 +742,8 @@ module.exports = defineComponent( {
 					let keyName = kvPair[0].trim();
 					let inputType = findInputTypeForFacetByName(keyName);
 					let val = (kvPair[1] ?? "").trim();
-					if (inputType == "multiselect") {
-						// multiselect requires arrays
+					if (inputType == "multiselect" || inputType == "checkboxes") {
+						// requires arrays
 						val = convertToArray(kvPair[1] ?? "", valueSep.value ?? ";");
 					}
 					query[keyName] = val;

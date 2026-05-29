@@ -1,7 +1,13 @@
 <template>
 	<template v-if="componentType === 'lookup'">
 		<div class="form-group form-group-v">
-			<div><label>{{ label }}</label></div>
+			<div class="recon-label-area">
+				<label>{{ label }}</label>
+				<info-dialog v-if="configData.info"
+					:comment="configData.info"
+					:title="label"
+				></info-dialog>
+			</div>
 			<div>
 				<cdx-lookup
 					:name="name"
@@ -19,7 +25,13 @@
 	</template>
 	<template v-else-if="componentType === 'select'">
 		<div class="form-group form-group-v">
-			<div><label>{{ label }}</label></div>
+			<div class="recon-label-area">
+				<label>{{ label }}</label>
+				<info-dialog v-if="configData.info"
+					:comment="configData.info"
+					:title="label"
+				></info-dialog>
+			</div>
 			<div>
 				<cdx-select
 					v-model:selected="query[name]"
@@ -34,7 +46,13 @@
 	</template>
 	<template v-else-if="componentType === 'multiselect'">
 		<div class="form-group form-group-v">
-			<div><label>{{ label }}</label></div>
+			<div class="recon-label-area">
+				<label>{{ label }}</label>
+				<info-dialog v-if="configData.info"
+					:comment="configData.info"
+					:title="label"
+				></info-dialog>
+			</div>
 			<div>
 				<cdx-multiselect-lookup
 					v-model:input-chips="chips"
@@ -53,7 +71,13 @@
 	</template>
 	<template v-else-if="componentType === 'text'">
 		<div class="form-group form-group-v">
-			<div><label>{{ label }}</label></div>
+			<div class="recon-label-area">
+				<label>{{ label }}</label>
+				<info-dialog v-if="configData.info"
+					:comment="configData.info"
+					:title="label"
+				></info-dialog>
+			</div>
 			<div>
 				<cdx-text-input
 					:name="name"
@@ -67,7 +91,13 @@
 
 	<template v-else-if="componentType === 'radio'">
 		<div class="form-group form-group-v">
-			<div><label>{{ label }}</label></div>
+			<div class="recon-label-area">
+				<label>{{ label }}</label>
+				<info-dialog v-if="configData.info"
+					:comment="configData.info"
+					:title="label"
+				></info-dialog>
+			</div>
 			<div class="recon-radio-group" role="radiogroup">
 				<cdx-radio
 					v-for="(radio, index) in selectList"
@@ -81,7 +111,42 @@
 				</cdx-radio>
 				<!-- CdxButton -->
 				<a v-if="hasFurtherResults"
-					@click="requestAdditionalRadioOptions"
+					@click="requestAdditionalRadioOrCheckboxOptions"
+					class="recon-further-results"
+				>
+					<cdx-icon :icon="cdxIconDownTriangle" size="x-small"></cdx-icon> More&hellip;
+				</a>
+			</div>
+		</div>
+	</template>
+
+	<template v-else-if="componentType === 'checkboxes'">
+		<div class="form-group form-group-v">
+			<div class="recon-label-area">
+				<label>{{ label }}</label>
+				<info-dialog v-if="configData.info"
+					:comment="configData.info"
+					:title="label"
+				></info-dialog>
+			</div>
+			<div>
+				<div v-if="configData.smwpropertyMatchLogic == 'OR'" class="recon-comment">Match any selected ({{ query[name].length }}):</div>
+				<div v-else class="recon-comment">Match all selected ({{ query[name].length }}):</div>
+			</div>
+			<div class="recon-checkbox-group" role="group">
+				<cdx-checkbox
+					v-for="(check, index) in selectList"
+					:key="'check-' + check.name + check.value + index"
+					v-model="query[name]"
+					:name="name"
+					:input-value="check.value"
+					@update:model-value="onUpdateSelected"
+				>
+					<span v-html="check.label"></span>
+				</cdx-checkbox>
+				<!-- CdxButton -->
+				<a v-if="hasFurtherResults"
+					@click="requestAdditionalRadioOrCheckboxOptions"
 					class="recon-further-results"
 				>
 					<cdx-icon :icon="cdxIconDownTriangle" size="x-small"></cdx-icon> More&hellip;
@@ -106,17 +171,18 @@
 
 <script>
 const { defineComponent, computed, ref, reactive, watch } = require("vue");
-const { CdxTextInput, CdxSelect, CdxLookup, CdxMultiselectLookup, CdxRadio, CdxIcon } = require( "@wikimedia/codex" );
+const { CdxTextInput, CdxSelect, CdxLookup, CdxMultiselectLookup, CdxRadio, CdxCheckbox, CdxIcon } = require( "@wikimedia/codex" );
 const RangeFacet = require( "./RangeFacet.vue" );
+const InfoDialog = require( "./InfoDialog.vue" );
 const { cdxIconDownTriangle } = require( "./icons.json" );
 
 module.exports = defineComponent( {
 	name: "Facet",
 	components: {
 		//CdxButton
-		CdxTextInput, CdxSelect, CdxLookup, CdxMultiselectLookup, CdxRadio, CdxIcon,
+		CdxTextInput, CdxSelect, CdxLookup, CdxMultiselectLookup, CdxRadio, CdxCheckbox, CdxIcon,
 		// CdxField, CdxSearchInput
-		RangeFacet
+		RangeFacet, InfoDialog
 	},
 	props: {
 		name: { type: "String", default: "" },
@@ -143,7 +209,7 @@ module.exports = defineComponent( {
 		}
 
 		const allowEmpty = ref(true);
-		if( props.configData.allowEmpty !== undefined && props.configData.allowEmpty == false ) {
+		if(props.configData.allowEmpty !== undefined && props.configData.allowEmpty == false) {
 			allowEmpty.value = false;
 		}
 
@@ -162,7 +228,7 @@ module.exports = defineComponent( {
 		const selectList = ref( [] );
 		initSelectList();
 		function initSelectList() {
-			if ((componentType.value == "select" || componentType.value == "radio") && allowEmpty.value ) {
+			if ((componentType.value == "select" || componentType.value == "radio") && allowEmpty.value) {
 				// Start with dummy value
 				selectList.value.push({
 					value: "",
@@ -170,11 +236,11 @@ module.exports = defineComponent( {
 				});
 			}
 			// Fixed options or mapped options
-			if ( props.configData.options !== undefined ) {
+			if (props.configData.options !== undefined) {
 				props.configData.options.forEach( (opt) => {
 					selectList.value.push( { value: opt['value'], label: opt['label'] } );
 				} );
-			} else if ( props.configData.mapOptions !== undefined ) {
+			} else if (props.configData.mapOptions !== undefined) {
 				props.configData.mapOptions.forEach( (opt) => {
 					selectList.value.push( { value: opt['option'], label: opt['option'] } );
 				} );
@@ -189,9 +255,9 @@ module.exports = defineComponent( {
 		 * @param {String} [action] see requestEntity() and requestPropertyValue()
 		 */
 		function runRequest(term, action) {
-			if ( dataSourceType.value !== "api" ) {
+			if (dataSourceType.value !== "api") {
 				return;
-			} else if ( !term ) {
+			} else if (!term) {
 				// reset?
 				// selectList.value = [];
 				// return;
@@ -230,7 +296,7 @@ module.exports = defineComponent( {
 				offset: offset ?? 0,
 				prefix: term
 			};
-			if ( profileId.value !== null ) {
+			if (profileId.value !== null) {
 				apiUrlParams["profile"] = profileId.value;
 			}
 
@@ -242,7 +308,7 @@ module.exports = defineComponent( {
 		}
 
 		function handleEntityResponseForInitialValues(data) {
-			if ( data.result == undefined || data.result.length == 0 ) {
+			if (data.result == undefined || data.result.length == 0) {
 				return null;
 			}
 			var firstItem = data.result[0];
@@ -254,7 +320,7 @@ module.exports = defineComponent( {
 		}
 
 		function handleEntityResponse(data, action) {
-			if ( data.result == undefined ) {
+			if (data.result == undefined) {
 				return;
 			}
 			var newSelectList = data.result.map( (res) => ( {
@@ -272,7 +338,7 @@ module.exports = defineComponent( {
 				// replace
 				selectList.value = newSelectList;
 				// add dummy in again
-				if ( componentType.value == "radio" && allowEmpty.value ) {
+				if (componentType.value == "radio" && allowEmpty.value) {
 					selectList.value.unshift({
 						value: "",
 						label: "---"
@@ -286,10 +352,10 @@ module.exports = defineComponent( {
 		const hasFurtherResults = ref(false);
 		const nextOffset = ref(0);
 
-		// Currently type 'radio' only
-		function requestAdditionalRadioOptions() {
+		// Currently type 'radio' or 'checkboxes' only
+		function requestAdditionalRadioOrCheckboxOptions() {
 			if (profileId.value !== null) {
-				requestEntity("", nextOffset.value )
+				requestEntity("", nextOffset.value)
 				.then( (data) => {
 					handleEntityResponse(data, "append");
 				});
@@ -303,8 +369,8 @@ module.exports = defineComponent( {
 
 		// Currently used for radio buttons
 		function signalFurtherResults(nextOffsetFromAPI) {
-			if ( componentType.value == "radio" ) {
-				if ( nextOffsetFromAPI > 0 ) {
+			if (componentType.value == "radio" || componentType.value == "checkboxes") {
+				if (nextOffsetFromAPI > 0) {
 					// add 
 					//console.log( "More results..." );
 					hasFurtherResults.value = true;
@@ -336,7 +402,7 @@ module.exports = defineComponent( {
 		}
 
 		function handlePropertyValueResponseForInitialValues(data) {
-			if ( data.result == undefined || data.result.length == 0 ) {
+			if (data.result == undefined || data.result.length == 0) {
 				return null;
 			}
 			var firstItem = data.result[0];
@@ -349,7 +415,7 @@ module.exports = defineComponent( {
 
 		// Handles response from requestPropertyValue
 		function handlePropertyValueResponse(data, action) {
-			if ( data.result == undefined ) {
+			if (data.result == undefined) {
 				return;
 			}
 			var newSelectList = data.result.map( (res) => ( {
@@ -357,13 +423,13 @@ module.exports = defineComponent( {
 				label: res.name,
 				description: res.description ?? ""
 			} ) );
-			if ( action && action === "append" ) {
+			if (action && action === "append") {
 				// Append options to list. Used for radio options
 				selectList.value.push( ...newSelectList );
 			} else {
 				selectList.value = newSelectList;
 				// dummy
-				if ( componentType.value == "radio" && allowEmpty.value ) {
+				if (componentType.value == "radio" && allowEmpty.value) {
 					selectList.value.unshift({
 						value: "",
 						label: "---"
@@ -383,6 +449,7 @@ module.exports = defineComponent( {
 		// 
 		const selectInput = ref( "" );
 		const chips = ref( [] );
+		const checkboxVals = ref( [] );
 		if (props.query[props.name]) {
 			handleInitialValues();
 		}
@@ -397,28 +464,40 @@ module.exports = defineComponent( {
 					var target = "selectInput";
 				break;
 				case "multiselect":
-					var target = "chips"
+					var target = "chips";
+				break;
+				case "checkboxes":
+					console.log("init handleInitialValues - checkboxes");
+					console.log("dataSourceType.value",dataSourceType.value)
+					console.log("props.profileId",props.profileId);
+					var target = "checkboxes";
 				break;
 			}
-			if ( target == null ) {
+			if (target == null) {
 				return;
 			}
 
 			// For any initial value, get value/label pair
-			const initialValues = ( typeof props.query[props.name] == "string" )
+			const initialValues = (typeof props.query[props.name] == "string")
 				? [ props.query[props.name] ]
 				: props.query[props.name];
-			
-			switch( dataSourceType.value ) {
+
+			switch(dataSourceType.value) {
 				case "api":
 					initialValues.forEach( (v) => {
-						if ( props.profileId !== null ) {
+						if (props.profileId !== null) {
 							// Run request against API
 							requestEntity(v, 0).then( (data) => {
 								let firstResult = handleEntityResponseForInitialValues(data);
-								if( target == "chips" ) {	
+								if(target == "chips") {
+									console.log("chips");
 									chips.value.push( firstResult ?? { value: v, label: v } );
+								} else if(target == "checkboxes" && false) {
+									// @todo 
+									console.log( "checkboxes, checkboxVals");
+									checkboxVals.push(firstResult ?? { value: v, label: v });
 								} else {
+									console.log("selectInput");
 									selectInput.value = firstResult['label'] ?? v;
 								}
 							});
@@ -426,8 +505,8 @@ module.exports = defineComponent( {
 							// @todo pages with display titles
 							requestPropertyValue(v, 0).then( (data) => {
 								let firstResult = handlePropertyValueResponseForInitialValues(data, v);
-								if( target == "chips" ) {
-									chips.value.push( firstResult ?? { value: v, label: v } );
+								if(target == "chips") {
+									chips.value.push(firstResult ?? { value: v, label: v });
 								} else {
 									selectInput.value = firstResult['label'] ?? v;
 								}
@@ -440,8 +519,8 @@ module.exports = defineComponent( {
 					const initialOptions = props.configData.options ?? props.configData.mapOptions ?? [];
 					initialValues.forEach( (v) => {
 						initialOptions.find( (opt) => {
-							if (opt['value'] == v ) {
-								if( target == "chips" ) {
+							if (opt['value'] == v) {
+								if(target == "chips") {
 									chips.value.push(opt);
 								} else {
 									selectInput.value = opt['label'];
@@ -460,7 +539,7 @@ module.exports = defineComponent( {
 
 		function onMultiselectInput(value) {
 			if(dataSourceType.value == "api") {
-				runRequest( value );
+				runRequest(value);
 				// 
 			} else if(props.configData?.options !== undefined) {
 				// selectList.value = props.configData.options.filter( ( opt ) => opt.value == value );
@@ -471,10 +550,10 @@ module.exports = defineComponent( {
 		}
 
 		// type 'radio' - init, no trigger needed
-		if (componentType.value === "radio") {
-			initRadioGroup();
+		if (componentType.value === "radio" || componentType.value === "checkboxes") {
+			initRadioOrCheckboxGroup();
 		}
-		function initRadioGroup() {
+		function initRadioOrCheckboxGroup() {
 			if (profileId.value !== null) {
 				requestEntity("")
 				.then( (data) => {
@@ -491,7 +570,7 @@ module.exports = defineComponent( {
 		// type 'text', 'multiselect'
 		function onEnter() {
 			// Let the parent initiate query on enter
-			emit('run-query', 0 );
+			emit('run-query', 0);
 		}
 
 		return {
@@ -508,10 +587,11 @@ module.exports = defineComponent( {
 
 			selectInput,
 			chips,
+			checkboxVals,
 			onMultiselectInput,
 			multiselectConfig,
 
-			requestAdditionalRadioOptions,
+			requestAdditionalRadioOrCheckboxOptions,
 
 			hasFurtherResults,
 			nextOffset,
@@ -525,6 +605,13 @@ module.exports = defineComponent( {
 </script>
 
 <style lang="less">
+
+.recon-label-area {
+	display:flex;
+	flex-wrap:nowrap;
+	justify-content: space-between;
+}
+
 .recon-radio-group {
 	max-height: 10rem;
 	overflow-y: auto;
@@ -532,6 +619,21 @@ module.exports = defineComponent( {
 	.cdx-radio {
 		margin-bottom: 2px;
 	}
+}
+
+.recon-checkbox-group {
+	max-height: 10rem;
+	overflow-y: auto;
+	line-height: 1.5rem;
+	.cdx-checkbox {
+		margin-bottom: 2px;
+	}
+}
+
+.recon-comment {
+	//font-variant: all-small-caps;
+	font-size: .8rem;
+	margin-bottom: 5px;
 }
 
 .recon-further-results {

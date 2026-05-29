@@ -145,20 +145,21 @@
 				"components/FacetedSearch.vue",
 				"components/Facet.vue",
 				"components/FacetedSearchResult.vue",
+				"components/InfoDialog.vue",
 				"components/RangeFacet.vue",
 				"components/SortOrder.vue",
 				"components/Pagination.vue",
 				{
 					"name": "components/icons.json",
 					"callback": "MediaWiki\\ResourceLoader\\CodexModule::getIcons",
-					"callbackParam": [ "cdxIconDownTriangle", "cdxIconUpTriangle" ]
+					"callbackParam": [ "cdxIconDownTriangle", "cdxIconUpTriangle", "cdxIconInfo" ]
 				}
 			],
 			"dependencies": [ 
 				"@wikimedia/codex"
 			],
 			"codexComponents": [
-				"CdxTextInput", "CdxSelect", "CdxLookup", "CdxMultiselectLookup", "CdxIcon", "CdxRadio"
+				"CdxTextInput", "CdxSelect", "CdxLookup", "CdxMultiselectLookup", "CdxIcon", "CdxRadio", "CdxCheckbox", "CdxDialog", "CdxButton"
 			]
 		}
 	},
