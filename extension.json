@@ -13,7 +13,8 @@
 	},
 	"MessagesDirs": {
 		"Recon": [
-		  "i18n"
+		  "i18n",
+		  "resources/i18n"
 		]
 	},
 	"ExtensionMessagesFiles": {
@@ -160,6 +161,9 @@
 			],
 			"codexComponents": [
 				"CdxTextInput", "CdxSelect", "CdxLookup", "CdxMultiselectLookup", "CdxIcon", "CdxRadio", "CdxCheckbox", "CdxDialog", "CdxButton"
+			],
+			"messages": [
+				"recon-faceted-result", "recon-faceted-results", "recon-faceted-show-results", "recon-faceted-sort-by", "recon-faceted-match-any", "recon-faceted-match-all", "recon-faceted-more"
 			]
 		}
 	},

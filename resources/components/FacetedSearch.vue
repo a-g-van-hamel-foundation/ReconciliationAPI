@@ -17,7 +17,7 @@
 				></facet>
 			</template>
 
-			<button @click="submitQuery(0)" class="btn-submit">Show results</button>
+			<button @click="submitQuery(0)" class="btn-submit">{{ $i18n('recon-faceted-show-results').text() }}</button>
 
 		</div>
 		<div class="recon-results" ref="resultsWrapper">
@@ -40,7 +40,7 @@
 			<!-- Top section with result count -->
 			<div class="recon-results-top">
 				<div class="recon-result-count">
-					<span>{{ resultCount }} <span v-if="resultCount==1">result</span><span v-else>results</span>
+					<span>{{ resultCount }} <span v-if="resultCount==1">{{ $i18n('recon-faceted-result').text() }}</span><span v-else>{{ $i18n('recon-faceted-results').text() }}</span>
 					</span>
 				</div>
 				<!-- Reserved for sorter -->

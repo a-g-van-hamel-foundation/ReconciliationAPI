@@ -130,8 +130,8 @@
 				></info-dialog>
 			</div>
 			<div>
-				<div v-if="configData.smwpropertyMatchLogic == 'OR'" class="recon-comment">Match any selected ({{ query[name].length }}):</div>
-				<div v-else class="recon-comment">Match all selected ({{ query[name].length }}):</div>
+				<div v-if="configData.smwpropertyMatchLogic == 'OR'" class="recon-comment">{{ $i18n('recon-faceted-match-any').text() }} ({{ query[name].length }}):</div>
+				<div v-else class="recon-comment">{{ $i18n('recon-faceted-match-all').text() }} ({{ query[name].length }}):</div>
 			</div>
 			<div class="recon-checkbox-group" role="group">
 				<cdx-checkbox
@@ -149,7 +149,7 @@
 					@click="requestAdditionalRadioOrCheckboxOptions"
 					class="recon-further-results"
 				>
-					<cdx-icon :icon="cdxIconDownTriangle" size="x-small"></cdx-icon> More&hellip;
+					<cdx-icon :icon="cdxIconDownTriangle" size="x-small"></cdx-icon> {{ $i18n('recon-faceted-more').text() }}
 				</a>
 			</div>
 		</div>

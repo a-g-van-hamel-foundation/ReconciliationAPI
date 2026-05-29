@@ -3,7 +3,7 @@
 
 		<!-- sort -->
 		<template v-if="sortOptions.length > 0">
-			<label>Sort&nbsp;by</label>
+			<label>{{ $i18n('recon-faceted-sort-by').text() }}</label>
 			<cdx-select
 				v-model:selected="sort"
 				:menu-items="selectList || []"
