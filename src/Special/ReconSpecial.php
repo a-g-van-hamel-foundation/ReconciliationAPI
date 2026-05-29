@@ -252,6 +252,22 @@ class ReconSpecial extends SpecialPage {
 				"menutitle" => "recon-propose-property",
 				"file" => "recon-propose-property.wiki"
 			],
+			"facetedsearch" => [
+				"type" => "header",
+				"menutitle" => "Faceted search"
+			],
+			"faceted" => [
+				"type" => "page",
+				"menutitle" => "#recon-faceted-search",
+				"pagetitle" => "Faceted search: the parser function",
+				"file" => "faceted-search.wiki"
+			],
+			"faceted-profile" => [
+				"type" => "page",
+				"menutitle" => "Create a search profile",
+				"pagetitle" => "Faceted search: the configuration profile",
+				"file" => "faceted-search-profile.wiki"
+			],
 			"other" => [
 				"type" => "header",
 				"menutitle" => "Other"
@@ -273,12 +289,6 @@ class ReconSpecial extends SpecialPage {
 				"pagetitle" => "Testbench",
 				"menutitle" => "Testbench",
 				"file" => "testbench.wiki"
-			],
-			"faceted" => [
-				"type" => "page",
-				"menutitle" => "Faceted search",
-				"pagetitle" => "Faceted search",
-				"file" => "faceted-search.wiki"
 			],
 			"guide" => [
 				"type" => "page",
