@@ -1,6 +1,6 @@
 <template>
 	<div class="recon-dialog-wrapper">
-		<a @click="isOpen = true" class="cdx-docs-link">
+		<a @click="isOpen = true" class="cdx-docs-link" :aria-label="$i18n('recon-faceted-info-dialog-icon-aria-label')">
 			<cdx-icon :icon="cdxIconInfo"></cdx-icon>
 		</a>
 
@@ -10,7 +10,7 @@
 			:use-close-button="true"
 			@default="isOpen = false"
 		>
-			<p>{{ comment }}</p>
+			<p v-html="parsedComment"></p>
 		</cdx-dialog>
 	</div>
 </template>
@@ -32,8 +32,18 @@ module.exports = defineComponent( {
 	setup(props, { emit } ) {
 		const isOpen = ref( false );
 
+		const parsedComment = ref("");
+		parseWikitext();
+		function parseWikitext() {
+			new mw.Api().parse(props.comment)
+			.done( (rawData) => {
+				parsedComment.value = rawData;
+			});
+		}
+
 		return {
 			isOpen,
+			parsedComment,
 			cdxIconInfo
 		}
 	}

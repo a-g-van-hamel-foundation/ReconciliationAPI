@@ -5,6 +5,8 @@
 	"recon-faceted-sort-by": "Sort&nbsp;by",
 	"recon-faceted-match-any": "Match any selected",
 	"recon-faceted-match-all": "Match all selected",
-	"recon-faceted-more": "More&hellip;"
+	"recon-faceted-more": "More&hellip;",
+
+	"recon-faceted-info-dialog-icon-aria-label": "Click icon to view dialogue box with info about the present facet"
 
 }

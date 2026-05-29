@@ -78,7 +78,7 @@ To add faceted search to a wiki page, add an instance of the <code>#recon-facete
 </div>
 <div class="recon-data-item">
 <div><code>scrollmargintop</code></div>
-<div>When you use the pagination widget at the bottom of your search results, the page will automatically scroll up to the top. If your site happens to use a fixed header, the unfortunate side-effect is that the very top of the widget will then be buried under the header. To remedy this, set 'scrollmargintop' to the height of your header, including a unit such as 'px' or 'em'.</div>
+<div>When you navigate to a new result batch using the pagination widget at the bottom of your search results, the page will automatically scroll up to the top. If your site happens to use a fixed header, the unfortunate side-effect is that the very top of the widget will then be buried under the header. To remedy this, set 'scrollmargintop' to the height of your header, including a unit such as 'px' or 'em'.</div>
 </div>
 <div class="recon-data-item">
 <div><code>updateurl</code></div>
@@ -206,19 +206,71 @@ What follows is the general structure of a profile. The inline comments below ar
 === Define your facets ===
 The following JSON keys are available for configuring a facet. Their usage will be explained in more detail below.
 
-* '''inputType''' (mandatory) - either "select", "multiselect", "radio" or "text"
-* '''label''' - the visible label associated with a facet
-* '''name''' (mandatory) - unique name. It is essential that each facet is identifiable by a unique name.
-* '''smwproperty''' - the property to be used in the query, or an inverse query, or a property chain
-* '''subquery''' - optionally, a subquery to be used for 'smwproperty', without q tags and with @@@ as placeholder for the selected value. 
-* '''smwpropertyMatch''' - if using inputType=text, set to 'exact' to make the query match exactly.
-* Data source options, each of which will be explained below :
-** '''profileid'''
-** '''valuesFromProperty'''
-** '''options'''
-** '''mapOptions'''
-* '''resultLimit''' - optionally, the maximum number of possible values ( default: 25) that can be shown in a facet if data is retrieved over the API. This can be useful, for instance, if you need to accommodate more items in a 'radio' button group.
-* '''allowEmpty''' - Used for 'radio' and 'select' inputs. Whether to prepend an empty option ('true' by default). Set to 'false' to disable it. See info on radio buttons below.
+<div class="recon-data-item">
+<div><code>inputType</code> (mandatory)</div>
+<div>Current options are "select", "multiselect", "radio", "checkboxes", "text", and two dual input facets, "numberrange" and "daterange". </div>
+</div>
+<div class="recon-data-item">
+<div><code>name</code> (mandatory for most)</div>
+<div>Unique name. It is essential that each facet is identifiable by a unique name. Mandatory except for the range inputs, which require two of them (<code>name1</code>, <code>name2</code>). 
+</div>
+</div>
+<div class="recon-data-item">
+<div><code>name1</code>, <code>name2</code></div>
+<div>Mandatory for the range inputs ("numberrange", "daterange"), which require a unique 'name' for each input.</div>
+</div>
+<div class="recon-data-item">
+<div><code>label</code></div>
+<div>The visible label associated with a facet</div>
+</div>
+Data source options, each of which will be explained below :
+<div class="recon-data-item">
+<div><code>profileid</code></div>
+<div>Page ID of the reconciliation profile to be used for retrieving entities from the API.</div>
+</div>
+<div class="recon-data-item">
+<div><code>valuesFromProperty</code></div>
+<div>Property from which to return values.</div>
+</div>
+<div class="recon-data-item">
+<div><code>options</code></div>
+<div>Predefined pairs of values and labels to be used as selectable options.</div>
+</div>
+<div class="recon-data-item">
+<div><code>mapOptions</code></div>
+<div>Directly map values to query conditions. 
+</div>
+</div>
+Relating to SMW:
+<div class="recon-data-item">
+<div><code>smwproperty</code></div>
+<div>The property to be used in the query, or an inverse query, or a property chain.</div>
+</div>
+<div class="recon-data-item">
+<div><code>subquery</code></div>
+<div>Optionally, a subquery to be used for 'smwproperty', without q tags and with @@@ as placeholder for the selected value.</div>
+</div>
+<div class="recon-data-item">
+<div><code>smwpropertyMatch</code></div>
+<div>If using inputType=text, you can set it to 'exact' to make the query match exactly.</div>
+</div>
+<div class="recon-data-item">
+<div><code>smwpropertyMatchLogic</code></div>
+<div>Either AND (default) or OR. Used for multi-valued facets such as "multiselect" and "checkboxes".</div>
+</div>
+Other:
+<div class="recon-data-item">
+<div><code>resultLimit</code></div>
+<div>Optionally, the maximum number of possible values (default: 25) that can be shown in a facet if data is retrieved over the API. This can be useful, for instance, if you need to accommodate more items in a 'radio' button group or 'checkboxes' group.</div>
+</div>
+<div class="recon-data-item">
+<div><code>allowEmpty</code></div>
+<div>Used for 'radio' and 'select' inputs. Whether to prepend an empty option ('true' by default). Set to 'false' to disable it. See info on radio buttons below.</div>
+</div>
+<div class="recon-data-item">
+<div><code>info</code></div>
+<div>Add a comment in wikitext markup if you need to clarify the use of a given facet, what to expect and what not to expect. The comment will be made visible when a user clicks the info icon that appears to the right of the facet's label.</div>
+</div>
 
 ==== Choose your input type ====
 
@@ -255,6 +307,10 @@ By default, this input type assumes the property value will be fed to a wildcard
 
 Both types allow for the use of predefined lists as well as API-provided data sets.
 
+If you use "multiselect", you can define <code>smwpropertyMatchLogic</code> to determine the logic of matching multiple values:
+* "AND" (default): match all selected
+* "OR": match any selected
+
 ===== (3) 'radio' =====
 
 If users should be allowed to select single values only, you can also use a radio button group. It is commonly used when the number of possible values is relatively small and a direct listing is preferred to autocompletion. 
@@ -264,6 +320,33 @@ That said, many values are handled as follows :
 * If the total number of results exceeds the result limit, you can click a link at the bottom of the list ("more") to fetch further options. At intervals equal to the result limit (which again, is customisable), this continues until there's nothing left to show.
 
 The default behaviour is to add an empty option at the start of the list so that users can always clear their choice. You can opt out by setting <code>allowEmpty</code> (in the faceted search profile) to <code>false</code>.
+
+===== (4) 'checkboxes' =====
+Where "radio" allows for single selections, the "checkboxes" inout type can be used to allow for multiple selections. 
+
+Use <code>smwpropertyMatchLogic</code> to determine the logic of matching multiple values:
+* "AND" (default): match all selected
+* "OR": match any selected
+
+Like "radio", "checkboxes" is best used if the number of possible values is relatively small and can still be contained within the form. That said, like "radio", "checkboxes" also supports a widget for loading additional results from the API and a configuration setting for the result limit (<code>resultLimit</code>).
+
+===== (5) 'numberrange' and 'daterange' =====
+"numberrange" and "daterange" are dual-input facets that let the user define a numerical range or date range between one or two boundaries. For instance, a user may want to define 1970 (input 1) and 1975 (input 2) to find books released anywhere between those years; or just 1975 (input 2) to find books released before or in 1975. "daterange" is suitable for calendrical dates. For years and numbers, use "numberrange".
+
+Example:
+<pre>
+{
+	"inputType": "numberrange",
+	"name1": "year1",
+	"name2": "year2",
+	"placeholder1": "from", // optional
+	"placeholder2": "to", // optional
+	"label": "Year range",
+	"smwproperty": "Has year"
+},
+</pre>
+
+<blockquote>Note that "numberrange" and "daterange" are not yet ready for the use of two different properties representing earliest and latest possible dates (termini post quem/ante quem). This will be considered in the future.</blockquote>
 
 ==== Choose your data source ====
 In order that a facet can offer any items for users to select, you can either use a dataset returned by the API or a pre-defined list of options :
@@ -411,7 +494,7 @@ In the faceted search profile you would add an object (instead of a string) and 
 
 With a filter translated to <code><nowiki>[[Has item::C]]</nowiki></code> (random example), the resulting query would be <code><nowiki>[[Category:A]] [[Has item::C]] OR [[Category:B]] [[Has item::C]]</nowiki></code>. 
 
-The intended use case, however, is not necessarily two distinct base queries. In the case above, it would have been easier to use a concept that combines both categories (<code><nowiki>[[Category:A]] OR [[Category:B]]</nowiki></code>). 
+The intended use case, however, is not necessarily two distinct base queries. In the example above, it would have been easier to use a single base query like <code><nowiki>[[Category:A||B]]</nowiki></code>, but it serves the purpose of explaining how it works.
 
 But what if one query group requires that the same filter value is treated differently in the translation to query syntax. In that case, do not use <code>smwproperty</code>, etc., directly, but assign them to a specific condition. This is done under the <code>conditions</code> key of the facet object, as illustrated below. In this example, "1" and "2" represent the identifiers defined for each condition:
 

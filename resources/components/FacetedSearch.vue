@@ -510,7 +510,7 @@ module.exports = defineComponent( {
 		 * @param facet {object} containing facet data
 		 * @param smwMap {object} containing SMW mapping data such as smwproperty, smwquery
 		 * @param filterVal {string} filter value
-		 * @param inputIndex {integer} used for facets with multiple inputs that must be differentiated ('rangetext')
+		 * @param inputIndex {integer} used for facets with multiple inputs that must be differentiated (range facets)
 		 */
 		function createSubconditionFromFacet(facet, smwMap, filterVal, inputIndex) {
 			var newQ = "";
@@ -573,7 +573,8 @@ module.exports = defineComponent( {
 						}
 					}
 				break;
-				case "rangetext":
+				case "numberrange":
+				case "daterange":
 					if (smwMap.smwproperty && inputIndex === 0) {
 						newQ = `[[${smwMap.smwproperty}::>${filterVal}]]`;
 					} else if (smwMap.smwproperty && inputIndex === 1) {

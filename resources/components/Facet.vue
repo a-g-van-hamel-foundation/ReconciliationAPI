@@ -155,9 +155,25 @@
 		</div>
 	</template>
 
-	<template v-else-if="componentType === 'rangetext'">
+	<template v-else-if="componentType === 'numberrange'">
 		<range-facet
 			:component-type="componentType"
+			:input-type="'number'"
+			v-model:query="query"
+			:name1="name1 ?? null"
+			:name2="name2 ?? null"
+			:placeholder1="configData.placeholder1 ?? null"
+			:placeholder2="configData.placeholder2 ?? null"
+			:label="label"
+			:config-data="configData"
+			@on-enter="onEnter()"
+		></range-facet>
+	</template>
+
+	<template v-else-if="componentType === 'daterange'">
+		<range-facet
+			:component-type="componentType"
+			input-type="date"
 			v-model:query="query"
 			:name1="name1 ?? null"
 			:name2="name2 ?? null"

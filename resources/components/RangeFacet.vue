@@ -1,13 +1,13 @@
 <template>
 
-	<template v-if="componentType === 'rangetext'">
+	<template v-if="componentType === 'numberrange' || componentType === 'daterange'">
 			<div class="form-group form-group-v">
 				<div><label>{{ label }}</label></div>
 				<div class="text-input-wrapper">
 
 					<cdx-text-input
 						:name="name1"
-						input-type="number"
+						:input-type="inputType"
 						v-model="query[name1]"
 						:placeholder="placeholder1"
 						@keyup.enter="onEnter()"
@@ -17,7 +17,7 @@
 
 					<cdx-text-input
 						:name="name2"
-						input-type="number"
+						:input-type="inputType"
 						v-model="query[name2]"
 						:placeholder="placeholder2"
 						@keyup.enter="onEnter()"
@@ -47,9 +47,9 @@ module.exports = defineComponent( {
 		name1: { type: "String", default: null },
 		name2: { type: "String", default: null },
 		label: { type: "String" },
-		placeholder1: { type: "String", default: "" },
-		placeholder2: { type: "String", default: "" },
-		//inputType: { type: "String", default: "text" }
+		placeholder1: { type: "String", default: null },
+		placeholder2: { type: "String", default: null },
+		inputType: { type: "String", default: "number" }
 	},
 	emits: ['on-enter'],
 	setup(props, {emit} ) {
