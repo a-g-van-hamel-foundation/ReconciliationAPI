@@ -234,7 +234,7 @@ module.exports = defineComponent( {
 				let format = props.configData.resultFormat ?? (props.configData.template ? "plainlist" : null);
 
 				let askPF = createAskPF(format, smwQuery);
-				console.log( "#ask", askPF );
+				debugLog("#ask", askPF);
 
 				showLoader.value = true;
 
@@ -253,7 +253,7 @@ module.exports = defineComponent( {
 				// Create full template string to be parsed
 				let filtersUsed = getFiltersUsed();				
 				let tpl = `{{${props.configData.template} |query=${smwQuery} ${filtersUsed}}}`;
-				console.log("template", tpl);
+				debugLog("template", tpl);
 
 				// parse, etc.
 				new mw.Api().parse(tpl)
@@ -317,7 +317,10 @@ module.exports = defineComponent( {
 		}
 
 		function createAskPF(format, smwQuery) {
-			let filtersUsed = getFiltersUsed();
+			if (props.configData.addFiltersToUserparams == "true") {
+				let filtersUsed = getFiltersUsedForUserparams();
+				smwQuery += `|userparams=${filtersUsed}`;
+			}
 			if (format == "plainlist" && props.configData.template) {
 				var askPF = `{{#ask: ${smwQuery} |format=${format} |template=${props.configData.template ?? ""} |link=none |?=Page |named args=yes |searchlabel= |valuesep=${valueSep.value} }}`;
 			} else if(format == "table" || format == "broadtable") {
@@ -349,6 +352,24 @@ module.exports = defineComponent( {
 					: `|filter-${k}=${v}`;
 			}
 			return filtersUsed;
+		}
+
+		/** 
+		 * Get filters used and convert to string
+		 * for use with #ask's 'userparams' parameter.
+		 * @return string
+		 */
+		function getFiltersUsedForUserparams() {
+			let filters = [];
+			for (const [k,v] of Object.entries(query)) {
+				if (v == null || v == "") {
+					continue;
+				}
+				filters.push( Array.isArray(v)
+					? `${k}=` + v.join(valueSep.value)
+					: `${k}=${v}` );
+			}
+			return filters.join(" --- ");
 		}
 
 		/**
@@ -480,8 +501,8 @@ module.exports = defineComponent( {
 			} );
 
 			var smwQuery = convertSmwQueryObjToString();
-			console.log("smwQueryObj", smwQueryObj);
-			console.log("smwQuery",smwQuery);
+			debugLog("smwQueryObj", smwQueryObj);
+			debugLog("smwQuery", smwQuery);
 
 			if (props.configData.output == "ask") {
 				smwPrintoutProps.forEach( (prop) => {
@@ -650,7 +671,7 @@ module.exports = defineComponent( {
 						newStr += `+${str}* `;
 					} else {
 						// @todo: ${str} vs ${str}* ?
-						// console.log("small token size");
+						// small token size
 						newStr += `${str} `;
 					}
 				} );
@@ -788,7 +809,7 @@ module.exports = defineComponent( {
 
 		function getFiltersForUrl() {
 			let cleanQuery = getCleanObject(query);
-			console.log("cleanQuery", cleanQuery);
+			debugLog("cleanQuery", cleanQuery);
 
 			// only if
 			let options = getCleanObject({
@@ -938,6 +959,11 @@ module.exports = defineComponent( {
 				}
 			});
 			return found;
+		}
+
+		// Used in dev mode only
+		function debugLog(message, data) {
+			//console.log(`Debug log: ${message}`, data);
 		}
 
 		return {
