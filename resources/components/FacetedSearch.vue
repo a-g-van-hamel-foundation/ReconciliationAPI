@@ -317,9 +317,9 @@ module.exports = defineComponent( {
 		}
 
 		function createAskPF(format, smwQuery) {
-			if (props.configData.addFiltersToUserparams == "true") {
-				let filtersUsed = getFiltersUsedForUserparams();
-				smwQuery += `|userparams=${filtersUsed}`;
+			if (props.configData.addFiltersToUserparam == "true") {
+				let filtersUsed = getFiltersUsedForUserparam();
+				smwQuery += `|userparam=${filtersUsed}`;
 			}
 			if (format == "plainlist" && props.configData.template) {
 				var askPF = `{{#ask: ${smwQuery} |format=${format} |template=${props.configData.template ?? ""} |link=none |?=Page |named args=yes |searchlabel= |valuesep=${valueSep.value} }}`;
@@ -356,10 +356,10 @@ module.exports = defineComponent( {
 
 		/** 
 		 * Get filters used and convert to string
-		 * for use with #ask's 'userparams' parameter.
+		 * for use with #ask's 'userparam' parameter.
 		 * @return string
 		 */
-		function getFiltersUsedForUserparams() {
+		function getFiltersUsedForUserparam() {
 			let filters = [];
 			for (const [k,v] of Object.entries(query)) {
 				if (v == null || v == "") {

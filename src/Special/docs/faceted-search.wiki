@@ -93,6 +93,10 @@ Because there is only one URL at a time, you should not enable this feature for 
 <div>Whether the query should be run and its results shown when the page loads. This is the default behaviour. If instead you want to wait for the user to interact, you can opt out by setting <code>runonload=false</code>. </div>
 </div>
 <div class="recon-data-item">
+<div><code>addfilterstouserparam</code></div>
+<div>Either 'true' or 'false' (default). If output=ask, determines whether filters used should be sent to the <code>userparam</code> parameter of the #ask query. The string that this parameter will receive is delimited and formatted in the same way as is done for <code>defaultfilters</code> above: again <code> --- </code> to separate the filters and the value of <code>valuesep</code> to separate the filter values. </div>
+</div>
+<div class="recon-data-item">
 <div><code>debug</code></div>
 <div>If set to "true", some additional info about your query and query results will be shown to help you debug any possible issues.</div>
 </div>
