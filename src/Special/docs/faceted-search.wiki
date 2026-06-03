@@ -94,7 +94,7 @@ Because there is only one URL at a time, you should not enable this feature for 
 </div>
 <div class="recon-data-item">
 <div><code>addfilterstouserparam</code></div>
-<div>Either 'true' or 'false' (default). If output=ask, determines whether filters used should be sent to the <code>userparam</code> parameter of the #ask query. The string that this parameter will receive is delimited and formatted in the same way as is done for <code>defaultfilters</code> above: again <code> --- </code> to separate the filters and the value of <code>valuesep</code> to separate the filter values. </div>
+<div>Either 'true' or 'false' (default). If output=ask, determines whether filters used should be sent to the <code>userparam</code> parameter of the #ask query. The string that this parameter will receive is delimited and formatted in the same way as is done for <code>defaultfilters</code> above: again <code> --- </code> to separate the filters and the value of <code>valuesep</code> to separate the filter values. If you already have a value for <code>userparam</code>, it will not be replaced. It will be concatenated with the filters, using the same three-line filter separator.</div>
 </div>
 <div class="recon-data-item">
 <div><code>debug</code></div>

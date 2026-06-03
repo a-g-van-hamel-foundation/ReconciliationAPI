@@ -214,14 +214,6 @@ module.exports = defineComponent( {
 			// Do result count separately
 			setResultCount(smwQuery);
 
-			// Transfer any additional #ask parameters from the config
-			//var askParams = JSON.parse( props.configData.askParams );
-			if (typeof askParams.value !== "undefined") {
-				for (const [k,v] of Object.entries(askParams.value)) {
-					smwQuery += `|${k}=${v} `;
-				}
-			}
-
 			/* Three 'output' types:
 			 * "ask" - an #ask query is parsed
 			 * "template" - a template that receives the query is parsed
@@ -231,8 +223,8 @@ module.exports = defineComponent( {
 
 			// Run the query
 			if (output == "ask") {
+				smwQuery += getAskParamsAsString();
 				let format = props.configData.resultFormat ?? (props.configData.template ? "plainlist" : null);
-
 				let askPF = createAskPF(format, smwQuery);
 				debugLog("#ask", askPF);
 
@@ -316,11 +308,12 @@ module.exports = defineComponent( {
 			}, 150);
 		}
 
+		/**
+		 * Helper function for submitQuery()
+		 * @param format
+		 * @param smwQuery 
+		 */
 		function createAskPF(format, smwQuery) {
-			if (props.configData.addFiltersToUserparam == "true") {
-				let filtersUsed = getFiltersUsedForUserparam();
-				smwQuery += `|userparam=${filtersUsed}`;
-			}
 			if (format == "plainlist" && props.configData.template) {
 				var askPF = `{{#ask: ${smwQuery} |format=${format} |template=${props.configData.template ?? ""} |link=none |?=Page |named args=yes |searchlabel= |valuesep=${valueSep.value} }}`;
 			} else if(format == "table" || format == "broadtable") {
@@ -333,6 +326,32 @@ module.exports = defineComponent( {
 				|template=${props.configData.template ?? ""} }}`;
 			}
 			return askPF;
+		}
+
+		/**
+		 * Helper function for submitQuery(). Transfers additional 
+		 * #ask parameters from the config and concatenates them 
+		 * to the query string
+		 * @return {String}
+		 */
+		function getAskParamsAsString() {
+			let q = "";
+			if (typeof askParams.value !== "undefined") {
+				// Possibly add filters to 'userparam', merge if with delimiter ( --- ) if necessary
+				if (props.configData.addFiltersToUserparam == "true") {
+					let filtersUsed = getFiltersUsedForUserparam();
+					if ( askParams.value.userparam ) {
+						askParams.value.userparam += " --- " + filtersUsed;
+					} else {
+						askParams.value.userparam = filtersUsed;
+					}
+				}
+				// Concatenate string
+				for (const [k,v] of Object.entries(askParams.value)) {
+					q += `|${k}=${v} `;
+				}
+			}
+			return q;
 		}
 
 		/** 
@@ -450,8 +469,10 @@ module.exports = defineComponent( {
 			}
 		}
 
-		// Transform query elements to syntax required for API
-		// smwQuery, smwQueryObj, COUNT?
+		/**
+		 * Transform query elements to syntax required for API
+		 * @return string (smwQuery)
+		 */
 		function buildQuery() {
 			// set/reset smwQuery and smwQueryObject to initial
 			for (var k in smwQueryObj) delete smwQueryObj[k];
