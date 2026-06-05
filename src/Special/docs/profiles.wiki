@@ -173,7 +173,10 @@ A bare-bones installation of MediaWiki does not allow for many options to influe
 			},
 			"image": {
 				"smwproperty": "Has lead image"
-			}
+			},
+			// Optional:
+			"sort": "Display title of",
+			"order": "asc"
 		}
 	},
 	...
@@ -191,6 +194,14 @@ A bare-bones installation of MediaWiki does not allow for many options to influe
 <div class="recon-data-item">
 	<div><code>image</code></div>
 	<div>Set <code>smwproperty</code> to the preferred property to be used for providing a thumbnail associated with the subject. If omitted, the default property set in <code>$wgReconAPIThumbnailProp</code> will be used. </div>
+</div>
+<div class="recon-data-item">
+	<div><code>sort</code></div>
+	<div>Optionally, a sorting condition. Corresponds to [https://www.semantic-mediawiki.org/wiki/Help:Sorting '''sort''' in an #ask query]</div>
+</div>
+<div class="recon-data-item">
+	<div><code>order</code></div>
+	<div>Optional. Corresponds to [https://www.semantic-mediawiki.org/wiki/Help:Sorting '''order''' in an #ask query]</div>
 </div>
 
 [...]

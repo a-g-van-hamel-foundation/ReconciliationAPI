@@ -37,7 +37,7 @@ To add faceted search to a wiki page, add an instance of the <code>#recon-facete
 <div>What output method to use for your query results. You can decide between three options :
 * (1) 'ask' (default) - create an <code>#ask</code> query and have that parsed.
 * (2) 'template' - leave it up to a wiki template to run queries and visualise data. The template just receives the query condition along with other dynamic data such as 'offset' and 'sort'. More advanced but also more flexible and useful, for instance, if you want to pair two different visualisations.
-* (3) 'basic' - a minimal presentation will be used instead.</div>
+* (3) 'basic' - a minimal card-like presentation will be used instead showing a page link with label and description if any. The properties needed to return a label and description are based on your general preferences as defined in your global settings, <code>$wgReconAPILabelProp</code> and <code>$wgReconAPIDescriptionProp</code>. </div>
 </div>
 <div class="recon-data-item">
 <div><code>resultformats</code></div>
@@ -94,7 +94,7 @@ Because there is only one URL at a time, you should not enable this feature for 
 </div>
 <div class="recon-data-item">
 <div><code>addfilterstouserparam</code></div>
-<div>Either 'true' or 'false' (default). If output=ask, determines whether filters used should be sent to the <code>userparam</code> parameter of the #ask query. The string that this parameter will receive is delimited and formatted in the same way as is done for <code>defaultfilters</code> above: again <code> --- </code> to separate the filters and the value of <code>valuesep</code> to separate the filter values. If you already have a value for <code>userparam</code>, it will not be replaced. It will be concatenated with the filters, using the same three-line filter separator.</div>
+<div>Either 'true' or 'false' (default). If output=ask, determines whether all filters in use should be passed to the <code>userparam</code> parameter of the #ask query. The string that this parameter will receive is delimited and formatted in the same way as is done for <code>defaultfilters</code> above: again <code> --- </code> to separate the filters and the value of <code>valuesep</code> to separate the filter values. If you already have a value for <code>userparam</code>, it will not be replaced. It will be concatenated with the filters, using the same three-line filter separator.</div>
 </div>
 <div class="recon-data-item">
 <div><code>debug</code></div>
