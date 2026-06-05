@@ -63,6 +63,7 @@
 					:smw-result="smwQueryResults"
 					:template="configData.template ?? null"
 					:value-sep="valueSep"
+					:config-data="configData"
 				></faceted-search-result>
 			</template>
 			<template v-else>
@@ -525,10 +526,13 @@ module.exports = defineComponent( {
 			debugLog("smwQueryObj", smwQueryObj);
 			debugLog("smwQuery", smwQuery);
 
+			// add properties
 			if (props.configData.output == "ask") {
 				smwPrintoutProps.forEach( (prop) => {
 					smwQuery += `|?${prop} `;
 				} );
+			} else if(props.configData.output == "basic") {
+				smwQuery += `|?${props.configData.reconLabelProp ?? "Display title of"} |?${props.configData.reconDescriptionProp} `;
 			}
 
 			// options (limit, offset, sort, order)
@@ -551,10 +555,13 @@ module.exports = defineComponent( {
 		 * Helper function for buildQuery
 		 * @param facet {object} containing facet data
 		 * @param smwMap {object} containing SMW mapping data such as smwproperty, smwquery
-		 * @param filterVal {string} filter value
+		 * @param filterVal {string|null} filter value
 		 * @param inputIndex {integer} used for facets with multiple inputs that must be differentiated (range facets)
 		 */
 		function createSubconditionFromFacet(facet, smwMap, filterVal, inputIndex) {
+			if (filterVal == null) {
+				filterVal = "";
+			}
 			var newQ = "";
 			switch(facet.inputType) {
 				case "select":
