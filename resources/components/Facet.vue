@@ -16,8 +16,9 @@
 					:menu-items="selectList"
 					@update:input-value="runRequest"
 					@focus="runRequest('')"
-					:placeholder="label"
+					:placeholder="configData.placeholder ?? label"
 					:clearable="true"
+					:menu-config="menuConfig"
 					@keyup.enter="onEnter()"
 				></cdx-lookup>
 			</div>
@@ -38,8 +39,8 @@
 					:menu-items="selectList || []"
 					:multiple="multiple || false"
 					@update:selected="onUpdateSelected"
-					default-label="Select"
-					:placeholder="label"
+					:default-label="configData.placeholder ?? 'Select...'"
+					:menu-config="menuConfig"
 				></cdx-select>
 			</div>
 		</div>
@@ -53,17 +54,20 @@
 					:title="label"
 				></info-dialog>
 			</div>
+			<div v-if="configData.smwpropertyMatchLogic == 'OR'" class="recon-comment">{{ $i18n('recon-faceted-match-any').text() }} ({{ query[name].length }}):</div>
+			<div v-else class="recon-comment">{{ $i18n('recon-faceted-match-all').text() }} ({{ query[name].length }}):</div>
 			<div>
 				<cdx-multiselect-lookup
 					v-model:input-chips="chips"
 					v-model:selected="query[name]"
 					:menu-items="selectList || []"
-					:menu-config="multiselectConfig"
+					:menu-config="menuConfig"
 					@update:selected="onUpdateSelected"
 					@input="onMultiselectInput"
 					@focus="onMultiselectInput('')"
 					@keyup.enter="onEnter()"
 					aria-label="Select one or multiple items"
+					:placeholder="configData.placeholder ?? label"
 				>
 				</cdx-multiselect-lookup>
 			</div>
@@ -82,7 +86,7 @@
 				<cdx-text-input
 					:name="name"
 					v-model="query[name]"
-					:placeholder="label"
+					:placeholder="configData.placeholder ?? label"
 					@keyup.enter="onEnter()"
 				></cdx-text-input>
 			</div>
@@ -208,7 +212,7 @@ module.exports = defineComponent( {
 		query: { type: "Object", default: {} },
 		configData: { type: "Object", default: {} },
 		name1: { type: "String", default: null },
-		name2: { type: "String", default: null },
+		name2: { type: "String", default: null }
 	},
 	emits: [ 'run-query' ],
 	setup(props, { emit } ) {
@@ -323,6 +327,9 @@ module.exports = defineComponent( {
 			});
 		}
 
+		/**
+		 * @return object|null
+		 */
 		function handleEntityResponseForInitialValues(data) {
 			if (data.result == undefined || data.result.length == 0) {
 				return null;
@@ -387,8 +394,6 @@ module.exports = defineComponent( {
 		function signalFurtherResults(nextOffsetFromAPI) {
 			if (componentType.value == "radio" || componentType.value == "checkboxes") {
 				if (nextOffsetFromAPI > 0) {
-					// add 
-					//console.log( "More results..." );
 					hasFurtherResults.value = true;
 					nextOffset.value = nextOffsetFromAPI;
 				} else {
@@ -417,6 +422,9 @@ module.exports = defineComponent( {
 			});
 		}
 
+		/**
+		 * @return object|null
+		 */
 		function handlePropertyValueResponseForInitialValues(data) {
 			if (data.result == undefined || data.result.length == 0) {
 				return null;
@@ -483,9 +491,9 @@ module.exports = defineComponent( {
 					var target = "chips";
 				break;
 				case "checkboxes":
-					console.log("init handleInitialValues - checkboxes");
-					console.log("dataSourceType.value",dataSourceType.value)
-					console.log("props.profileId",props.profileId);
+					//console.log("init handleInitialValues - checkboxes");
+					//console.log("dataSourceType.value",dataSourceType.value)
+					//console.log("props.profileId",props.profileId);
 					var target = "checkboxes";
 				break;
 			}
@@ -506,15 +514,15 @@ module.exports = defineComponent( {
 							requestEntity(v, 0).then( (data) => {
 								let firstResult = handleEntityResponseForInitialValues(data);
 								if(target == "chips") {
-									console.log("chips");
+									//console.log("chips");
 									chips.value.push( firstResult ?? { value: v, label: v } );
 								} else if(target == "checkboxes" && false) {
 									// @todo 
-									console.log( "checkboxes, checkboxVals");
+									//console.log( "checkboxes, checkboxVals");
 									checkboxVals.push(firstResult ?? { value: v, label: v });
 								} else {
-									console.log("selectInput");
-									selectInput.value = firstResult['label'] ?? v;
+									//console.log("selectInput");
+									selectInput.value = firstResult !== null ? firstResult['label'] : v;
 								}
 							});
 						} else if(valuesFromProperty.value !== null) {
@@ -524,7 +532,7 @@ module.exports = defineComponent( {
 								if(target == "chips") {
 									chips.value.push(firstResult ?? { value: v, label: v });
 								} else {
-									selectInput.value = firstResult['label'] ?? v;
+									selectInput.value = firstResult !== null ? firstResult['label'] : v;
 								}
 							});
 						}
@@ -548,9 +556,9 @@ module.exports = defineComponent( {
 			}
 		}
 
-		const multiselectConfig = {
+		const menuConfig = {
 			boldLabel: false,
-			visibleItemLimit: 15
+			visibleItemLimit: 5
 		};
 
 		function onMultiselectInput(value) {
@@ -605,7 +613,7 @@ module.exports = defineComponent( {
 			chips,
 			checkboxVals,
 			onMultiselectInput,
-			multiselectConfig,
+			menuConfig,
 
 			requestAdditionalRadioOrCheckboxOptions,
 
