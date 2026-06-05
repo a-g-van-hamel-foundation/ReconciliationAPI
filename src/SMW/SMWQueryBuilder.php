@@ -57,6 +57,8 @@ class SMWQueryBuilder {
 	private $queryProfile;
 	private $resultOffset;
 	private $resultLimit;
+	private $resultSort;
+	private $resultOrder;
 	private $resultbatchcount;
 	private $hasFurtherResults;
 	private $comment = [];
@@ -110,7 +112,8 @@ class SMWQueryBuilder {
 		$substring = null,
 		$substringPattern = null,
 		$useDisplayTitle = null,
-		$hideNamespacePrefix = null
+		$hideNamespacePrefix = null,
+		$resultSort = null
 	) {
 		$this->resultOffset = $offset;
 		$this->resultLimit = $limit;
@@ -126,7 +129,10 @@ class SMWQueryBuilder {
 		}
 		if ( $hideNamespacePrefix !== null ) {
 			$this->hideNamespacePrefix = $hideNamespacePrefix;
-		}		
+		}
+		if ( $resultSort !== null ) {
+			$this->resultSort = $resultSort;
+		}
 	}
 
 	public function setQueryProfile( $queryProfile ) {
@@ -316,6 +322,7 @@ class SMWQueryBuilder {
 			"resultBatchCount" => $this->resultbatchcount,
 			"resultLimit" => $this->resultLimit,
 			"resultOffset" => $this->resultOffset,
+			"resultSort" => $this->resultSort,
 			"nextOffset" => $this->hasFurtherResults
 				? ( $this->resultOffset + $this->resultLimit )
 				// @todo ?
@@ -400,9 +407,15 @@ class SMWQueryBuilder {
 			$outputPropertyInfo["description"],
 			$outputPropertyInfo["image"]
 		);
+		if ( isset( $outputPropertyInfo["sort"] ) ) {
+			$this->resultSort = $outputPropertyInfo["sort"];
+		}
+		if ( isset( $outputPropertyInfo["order"] ) ) {
+			$this->resultOrder = $outputPropertyInfo["order"];
+		}
+
 		$rawQuery = $this->constructQueryFromConfigProfile( $q );
 		// $outputPropertyInfo - formatting options @todo
-
 		return $rawQuery;
 	}
 
@@ -448,7 +461,13 @@ class SMWQueryBuilder {
 			"limit={$this->resultLimit}",
 			"searchlabel="
 		];
-		
+		if ( $this->resultSort !== null ) {
+			$rawQueryArr[] = "sort={$this->resultSort}";
+		}
+		if ( $this->resultOrder !== null ) {
+			$rawQueryArr[] = "order={$this->resultOrder}";
+		}
+
 		// Add printout properties
 		$printoutProperties = [
 			$this->labelProperty,

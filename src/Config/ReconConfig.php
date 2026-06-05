@@ -41,6 +41,8 @@ class ReconConfig {
 	private $labelProperty = null;
 	private $descriptionProperty = null;
 	private $imageProperty = null;
+	private $sort = null;
+	private $order = null;
 	private $imageExtension = null;
 	private $stripLabel = false;
 	private $stripDescription = false;
@@ -241,7 +243,9 @@ class ReconConfig {
 			"description" => $this->descriptionProperty,
 			"image" => $this->imageProperty,
 			"stripLabel" => $this->stripLabel,
-			"stripDescription" => $this->stripDescription
+			"stripDescription" => $this->stripDescription,
+			"sort" => $this->sort,
+			"order" => $this->order
 		];
 	}
 
@@ -327,6 +331,12 @@ class ReconConfig {
 			$this->descriptionProperty = $this->output["description"]["smwproperty"] ?? null;
 			$this->stripDescription = $this->output["description"]["striptags"] ?? false;
 			$this->imageProperty = $this->output["image"]["smwproperty"] ?? null;
+			if ( isset( $this->output["sort"] ) ) {
+				$this->sort = $this->output["sort"] ?? null;
+			}
+			if ( isset( $this->output["order"] ) ) {
+				$this->order = $this->output["order"] ?? null;
+			}
 		}
 	}
 
