@@ -121,6 +121,13 @@ class ReconFacetedSearch {
 			$attributes["data-profile-id"] = $profileId;
 		}
 
+		if ( $output == "basic") {
+			global $wgReconAPILabelProp;
+			global $wgReconAPIDescriptionProp;
+			$attributes["data-recon-label-prop"] = $wgReconAPILabelProp;
+			$attributes["data-recon-description-prop"] = $wgReconAPIDescriptionProp;
+		}
+
 		return Html::rawElement( "div", $attributes, "" );
 	}
 

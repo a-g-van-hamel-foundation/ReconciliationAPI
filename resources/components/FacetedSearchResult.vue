@@ -4,7 +4,11 @@
 	<div v-if="template" v-html="formattedHtml" class="faceted-query-list"></div>
 	<div v-else class="faceted-query-list">
 		<div v-for="f in formattedResults" :key="f.key" class="faceted-query-result">
-			<h3><a :href="f.fullurl" v-html="f.displaytitle || f.fulltext"></a></h3>
+			<h3>
+				<a v-if="f.exists" :href="f.fullurl" v-html="f.displaytitle || f.fulltext"></a>
+				<span v-else v-html="f.displaytitle || f.fulltext"></span>
+			</h3>
+			<div v-if="f.description !== ''" class="description" v-html="f.description"></div>
 		</div>
 	</div>
 
@@ -20,7 +24,8 @@ module.exports = defineComponent( {
 	props: {
 		smwResult: { type: "Object", default: null },
 		template: { type: "String", default: null },
-		valueSep: { type: "String" }
+		valueSep: { type: "String" },
+		configData: { type: "Object", default: {} }
 	},
 	setup(props, context) {
 		/**
@@ -59,7 +64,6 @@ module.exports = defineComponent( {
 		}
 
 		function formatResultForTemplate(key,value) {
-			//console.log( "key",key );
 			formattedResults.push( { "key": key } );
 
 			var wikiTplParams = `|Page=${value.fulltext}` + `|displaytitle=${value.displaytitle}` + `|fullurl=${value.fullurl}` + `|exists=${value.exists}`;
@@ -124,16 +128,55 @@ module.exports = defineComponent( {
 			});
 		}
 
-		// 
+		// In use
 		function formatResultsForDefaultOutput(res) {
-			//formattedResults
 			for (const [key, value] of Object.entries( res )) {
-				formattedResults.push( { 
-					key: key,
-					fulltext: value.fulltext,
-					fullurl: value.fullurl,
-					displaytitle: value.displaytitle
-				} );
+				// printout properties: label
+				let label = "";
+				let labelProp = props.configData.reconLabelProp ?? "Display title of";
+				if (value.printouts[labelProp] !== undefined) {
+					label = value.printouts[labelProp].join("; ");
+				}
+				// printout properties:description
+				let description = "";
+				let descriptionProp = props.configData.reconDescriptionProp ?? "Has description";
+				if (value.printouts[descriptionProp] !== undefined) {
+					description = value.printouts[descriptionProp].join("; ");
+				}
+
+				if (description == "") {
+					// No need to parse empty description
+					formattedResults.splice(key, 0, {
+						key: key,
+						fulltext: value.fulltext,
+						fullurl: value.fullurl,
+						displaytitle: label ?? value.displaytitle,
+						description: "",
+						exists: value.exists
+					});
+				} else {
+					// Parse wikitext description first
+					const api = new mw.Api();
+					const apiParams = {
+						action: "parse",
+						text: description ?? "",
+						contentmodel: "wikitext",
+						format: "json",
+						formatversion: 2,
+						prop: "text"
+					};
+					api.post(apiParams)
+					.done(function(data) {
+						formattedResults.splice(key, 0, {
+							key: key,
+							fulltext: value.fulltext,
+							fullurl: value.fullurl,
+							displaytitle: label ?? value.displaytitle,
+							description: data.parse.text,
+							exists: value.exists
+						})
+					});
+				}
 			}
 		}
 
