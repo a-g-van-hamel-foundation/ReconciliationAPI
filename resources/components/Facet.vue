@@ -2,7 +2,7 @@
 	<template v-if="componentType === 'lookup'">
 		<div class="form-group form-group-v">
 			<div class="recon-label-area">
-				<label>{{ label }}</label>
+				<label v-html="label"></label>
 				<info-dialog v-if="configData.info"
 					:comment="configData.info"
 					:title="label"
@@ -27,7 +27,7 @@
 	<template v-else-if="componentType === 'select'">
 		<div class="form-group form-group-v">
 			<div class="recon-label-area">
-				<label>{{ label }}</label>
+				<label v-html="label"></label>
 				<info-dialog v-if="configData.info"
 					:comment="configData.info"
 					:title="label"
@@ -48,7 +48,7 @@
 	<template v-else-if="componentType === 'multiselect'">
 		<div class="form-group form-group-v">
 			<div class="recon-label-area">
-				<label>{{ label }}</label>
+				<label v-html="label"></label>
 				<info-dialog v-if="configData.info"
 					:comment="configData.info"
 					:title="label"
@@ -76,7 +76,7 @@
 	<template v-else-if="componentType === 'text'">
 		<div class="form-group form-group-v">
 			<div class="recon-label-area">
-				<label>{{ label }}</label>
+				<label v-html="label"></label>
 				<info-dialog v-if="configData.info"
 					:comment="configData.info"
 					:title="label"
@@ -96,7 +96,7 @@
 	<template v-else-if="componentType === 'radio'">
 		<div class="form-group form-group-v">
 			<div class="recon-label-area">
-				<label>{{ label }}</label>
+				<label v-html="label"></label>
 				<info-dialog v-if="configData.info"
 					:comment="configData.info"
 					:title="label"
@@ -127,7 +127,7 @@
 	<template v-else-if="componentType === 'checkboxes'">
 		<div class="form-group form-group-v">
 			<div class="recon-label-area">
-				<label>{{ label }}</label>
+				<label v-html="label"></label>
 				<info-dialog v-if="configData.info"
 					:comment="configData.info"
 					:title="label"
@@ -271,8 +271,8 @@ module.exports = defineComponent( {
 		let delayTimer = 0;
 		/**
 		 * Run API request for 'term'
-		 * @param {String} [term]
-		 * @param {String} [action] see requestEntity() and requestPropertyValue()
+		 * @param {string} term
+		 * @param {string} action see requestEntity() and requestPropertyValue()
 		 */
 		function runRequest(term, action) {
 			if (dataSourceType.value !== "api") {
@@ -300,10 +300,10 @@ module.exports = defineComponent( {
 
 		/**
 		 * Request entities from API
-		 * @param {String} [term]
-		 * @param {Number} [offset]
-		 * @param {String} [action] What to do with the retrieved data: replace (default; replace selectList), append (append to selectList)
-		 * @return Promise
+		 * @param {string} term
+		 * @param {number} offset
+		 * @param {string} action What to do with the retrieved data: replace (default; replace selectList), append (append to selectList)
+		 * @return {Promise}
 		 */
 		function requestEntity(term, offset) {
 			const actionApi = new mw.ForeignApi( props.apiUrl, { anonymous: false } );
@@ -328,7 +328,8 @@ module.exports = defineComponent( {
 		}
 
 		/**
-		 * @return object|null
+		 * @param {object} data
+		 * @return {object|null}
 		 */
 		function handleEntityResponseForInitialValues(data) {
 			if (data.result == undefined || data.result.length == 0) {
@@ -423,7 +424,8 @@ module.exports = defineComponent( {
 		}
 
 		/**
-		 * @return object|null
+		 * @param {object} data
+		 * @return {object|null}
 		 */
 		function handlePropertyValueResponseForInitialValues(data) {
 			if (data.result == undefined || data.result.length == 0) {

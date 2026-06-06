@@ -1,21 +1,19 @@
 <template>
 	<div class="recon-faceted-search" ref="wrapper" :style="`scroll-margin-top:` + scrollMarginTop + `; scroll-snap-margin-top:` + scrollMarginTop + `;`">
 		<div class="recon-facets">
-			<template v-for="facet in facets">
-				<!-- v-model="query[facet.name]" not necessary -->
-				<facet
-					:ref="facet.name"
-					:name="facet.name ?? facet.smwproperty"
-					:name1="facet.name1 ?? null"
-					:name2="facet.name2 ?? null"
-					:label="facet.label ?? facet.name"
-					:input-type="facet.inputType ?? 'text'"
-					v-model:query="query"
-					:api-url="apiUrl"
-					:config-data="facet"
-					@run-query=submitQuery(0)
-				></facet>
-			</template>
+			<facet v-for="facet in facets"
+				:ref="facet.name ?? facet.name1"
+				:key="`facet-` + facet.name ?? facet.name1"
+				:name="facet.name ?? null"
+				:name1="facet.name1 ?? null"
+				:name2="facet.name2 ?? null"
+				:label="facet.label"
+				:input-type="facet.inputType ?? 'text'"
+				v-model:query="query"
+				:api-url="apiUrl"
+				:config-data="facet"
+				@run-query="submitQuery(0)"
+			></facet>
 
 			<button @click="submitQuery(0)" class="btn-submit">{{ $i18n('recon-faceted-show-results').text() }}</button>
 
@@ -123,18 +121,38 @@ module.exports = defineComponent( {
 		if (askParams.value.valuesep !== undefined) {
 			valueSep.value = askParams.value.valuesep;
 		}
+
 		const facets = reactive( props.profile?.facets ?? [] );
+		// pre-sanitise
+		sanitiseFacets();
+		function sanitiseFacets() {
+			facets.forEach( (facet) => {
+				if (facet.name) {
+					facet.name = stripHtml(facet.name, false).trim();
+				} else if (facet.name1 && facet.name2) {
+					facet.name1 = stripHtml(facet.name1, false).trim();
+					facet.name2 = stripHtml(facet.name2, false).trim();
+				}
+				facet.label = facet.label !== undefined ? stripHtml(facet.label, true).trim() : "";
+				if (facet.options !== undefined) {
+					facet.options.forEach( (opt) => {
+						opt.value = opt.value !== undefined ? stripHtml(opt.value, false).trim() : "";
+						opt.label = opt.label !== undefined ? stripHtml(opt.label, true).trim() : "";
+					} );
+				}
+			} );
+		}
 
 		const apiUrl = ref( mw.config.get("wgServer") + (mw.config.get("wgScriptPath") || "") + "/api.php" );
 		const usesTokens = props.configData?.smwFts || props.configData?.smwElastic;
 		const minTokenSize = props.configData?.smwFtsMintokensize ?? 3;
 
-		props.profile?.facets.forEach( (facet) => {
+		facets.forEach( (facet) => {
 			// Set empty defaults
 			if (facet.name) {
 				// array
 				query[facet.name] = (facet.inputType == "multiselect" || facet.inputType == "checkboxes") ? [] : "";
-			} else if (facet.name1 && facet.name1) {
+			} else if (facet.name1 && facet.name2) {
 				query[facet.name1] = "";
 				query[facet.name2] = "";
 			}
@@ -311,8 +329,8 @@ module.exports = defineComponent( {
 
 		/**
 		 * Helper function for submitQuery()
-		 * @param format
-		 * @param smwQuery 
+		 * @param {string} format
+		 * @param {string} smwQuery 
 		 */
 		function createAskPF(format, smwQuery) {
 			if (format == "plainlist" && props.configData.template) {
@@ -496,7 +514,7 @@ module.exports = defineComponent( {
 				};
 			}
 
-			props.profile?.facets.forEach( (facet) => {
+			facets.forEach( (facet) => {
 				let facetKeys = facet.name ? [facet.name]
 					: (facet.name1 && facet.name2)
 						? [facet.name1, facet.name2] : [];
@@ -553,10 +571,10 @@ module.exports = defineComponent( {
 
 		/**
 		 * Helper function for buildQuery
-		 * @param facet {object} containing facet data
-		 * @param smwMap {object} containing SMW mapping data such as smwproperty, smwquery
-		 * @param filterVal {string|null} filter value
-		 * @param inputIndex {integer} used for facets with multiple inputs that must be differentiated (range facets)
+		 * @param {object} facet containing facet data
+		 * @param {object} smwMap containing SMW mapping data such as smwproperty, smwquery
+		 * @param {string|null} filterVal filter value
+		 * @param {integer} inputIndex used for facets with multiple inputs that must be differentiated (range facets)
 		 */
 		function createSubconditionFromFacet(facet, smwMap, filterVal, inputIndex) {
 			if (filterVal == null) {
@@ -899,11 +917,11 @@ module.exports = defineComponent( {
 
 				for (const [k,v] of Object.entries(options)) {
 					if (k == "offset") {
-						offset.value = stripHtml(v);
+						offset.value = stripHtml(v, false);
 					} else if(k == "sort") {
-						sort.value = stripHtml(v);
+						sort.value = stripHtml(v, false);
 					} else if(k == "order") {
-						order.value = stripHtml(v);
+						order.value = stripHtml(v, false);
 					}
 				}
 
@@ -911,9 +929,9 @@ module.exports = defineComponent( {
 				for (const [k,v] of searchParams) {
 					if (k.endsWith("[]")) {
 						// array
-						query[ k.replace("[]", "") ].push(stripHtml(v));
+						query[ k.replace("[]", "") ].push(stripHtml(v, true));
 					} else {
-						query[k] = stripHtml(v);
+						query[k] = stripHtml(v, true);
 					}
 				}
 			} else if (urlStructure.value == "json") {
@@ -967,10 +985,36 @@ module.exports = defineComponent( {
 				.trim();
 		}
 
-		function stripHtml(html) {
+		/**
+		 * Strip html, optionally except for i and em tags,
+		 * strictly without attributes
+		 * @param {string} html
+		 * @param {boolean} allowExceptions
+		 * @return {string}
+		 */
+		function stripHtml(html, allowExceptions = true ) {
+			let exceptions = {
+				iOpen: String.fromCharCode(182,182,105,182,182),
+				iClose: String.fromCharCode(182,182,105,182,182,181),
+				emOpen: String.fromCharCode(182,182,101,109,182,182),
+				emClose: String.fromCharCode(182,182,101,109,182,182,181)
+			};
+			if (allowExceptions) {
+				html = html
+					.replaceAll( ["<i>", "</i>"], [exceptions.iOpen, exceptions.iClose] )
+					.replaceAll( ["<em>", "</em>"], [exceptions.emOpen, exceptions.emClose] );
+			}
 			let tmp = document.createElement("div");
 			tmp.innerHTML = html;
-			return tmp.textContent || tmp.innerText || "";
+			let newHtml = tmp.textContent || tmp.innerText || "";
+			if (allowExceptions) {
+				// Restore exceptions and return
+				return newHtml
+					.replaceAll( [exceptions.iOpen, exceptions.iClose], ["<i>", "</i>"] )
+					.replaceAll( [exceptions.emOpen, exceptions.emClose], ["<em>", "</em>"] );
+			} else {
+				return newHtml;
+			}
 		}
 
 		/* Debug handling */
@@ -981,7 +1025,7 @@ module.exports = defineComponent( {
 
 		function findInputTypeForFacetByName(name) {
 			let found = null;
-			props.profile?.facets.forEach( (facet) => {
+			facets.forEach( (facet) => {
 				if(facet.name.trim() === name.trim()) {
 					found = facet.inputType;
 				}
