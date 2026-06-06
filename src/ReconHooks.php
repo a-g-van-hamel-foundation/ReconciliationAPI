@@ -19,6 +19,7 @@ use Recon\ParserFunctions\ReconSearch;
 use Recon\ParserFunctions\ReconSMWQueryUrl;
 use Recon\ParserFunctions\ReconQueryHelper;
 use Recon\ParserFunctions\ReconFacetedSearch;
+use Recon\ParserFunctions\ReconFacetedSearchLinker;
 
 class ReconHooks implements
 	ParserFirstCallInitHook,
@@ -69,6 +70,14 @@ class ReconHooks implements
 			"recon-faceted-search",
 			function( Parser $parser, PPFrame $frame, array $args ) {
 				$pf = new ReconFacetedSearch;
+				return $pf->run( $parser, $frame, $args );
+			},
+			$flags
+		);
+		$parser->setFunctionHook(
+			"recon-faceted-search-link",
+			function( Parser $parser, PPFrame $frame, array $args ) {
+				$pf = new ReconFacetedSearchLinker;
 				return $pf->run( $parser, $frame, $args );
 			},
 			$flags

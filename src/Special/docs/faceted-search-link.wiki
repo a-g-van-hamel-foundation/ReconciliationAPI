@@ -1,0 +1,44 @@
+<p class="recon-summary">What if your faceted search page uses URL navigation and now you want to link to this page with one or multiple preset filters? Crafting the appropriate URL by hand is possible but error-prone and can be a bit of a pain. Luckily, the <code>#recon-faceted-search-link</code> parser function was designed for exactly this type of situation.</p>
+
+<pre>{{#recon-faceted-search-link:
+// Standard filters
+|page=
+|updateurl=
+|valuesep=
+
+// + free parameters that will be used to populate the string with filters
+}}</pre>
+
+<div class="recon-data-item">
+<div><code>page</code></div>
+<div>The full pagename of the page you want to link to. If omitted, the current page is assumed. </div>
+</div>
+<div class="recon-data-item">
+<div><code>updateurl</code></div>
+<div>Either 'search' (default) or 'fragment'. For the difference, see the earlier section on URL navigation. </div>
+</div>
+<div class="recon-data-item">
+<div><code>valuesep</code></div>
+<div>Separator (default: <code>;</code>) to be used for multiple values associated with a single parameter. </div>
+</div>
+
+Any additional parameters in the parser function are taken to represent filters. For each filter that can (potentially) take multiple values, such as those associated with multiselects and checkboxes, you must do two things:
+* Append <code>[]</code> to the parameter name. See <code>restrictions[]</code> in the example below.
+* If you define multiple values for the preset, separate them using the value of <code>valuesep</code>
+
+Note that the URL returned comes without protocol (<code>https:</code>). Because MediaWiki does not parse a protocol-less URL as a link, it is easier to re-use in widgets and other parser functions.
+
+==Example==
+
+<pre>https:{{#recon-faceted-search-link:
+|page=FoodSearch
+|updateurl=fragment
+|valuesep=;
+|restrictions[]=vegan;gluten-free
+|cuisine=Thai
+}}</pre>
+
+Should translate to a working link:
+
+<pre>
+https://<your url here>/FoodSearch#restrictions%5B%5D=vegan&restrictions%5B%5D=gluten-free&cuisine=Thai </pre>

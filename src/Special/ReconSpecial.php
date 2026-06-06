@@ -268,6 +268,12 @@ class ReconSpecial extends SpecialPage {
 				"pagetitle" => "Faceted search: the configuration profile",
 				"file" => "faceted-search-profile.wiki"
 			],
+			"faceted-link" => [
+				"type" => "page",
+				"menutitle" => "Link to a faceted search page",
+				"pagetitle" => "Faceted search: <code>recon-faceted-search-link</code>",
+				"file" => "faceted-search-link.wiki"
+			],
 			"other" => [
 				"type" => "header",
 				"menutitle" => "Other"

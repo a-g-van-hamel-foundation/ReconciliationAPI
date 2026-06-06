@@ -37,6 +37,7 @@ class ReconFacetedSearch {
 			"maxpages" => "5",
 			// active if "true":
 			"scrollmargintop" => "0px",
+			// updateurl: "false", "search" or "fragment"
 			"updateurl" => "false",
 			"runonload" => "true",
 			"debug" => null
