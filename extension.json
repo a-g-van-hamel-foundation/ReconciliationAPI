@@ -1,6 +1,6 @@
 {
 	"name": "ReconciliationAPI",
-	"version": "0.3",
+	"version": "0.4",
 	"type": "api",
 	"author": [
 		"[https://codecs.vanhamel.nl Dennis Groenewegen (CODECS)]"
