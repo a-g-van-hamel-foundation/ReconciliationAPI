@@ -121,7 +121,7 @@ class ReconJsonContentHandler extends JsonContentHandler {
 		}
 
 		if ( $profileType === "ReconciliationProfile" ) {
-			$wikiWidget = $this->createWidget( $pageID );
+			$wikiWidget = $this->createWidget( $pageID, $jsonObj );
 			$outputPage->addWikiTextAsContent( $wikiWidget );
 		}
 	}
@@ -166,8 +166,15 @@ class ReconJsonContentHandler extends JsonContentHandler {
 	 * @param mixed $profileID
 	 * @return string
 	 */
-	private function createWidget( $profileID ) {
-		$currentSite = ReconUtils::getURLBase();		
+	private function createWidget( $profileID, $jsonObj ) {
+		$currentSite = ReconUtils::getURLBase();
+		if ( isset( $jsonObj->redirect->queryPage ) && isset( $jsonObj->redirect->query ) ) {
+			$targetUrl = "{$currentSite}/Special:ReconRedirect/{$profileID}?q=";
+			$footerUrl = "{$currentSite}/Special:ReconRedirect/{$profileID}?q=";
+		} else {
+			$targetUrl = "{$currentSite}/Special:Search?fulltext=0&search=";
+			$footerUrl = "{$currentSite}/Special:Search?fulltext=1&search=";
+		}
 		$build = <<<WIKI
 			{{#recon-search:
 			|apiurl={$currentSite}/api.php
@@ -177,8 +184,8 @@ class ReconJsonContentHandler extends JsonContentHandler {
 			|limit=10
 			|placeholder=Suggest entity (profile test)...
 			|internal=true
-			|targeturl={$currentSite}/Special:Search?fulltext=0&search=
-			|footerurl={$currentSite}/Special:Search?fulltext=1&search=
+			|targeturl={$targetUrl}
+			|footerurl={$footerUrl}
 			}}
 			WIKI;
 		return $build;

@@ -18,6 +18,7 @@ class ReconSpecialRedirect extends \SpecialPage {
 	private $profileID = null;
 	private $redirectProfile = null;
 	private $redirectConditions = false;
+	private $updateUrl = "search";
 
 	public function __construct( $name = 'ReconRedirect' ) {
 		parent::__construct( $name );
@@ -54,6 +55,9 @@ class ReconSpecialRedirect extends \SpecialPage {
 				$this->redirectConditions = isset( $profile["redirect"]["smwcondition"] )
 					? $profile["redirect"]["smwcondition"]
 					: false;
+				if ( isset( $profile["redirect"]["updateUrl"] ) ) {
+					$this->updateUrl = $profile["redirect"]["updateUrl"];
+				}
 			}
 			foreach( $_GET as $key => $value ){
 				if ( $key == "q" ) {
@@ -139,8 +143,12 @@ class ReconSpecialRedirect extends \SpecialPage {
 			$query = $this->query;
 		}
 
-		$queryPageTitle = Title::newFromText( $queryPage );		
-		return $queryPageTitle->getLocalUrl( $query );
+		$queryPageTitle = Title::newFromText( $queryPage );
+		if ( $this->updateUrl === "fragment" ) {
+			return $queryPageTitle->getLocalUrl() . "#" . http_build_query( $query, "", "&" );
+		} else {
+			return $queryPageTitle->getLocalUrl( $query );
+		}
 	}
 
 	private function getQueryPageDataFromProfile( array $profile, string $phrase ) {

@@ -19,7 +19,7 @@ Special:ReconRedirect/23234?q=<phrase>
 To support those use cases, you can add a section to your profile page, for instance:
 
 <pre>
-"redirectPage": {
+"redirect": {
 	// Name of the page :
 	"queryPage": "MySearchPage",
 	// Elements of the URL query string :
@@ -37,7 +37,9 @@ To support those use cases, you can add a section to your profile page, for inst
 			"pass": [ "Yes", "true" ],
 			"fail": [ "No", "false" ]
 		}
-	]
+	],
+	// Optionally, add query string to URL fragment instead. Omit otherwise.
+	"updateUrl": "fragment"
 }
 </pre>
 

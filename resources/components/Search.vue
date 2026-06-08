@@ -100,7 +100,7 @@ module.exports = defineComponent( {
 
 		function onInput( value ) {
 			// eslint-disable-next-line no-console
-			console.log( 'input event emitted with value:', value );
+			// console.log( 'input event emitted with value:', value );
 
 			// Internally track the current search term.
 			currentSearchTerm.value = value;
@@ -118,7 +118,7 @@ module.exports = defineComponent( {
 			var actionApiBaseUrl = data.configProps.apiBaseUrl;
 			// Convert the JSON-encoded string in the HTML to an object
 			var apiUrlParamsObj = JSON.parse( data.configProps.apiUrlParams );
-			console.log( actionApiUrl + `${ encodeURIComponent( value ) }` );
+			// console.log( actionApiUrl + `${ encodeURIComponent( value ) }` );
 
 			// Add user-provided value. Because we don't know in advance
 			// what the key (e.g. 'substr') is named, we'll pull this trick
@@ -142,8 +142,8 @@ module.exports = defineComponent( {
 			actionApi.get( apiUrlParamsObj )
 			.done( function ( data ) {
 				searchResults.value = data.result && data.result.length > 0
-						? adaptApiResponse( data.result )
-						: [];
+					? adaptApiResponse( data.result )
+					: [];
 				searchFooterUrl.value = footerUrl + `${ encodeURIComponent( value ) }`;
 			} );
 
@@ -195,12 +195,12 @@ module.exports = defineComponent( {
 
 		function onSearchResultClick( value ) {
 			// eslint-disable-next-line no-console
-			console.log( 'search-result-click event emitted with value:', value );
+			// console.log( 'search-result-click event emitted with value:', value );
 		}
 
 		function onSubmit( value ) {
 			// eslint-disable-next-line no-console
-			console.log( 'Submit event emitted with value:', value );
+			// console.log( 'Submit event emitted with value:', value );
 		}
 
 		// remove duplicates
