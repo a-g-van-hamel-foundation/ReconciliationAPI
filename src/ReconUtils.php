@@ -6,26 +6,28 @@
 
 namespace Recon;
 
-use Title;
+use MediaWiki\Title\Title;
 use MediaWiki\MainConfigNames;
 use MediaWiki\MediaWikiServices;
 use HtmlArmor;
 use Recon\MW\MWUtils;
-use MediaWiki\Logger\LoggerFactory;
+//use MediaWiki\Logger\LoggerFactory;
 
 class ReconUtils {
-	private const LOGNAME = 'ReconciliationAPI';
-	
+	private const EXTENSIONNAME = "ReconciliationAPI";
+
 	/**
 	 * Get URL base, without trailing slash,
 	 * handling both short and long (@todo?) URLs.
-	 * @todo maybe optionally include `/index.php?title=` 
-	 * (if wiki pages are intended)
 	 */
 	public static function getURLBase() {
 		$server = MediaWikiServices::getInstance()->getUrlUtils()->getCanonicalServer();
 		$scriptPath = MediaWikiServices::getInstance()->getMainConfig()->get( 'ScriptPath' );
 		return $server . $scriptPath;
+	}
+
+	public static function getFullURLForPage( string $pagename ) {
+		return Title::newFromText( $pagename )->getFullURL( "", false, PROTO_CANONICAL );
 	}
 
 	public static function fetchExtensionJson() {		
@@ -51,9 +53,10 @@ class ReconUtils {
 	 */
 	public static function getExtensionFolder() {
 		$baseUrl = self::getURLBase();
+		//$baseUrl = MediaWikiServices::getInstance()->getUrlUtils()->getServer( null );
 		$mainConfig = MediaWikiServices::getInstance()->getMainConfig();
 		$extAssets = $mainConfig->get( 'ExtensionAssetsPath' );
-		return $baseUrl . $extAssets . "/ReconciliationAPI";
+		return $baseUrl . $extAssets . "/" . self::EXTENSIONNAME;
 	}
 
 	/**
@@ -64,7 +67,7 @@ class ReconUtils {
 		global $IP;
 		$mainConfig = MediaWikiServices::getInstance()->getMainConfig();
 		$extAssets = $mainConfig->get( 'ExtensionAssetsPath' );
-		return $IP . $extAssets . "/ReconciliationAPI";
+		return $IP . $extAssets . "/" . self::EXTENSIONNAME;
 	}
 
 	/**
@@ -271,7 +274,7 @@ class ReconUtils {
 	 * @return void
 	 */
 	public static function log( string $msg, array $data = [] ) {
-		// $logger = LoggerFactory::getInstance( self::LOGNAME );
+		// $logger = LoggerFactory::getInstance( self::EXTENSIONNAME );
 		// $logger->info( $msg, $data );
 	}
 

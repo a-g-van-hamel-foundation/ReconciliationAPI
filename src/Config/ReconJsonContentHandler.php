@@ -167,14 +167,17 @@ class ReconJsonContentHandler extends JsonContentHandler {
 	 * @return string
 	 */
 	private function createWidget( $profileID, $jsonObj ) {
-		$currentSite = ReconUtils::getURLBase();
 		if ( isset( $jsonObj->redirect->queryPage ) && isset( $jsonObj->redirect->query ) ) {
-			$targetUrl = "{$currentSite}/Special:ReconRedirect/{$profileID}?q=";
-			$footerUrl = "{$currentSite}/Special:ReconRedirect/{$profileID}?q=";
+			$reconRedirectUrl = ReconUtils::getFullURLForPage( "Special:ReconRedirect" );
+			$targetUrl = "{$reconRedirectUrl}/{$profileID}?q=";
+			$footerUrl = "{$reconRedirectUrl}/{$profileID}?q=";
 		} else {
-			$targetUrl = "{$currentSite}/Special:Search?fulltext=0&search=";
-			$footerUrl = "{$currentSite}/Special:Search?fulltext=1&search=";
+			$searchUrl = ReconUtils::getFullURLForPage( "Special:Search" );
+			$targetUrl = "{$searchUrl}?fulltext=0&search=";
+			$footerUrl = "{$searchUrl}?fulltext=1&search=";
 		}
+		$currentSite = ReconUtils::getURLBase();
+
 		$build = <<<WIKI
 			{{#recon-search:
 			|apiurl={$currentSite}/api.php

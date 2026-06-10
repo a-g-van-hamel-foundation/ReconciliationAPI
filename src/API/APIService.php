@@ -16,6 +16,7 @@ namespace Recon\API;
 
 use MediaWiki\MainConfigNames;
 //use MediaWiki\MediaWikiServices;
+use MediaWiki\Api\ApiBase;
 use Wikimedia\ParamValidator\ParamValidator;
 use Recon\ReconUtils;
 use Recon\Config\ReconConfig;
@@ -26,7 +27,7 @@ use Recon\SMW\SMWExtendQueryRequest;
 use Recon\MW\MWUtils;
 use Recon\SMW\SMWSuggestType;
 
-class APIService extends \ApiBase {
+class APIService extends ApiBase {
 
 	private $extensionName = "ReconciliationAPI";
 	private $moduleName = "recon";
@@ -42,6 +43,7 @@ class APIService extends \ApiBase {
 		$params = $this->extractRequestParams();
 
 		$urlBase = ReconUtils::getURLBase();
+		$pageBase = str_replace( "MyHomepage", "", ReconUtils::getFullURLForPage( "MyHomepage" ) );
 		$extensionJson = ReconUtils::fetchExtensionJson();
 
 		$extensionVersion = ( $extensionJson !== false && array_key_exists( "version", $extensionJson ) ) ? $extensionJson["version"] : [ "version" => "?" ];
@@ -242,7 +244,7 @@ class APIService extends \ApiBase {
 			// @todo Json profile may want to use a unique descriptive name.
 			"name" => $name,
 			// URI describing the entity identifiers used in this service
-			"identifierSpace" => "{$urlBase}/Special:Recon/entity",
+			"identifierSpace" => ReconUtils::getFullURLForPage( "Special:Recon" ) . "/entity",
 			// ? URI describing the schema used in this service
 			//"schemaSpace" => "{$urlBase}/Special:Recon/prop/redirect"
 			"schemaSpace" => "http://www.w3.org/2004/02/skos/core#Concept",
@@ -254,7 +256,7 @@ class APIService extends \ApiBase {
 				// generic or /{profileid}
 				// @todo Allows for alternative service based on 
 				// page ID. Should we accommodate this?
-				"url" => "{$urlBase}/Special:ReconPreview/{$previewUrlStr}/page/{{id}}",
+				"url" => ReconUtils::getFullURLForPage( "Special:ReconPreview" ) . "/{$previewUrlStr}/page/{{id}}",
 				"height" => 200,
 				"width" => 350
 			],
@@ -265,13 +267,12 @@ class APIService extends \ApiBase {
 			// "authentication" => [ "type" => "apiKey", "name" => "api_key", "in" => "query" ],
 			"view" => [
 				// template transforming an entity identifier into the corresponding URI
-				// @todo again don't assume short URLs
-				"url" => "{$urlBase}/{{id}}"
+				"url" => "{$pageBase}{{id}}"
 			],
 			"feature_view" => [
 				// template to transform a matching feature identifier into the corresponding URI
 				// @todo handling for non-existing pages with semantic relationships in SMW
-				"url" => "{$urlBase}/{{id}}"
+				"url" => "{$pageBase}{{id}}"
 			],
 			"suggest" => [
 				// Currently, SMW only. Check if SMW is installed
@@ -298,8 +299,8 @@ class APIService extends \ApiBase {
 			"software" => [
 				"smw" => $this->isSMWStoreAvailable ? 1 : 0
 			],
-			"help" => [ "{$urlBase}/Special:ReconciliationAPI", "{$urlBase}/api.php?action=help&format=json&formatversion=2&modules={$this->moduleName}" ],
-			"config" => $configSettings			
+			"help" => [ ReconUtils::getFullURLForPage( "Special:ReconciliationAPI" ), "{$urlBase}/api.php?action=help&format=json&formatversion=2&modules={$this->moduleName}" ],
+			"config" => $configSettings
 		];
 		if ( $this->profileID !== null ) {
 			$meta["profileID"] = intval( $this->profileID );
