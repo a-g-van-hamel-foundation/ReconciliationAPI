@@ -82,7 +82,6 @@
 	"apihelp-recon-propose-property-param-type": "The ''type'' identifier. In MW core, a 'type' can be a category (use the full name with prefix). In the context of SMW, it can be a class page or a category.",
 	"apihelp-recon-propose-property-param-limit": "Optional limit (integer) to the maximum number of properties that should be returned. 0 means no limit.",
 
-	"reconredirect": "Reconciliation API redirect service",
-
-	"reconciliationapi-typeahead-norecord": "(No record available)"
+	"reconredirect": "Reconciliation API redirect service"
 }
+

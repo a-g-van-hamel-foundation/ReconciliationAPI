@@ -24,9 +24,10 @@ class ReconSearch {
 			"class" => "recon-search-widget",
 			"placeholder" => "Search the website",
 			"internal" => false,
+			"showthumbnail" => "true",
 			"dev" => "false"
 		];
-		list( $apiUrl, $apiUrlParams, $targetUrl, $footerUrl, $id, $class, $placeholder, $internal, $dev ) = array_values( ParserFunctionUtils::extractParams( $frame, $args, $paramsAllowed ) );
+		list( $apiUrl, $apiUrlParams, $targetUrl, $footerUrl, $id, $class, $placeholder, $internal, $showThumbnail, $dev ) = array_values( ParserFunctionUtils::extractParams( $frame, $args, $paramsAllowed ) );
 		$showDevInfo = ( $dev == "false" ) ? false : true;
 
 		if ( $targetUrl == false || $footerUrl == false ) {
@@ -72,7 +73,8 @@ class ReconSearch {
 			"data-footer-url" => $footerUrl,
 			"data-random" => "sitesearch-$random",
 			"data-placeholder" => $placeholder,
-			"data-internal" => $internal
+			"data-internal" => $internal,
+			"data-show-thumbnail" => $showThumbnail
 		];
 		$res = Html::rawElement( "div", $attributes, "" );
 

@@ -79,7 +79,10 @@
 				"@wikimedia/codex"
 			],
 			"messages": [
-				"reconciliationapi-typeahead-norecord"
+				"reconciliationapi-typeahead-norecord",
+				"recon-search-footer-default-text",
+				"recon-search-placeholder-default-text",
+				"recon-search-no-results-text"
 			],
 			"styles": [],
 			"packageFiles": [

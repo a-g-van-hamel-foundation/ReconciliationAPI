@@ -8,6 +8,7 @@
 |footerurl=
 |placeholder=
 |internal=
+|showthumbnail=
 }}
 </pre>
 
@@ -37,6 +38,10 @@ The extension comes with a special page designed for that purpose. See Special:R
 <div class="recon-data-item">
 <div><code>internal</code></div>
 <div>By default, the widget makes its requests (POST) to the API remotely. Because this relies on the <code>origin=*</code> string being added to the API's URL, it does not work if the wiki is readable by logged in users only and requests to the API need to be made 'internally'. To allow for the non-anonymous approach, set <code>internal=true</code> (which will omit <code>origin=*</code>).</div>
+</div>
+<div class="recon-data-item">
+<div><code>showthumbnail</code></div>
+<div>By default, each result in the dropdown menu will contain a thumbnail image that is set by the property you've defined in <code>$wgReconAPIThumbnailProp</code> or in your profile (under 'output' > 'image' > 'smwproperty). If no image is found, a placeholder image is shown instead. To hide the thumbnail entirely, set <code>showthumbnail</code> to false. </div>
 </div>
 
 == Define your target URLs ==
