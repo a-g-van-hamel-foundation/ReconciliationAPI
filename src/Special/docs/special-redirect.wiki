@@ -2,19 +2,19 @@
 
 MediaWiki uses a similar special page, <code>Special:Search</code>, to serve as both a central search page as well as a redirect page if the search phrase in the URL string (<code>search</code>) matches an existing page and if that page offers read access to the user. It is used, for instance, by the main search box in the Vector skin. But what if instead you want to do either of the following, or both?
 
-* send the user to a custom search page on the wiki
-* check a semantic property (SMW) if the page should be visited directly
+* Send the user to a custom search page on the wiki
+** Do so and add query parameters to the URL’s fragment identifier
+* Check a semantic property (SMW) if the page should be visited directly
 
-This is where Special:ReconRedirect comes in. 
+This is where <code>Special:ReconRedirect</code> comes in. 
 
 The URL to the special page can be supplied to the TypeaheadSearch widget.
 
 == Methods ==
 
 === Profile ===
-<pre>
-Special:ReconRedirect/23234?q=<phrase>
-</pre>
+Example:
+<pre>Special:ReconRedirect/23234?q=<phrase></pre>
 
 To support those use cases, you can add a section to your profile page, for instance:
 
@@ -38,12 +38,18 @@ To support those use cases, you can add a section to your profile page, for inst
 			"fail": [ "No", "false" ]
 		}
 	],
-	// Optionally, add query string to URL fragment instead. Omit otherwise.
+	// Optionally, add query string to URL fragment identifier instead. Omit otherwise.
 	"updateUrl": "fragment"
 }
 </pre>
 
-Without the inline comments, of course. 
+Without the inline comments, of course.
+
+==== Skip checks ====
+<code>Special:ReconRedirect</code> supports an additional parameter with the name <code>skipcheck</code>. If it is set to true, the request will bypass any checks and take the user straight to the search page.
+
+Example:
+<pre>Special:ReconRedirect/23234?skipcheck=true&q=<phrase></pre>
 
 === Custom search page only ===
 You can do without a profile if all you need is a custom query page, with the regular checks in place but without the property-based check.
@@ -65,3 +71,5 @@ Special:ReconRedirect/MyCustomQueryPage?foo=bar&search=Táin<phrase>
 Special:ReconRedirect?foo=bar&search=Táin<phrase>
 </pre>
 
+=== TypeaheadSearch with the redirect service ===
+See [[Special:ReconciliationAPI/typeahead|TypeaheadSearch]]

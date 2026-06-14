@@ -14,12 +14,17 @@ class ReconSearch {
 	 * Parser function #recon-search
 	 */
 	public function run( Parser $parser, $frame, $args ) {
+		$mainConfig = MediaWikiServices::getInstance()->getMainConfig();
+
 		$random = rand(10000,99999);
 		$paramsAllowed = [
 			"apiurl" => false,
 			"apiurlparams" => false,
 			"targeturl" => false,
 			"footerurl" => false,
+			"searchaction" => $mainConfig->get( MainConfigNames::Script ),
+			"searchpage" => "Special:Search",
+			"searchpageparams" => false,
 			"id" => "recon-widget-sitesearch-$random",
 			"class" => "recon-search-widget",
 			"placeholder" => "Search the website",
@@ -27,23 +32,40 @@ class ReconSearch {
 			"showthumbnail" => "true",
 			"dev" => "false"
 		];
-		list( $apiUrl, $apiUrlParams, $targetUrl, $footerUrl, $id, $class, $placeholder, $internal, $showThumbnail, $dev ) = array_values( ParserFunctionUtils::extractParams( $frame, $args, $paramsAllowed ) );
+		list( $apiUrl, $apiUrlParams, $targetUrl, $footerUrl, $searchAction, $searchPage, $searchPageParams, $id, $class, $placeholder, $internal, $showThumbnail, $dev ) = array_values( ParserFunctionUtils::extractParams( $frame, $args, $paramsAllowed ) );
 		$showDevInfo = ( $dev == "false" ) ? false : true;
 
-		if ( $targetUrl == false || $footerUrl == false ) {
-			$canonServer = MediaWikiServices::getInstance()->getUrlUtils()->getCanonicalServer();
-			$scriptPath = MediaWikiServices::getInstance()->getMainConfig()->get( MainConfigNames::ScriptPath );
-			$server = $canonServer . $scriptPath;
-			if ( $targetUrl == false ) {
-				// Assuming present website is intended
-				$targetUrl = $server . "/index.php?title=";
-			}
-			if ( $footerUrl == false ) {
-				// Assuming present website is intended
-				$footerUrl = $server . "/index.php?title=Special:Search&fulltext=1&search=";
-			}	
+		// Set default for searchpageparams
+		if ( $searchPage == "Special:Search" && !$searchPageParams ) {
+			$searchPageParams = "fulltext=1\nsearch=";
+		} elseif ( str_starts_with( $searchPage, "Special:ReconRedirect" ) && !$searchPageParams ) {
+			$searchPageParams = "skipcheck=true\nq=";
 		}
 
+		// targetUrl, footerUrl
+		if ( $targetUrl == false || $footerUrl == false ) {
+			$canonServer = MediaWikiServices::getInstance()->getUrlUtils()->getCanonicalServer();
+			
+			$scriptPath = $mainConfig->get( MainConfigNames::ScriptPath );
+			$server = $canonServer . $scriptPath;
+			// targeturl
+			if( $targetUrl == false && str_starts_with( $searchPage, "Special:ReconRedirect" ) ) {
+				$targetUrl = $searchAction . "?title={$searchPage}&q=";
+			} elseif ( $targetUrl == false && $searchPage == "Special:Search" ) {
+				// Assuming present website is intended
+				$targetUrl = $searchAction . "?title=";
+			}
+			// footerurl
+			if( $footerUrl == false && str_starts_with( $searchPage, "Special:ReconRedirect" ) ) {
+				$footerUrl = $searchAction . "?title={$searchPage}&skipcheck=true&q=";
+			} elseif ( $footerUrl == false && $searchPage == "Special:Search" ) {
+				// Assuming present website is intended
+				$footerUrl = $searchAction . "?title=Special:Search&fulltext=1&search=";
+			}
+		}
+		$searchPageParamsStr = $this->convertToUrlQueryString( $searchPageParams );
+
+		// Handle API url
 		if ( $apiUrl !== false && $apiUrlParams == false ) {
 			// Using full URL with query params already included
 			$apiParts = explode( '?', $apiUrl );
@@ -56,12 +78,10 @@ class ReconSearch {
 		} else {
 			return "";
 		}
-		parse_str( $apiUrlParams, $parsed);
-		$queryParamsJson = json_encode($parsed, JSON_UNESCAPED_UNICODE );
+		parse_str( $apiUrlParams, $parsed );
+		$queryParamsJson = json_encode( $parsed, JSON_UNESCAPED_UNICODE );
 		$apiUrl = "{$apiUrlBase}?{$apiUrlParams}";
 
-		// @note Our Vue code converts names as variables
-		// e.g. data-api-base-url => apiBaseUrl
 		$attributes = [
 			"id" => $id,
 			"class" => $class,
@@ -71,16 +91,21 @@ class ReconSearch {
 			"data-api-url-params" => $queryParamsJson,
 			"data-target-url" => $targetUrl,
 			"data-footer-url" => $footerUrl,
+			"data-search-action" => $searchAction,
+			"data-search-page" => $searchPage,
+			"data-search-page-params" => $searchPageParamsStr,
 			"data-random" => "sitesearch-$random",
 			"data-placeholder" => $placeholder,
 			"data-internal" => $internal,
 			"data-show-thumbnail" => $showThumbnail
 		];
-		$res = Html::rawElement( "div", $attributes, "" );
+		// placeholder with this height serves to alleviate movement
+		$placeholderEl = "<span style='display:block;height:32px;'></span>";
+		$res = Html::rawElement( "div", $attributes, $placeholderEl );
 
 		// Show additional info intended for development only
 		if ( $showDevInfo ) {
-			$res .= "<div class='alert alert-warning mt-4'>Dev info. API: <a href='$apiUrl'>$apiUrl</a> <br>Target URL: <a href='$targetUrl'>$targetUrl</a> <br>Footer URL: $footerUrl</div>";
+			$res .= "<div class='alert alert-warning mt-4'>Dev info. API: <a href='$apiUrl'>$apiUrl</a> <br>Target URL: <a href='$targetUrl'>$targetUrl</a> <br>Footer URL: $footerUrl <br>search action: $searchAction <br>search page: $searchPage <br>search page params: $searchPageParamsStr</div>";
 		}
 
 		// Add module only if/when first instance of parser function

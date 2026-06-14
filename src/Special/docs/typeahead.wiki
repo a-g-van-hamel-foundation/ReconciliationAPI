@@ -1,4 +1,4 @@
-<p class="recon-summary">The extension comes with a parser function (<code>#recon-search</code>) for adding an API-driven typeahead search widget to any wiki page.</p>
+<p class="recon-summary">The extension comes with a parser function (<code>#recon-search</code>) for adding an API-driven typeahead search widget to any wiki page. When it’s used together with Special:ReconRedirect, you have some additional control over where to send users. </p>
 
 <pre>
 {{#recon-search:
@@ -14,30 +14,47 @@
 
 == Parameters ==
 
+;Relating to API requests
 <div class="recon-data-item">
 <div><code>apiurl</code></div>
 <div>Base URL of the API from which to fetch the data.</div>
 </div>
 <div class="recon-data-item">
 <div><code>apiurlparams</code></div>
-<div>URL query parameters to add to the base URL. This is a convenience method: put each URL parameter, e.g. action=recon-suggest-entity, on a new line. The URL encoding and ampersands are taken care of for you. Use the final parameter for the user-provided substring.</div>
+<div>URL query parameters to add to the base URL. This is a convenience method: put each URL parameter, e.g. action=recon-suggest-entity, on a new line. The URL encoding and ampersands are taken care of for you. Use the final parameter for the user-provided substring and leave it empty (e.g. 'substr=', including the equals sign).</div>
 </div>
+<div class="recon-data-item">
+<div><code>internal</code></div>
+<div>By default, the widget makes its requests (POST) to the API remotely. Because this relies on the <code>origin=*</code> string being added to the API's URL, it does not work if the wiki is readable by logged in users only and requests to the API need to be made 'internally'. To allow for the non-anonymous approach, set <code>internal=true</code> (which will omit <code>origin=*</code>).</div>
+</div>
+
+;Relating to destination URLs
 <div class="recon-data-item">
 <div><code>targeturl</code></div>
 <div>Optional if the wiki being queried is local. If this option is not set, the URL of each search result in the menu offers a direct link to the associated wiki page. It is possible, however, that the page is not necessarily available to the user. You can use this option to instead send the user to an intermediate page, a kind of web proxy, that handles the request, performs some checks and redirects to an appropriate destination. [...]
-The extension comes with a special page designed for that purpose. See Special:ReconDirect. </div>
+The extension comes with a special page designed for that purpose. See Special:ReconRedirect. </div>
 </div>
 <div class="recon-data-item">
 <div><code>footerurl</code></div>
 <div>Optional if the wiki being queried is local. The bottom item in the menu, or footer, is reserved for a link to a query page with the provided phrase. When nothing is set, it is assumed that you are happy to send users to MediaWiki’s general full-text search page (<code>Special:Search</code>, .../Special:Search?fulltext=1). Set it to a different URL of your choice as long as as the final parameter is used to take the phrase provided.</div>
 </div>
 <div class="recon-data-item">
-<div><code>placeholder</code></div>
-<div>The placeholder text in the search input.</div>
+<div><code>searchaction</code></div>
+<div>The base script URL to be used when the form gets submitted, named after a form's <code>action</code> attribute. For most wikis, the default value '/index.php' should work, but you can also provide an absolute URL. If the reconciliation service is external, as in the example for Wikidata elsewhere on this page, a fully qualified URL is mandatory.</div>
 </div>
 <div class="recon-data-item">
-<div><code>internal</code></div>
-<div>By default, the widget makes its requests (POST) to the API remotely. Because this relies on the <code>origin=*</code> string being added to the API's URL, it does not work if the wiki is readable by logged in users only and requests to the API need to be made 'internally'. To allow for the non-anonymous approach, set <code>internal=true</code> (which will omit <code>origin=*</code>).</div>
+<div><code>searchpage</code></div>
+<div>Name of the search page, or intermediary page using Special:ReconRedirect. Defaults to Special:Search. </div>
+</div>
+<div class="recon-data-item">
+<div><code>searchpageparams</code></div>
+<div>URL query parameters to add to the base URL of the search page. Again, as with <code>apiurlparams</code>, put each individual parameter on a new line. The URL encoding and ampersands are taken care of for you. Use the final parameter for the search term and leave it empty (e.g. 'search='). Defaults are set if <code>searchpage</code> is either 'Special:Search' or 'Special:ReconRedirect'.</div>
+</div>
+
+;Other
+<div class="recon-data-item">
+<div><code>placeholder</code></div>
+<div>The placeholder text in the search input.</div>
 </div>
 <div class="recon-data-item">
 <div><code>showthumbnail</code></div>
@@ -45,6 +62,71 @@ The extension comes with a special page designed for that purpose. See Special:R
 </div>
 
 == Define your target URLs ==
-The widget should work out of the box if it is used to suggest pages that are directly accessible at their URLs. If you find yourself in the situation where this isn't necessarily the case, you could consider [[Special:ReconciliationAPI/special-redirect|using an intermediate special page that runs a couple of checks]].
+Users need to be sent to the right page, whether they select an item from the dropdown menu, click the link in the menu's footer, or hit enter. To achieve this, the TypeaheadSearch widget may require some input from you :
 
+=== Option 1: accept default behaviour ===
+The widget should work out of the box :
+* (a) if query results refer to the local wiki (and not for instance, Wikidata)
+* (b) if MediaWiki's traditional searchbox behaviour suits you fine : let the menu suggest page links that when selected, take users directly to the relevant URL; and offer an alternative, such as clicking the footer link or hitting enter, to take users to <code>Special:Search</code> to let them search the wiki for occurrences of the search term. 
+** One difference with the traditional approach is that the present extension allows you to select non-existing pages (i.e. semantic values of datatype Page without a wiki page). This is resolved by letting <code>Special:Search</code> work out if the request should redirect users to a corresponding wiki page or let them use the search page.
 
+<!-- index.php Special:Search fulltext=1/0 search= -->
+
+=== Option 2: customise ===
+There are situations in which the default option will not do, notably :
+* If query results refer to pages external to your wiki, such as when querying Wikidata.
+* If you require any of the features provided for by [[Special:ReconciliationAPI/special-redirect|<code>Special:ReconRedirect</code>]].
+
+To customise behaviour, you'll need to define the following parameters in the parser function :
+* <code>targeturl</code>
+* <code>footerurl</code>
+* <code>searchaction</code>, e.g. <nowiki>https://example.com/index.php</nowiki>
+* <code>searchpage</code>
+* <code>searchpageparams</code>
+
+==== Example using an external service ====
+Here is an example of the parser function that uses Wikidata's reconciliation service to fetch results.
+
+<pre>{{#recon-search:
+|apiurl=https://wikidata-reconciliation.wmcloud.org/en/suggest/entity
+|apiurlparams=prefix=
+|targeturl=https://www.wikidata.org/wiki/
+|footerurl=https://www.wikidata.org/w/index.php?&title=Special%3ASearch&language=en&ns0=1&search=
+   // @todo change name?
+|searchaction=https://www.wikidata.org/w/index.php
+|searchpage=Special:Search
+|searchpageparams=language=en
+ns0=1
+search=
+}}</pre>
+
+Some things worth stressing :
+* <code>searchpageparams</code>, like <code>apiurlparams</code>, lets you add each individual parameter on a new line.
+* Notice that the parameter that will accept a search term, here 'search=', must always come at the end and is to be left empty (just like 'prefix=' under <code>apiurlparams</code>).
+* <code>targeturl</code> and <code>footerurl</code> are similarly open-ended in that they accept a variable, such as the name of a page or search term.
+
+==== Example using Special:ReconRedirect ====
+
+<pre>{{#recon-search:
+|apiurl=https://example.com/w/api.php
+|apiurlparams=action=recon-suggest-entity
+profile=<profileid>
+substr=
+|targeturl=https://example.com/wiki/Special:ReconRedirect/<profileid>?q=
+|footerurl=https://example.com/wiki/Special:ReconRedirect/<profileid>?skipcheck=true&q=
+|searchaction=https://example.com/w/index.php // or just /w/index.php if https://example.com is the local wiki
+|searchpage=Special:ReconRedirect/<profileid>
+|searchpageparams=skipcheck=true
+q=
+}}</pre>
+
+We can make this a little shorter. Because we already have <code>searchaction</code> and <code>searchpage</code>, we can rely on some automatic settings for the Special:ReconRedirect service. The following should produce something equivalent :
+
+<pre>{{#recon-search:
+|apiurl=https://example.com/w/api.php
+|apiurlparams=action=recon-suggest-entity
+profile=<profileid>
+substr=
+|searchaction=https://example.com/w/index.php
+|searchpage=Special:ReconRedirect/<profileid>
+}}</pre>

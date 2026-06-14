@@ -2,13 +2,14 @@
 
 namespace Recon\Special;
 
-use \Title;
-use \MediaWiki\MediaWikiServices;
+use MediaWiki\Title\Title;
+use MediaWiki\MediaWikiServices;
+use MediaWiki\SpecialPage\SpecialPage;
 use Recon\Config\ReconConfig;
 use Recon\SMW\SMWQueryBuilder;
 use Recon\SMW\SMWResultFormatter;
 
-class ReconSpecialRedirect extends \SpecialPage {
+class ReconSpecialRedirect extends SpecialPage {
 
 	private $mainConfig;
 	private $queryPageFrom = null;
@@ -19,6 +20,9 @@ class ReconSpecialRedirect extends \SpecialPage {
 	private $redirectProfile = null;
 	private $redirectConditions = false;
 	private $updateUrl = "search";
+	// Whether or not to skip the check and 
+	// go straight to the query page
+	private $skipCheck = false;
 
 	public function __construct( $name = 'ReconRedirect' ) {
 		parent::__construct( $name );
@@ -62,6 +66,8 @@ class ReconSpecialRedirect extends \SpecialPage {
 			foreach( $_GET as $key => $value ){
 				if ( $key == "q" ) {
 					$q = htmlspecialchars( $value );
+				} elseif( $key == "skipcheck" && htmlspecialchars( $value ) == "true" ) {
+					$this->skipCheck = true;
 				}
 			}
 		} elseif( isset( $subPage ) ) {
@@ -82,8 +88,9 @@ class ReconSpecialRedirect extends \SpecialPage {
 			}
 		}
 
+		// Start checks
 		$phrase = $q ?? "";
-		if ( $phrase !== "" ) {
+		if ( $phrase !== "" && !$this->skipCheck ) {
 			// if "" then ...
 			$title = Title::newFromText( $phrase );
 			// check that title isn't null
@@ -115,6 +122,10 @@ class ReconSpecialRedirect extends \SpecialPage {
 			// @todo allow for configurable alt. query page
 		}
 
+		if ( $newUrl == null ) {
+			// ?
+			return;
+		}
 		$this->redirectToUrl( $newUrl );
 		//$res = "Redirect to: " . $newUrl;
 		//$out->addWikiTextAsContent( $res );
@@ -131,11 +142,11 @@ class ReconSpecialRedirect extends \SpecialPage {
 		return $userCanAccess;
 	}
 
-	private function getQueryPageUrl( $phrase ) {
+	private function getQueryPageUrl( string $phrase ): ?string {
 		// @todo get searchpage default
 		// @todo get from URL
 
-		if ( $this->queryPageFrom == "profile" && $this->redirectProfile !== null ) {
+		if ( $this->queryPageFrom == "profile" && $this->redirectProfile !== false && $this->redirectProfile !== null  ) {
 			// Special:ReconRedirect/34234
 			[ $queryPage, $query ] = $this->getQueryPageDataFromProfile( $this->redirectProfile, $phrase );
 		} else {
@@ -143,7 +154,16 @@ class ReconSpecialRedirect extends \SpecialPage {
 			$query = $this->query;
 		}
 
+		// Remove "title" param, which is reserved by MW
+		// and will mess up the redirect if included
+		if ( isset( $query["title"] ) ) {
+			unset( $query["title"] );
+		}
+
 		$queryPageTitle = Title::newFromText( $queryPage );
+		if ( $queryPageTitle == null ) {
+			return null;
+		}
 		if ( $this->updateUrl === "fragment" ) {
 			return $queryPageTitle->getLocalUrl() . "#" . http_build_query( $query, "", "&" );
 		} else {
