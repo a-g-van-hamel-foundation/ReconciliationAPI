@@ -10,12 +10,15 @@
 			</div>
 			<div>
 				<cdx-lookup
+					ref="activeChild"
 					:name="name"
 					v-model:selected="query[name]"
 					v-model:input-value="selectInput"
-					:menu-items="selectList"
+					:menu-items="selectList || []"
 					@update:input-value="runRequest"
-					@focus="runRequest('')"
+					@focus="onFocusInput"
+					@clear="onClearInput"
+					@blur="onBlurInput"
 					:placeholder="configData.placeholder ?? label"
 					:clearable="true"
 					:menu-config="menuConfig"
@@ -35,6 +38,7 @@
 			</div>
 			<div>
 				<cdx-select
+					ref="activeChild"
 					v-model:selected="query[name]"
 					:menu-items="selectList || []"
 					:multiple="multiple || false"
@@ -58,13 +62,15 @@
 			<div v-else class="recon-comment">{{ $i18n('recon-faceted-match-all').text() }} ({{ query[name].length }}):</div>
 			<div>
 				<cdx-multiselect-lookup
+					ref="activeChild"
 					v-model:input-chips="chips"
 					v-model:selected="query[name]"
 					:menu-items="selectList || []"
 					:menu-config="menuConfig"
 					@update:selected="onUpdateSelected"
 					@input="onMultiselectInput"
-					@focus="onMultiselectInput('')"
+					@focus="onFocusInput"
+					@blur="onBlurInput"
 					@keyup.enter="onEnter()"
 					aria-label="Select one or multiple items"
 					:placeholder="configData.placeholder ?? label"
@@ -84,6 +90,7 @@
 			</div>
 			<div>
 				<cdx-text-input
+					ref="activeChild"
 					:name="name"
 					v-model="query[name]"
 					:placeholder="configData.placeholder ?? label"
@@ -161,6 +168,7 @@
 
 	<template v-else-if="componentType === 'numberrange'">
 		<range-facet
+			ref="activeChild"
 			:component-type="componentType"
 			:input-type="'number'"
 			v-model:query="query"
@@ -176,6 +184,7 @@
 
 	<template v-else-if="componentType === 'daterange'">
 		<range-facet
+			ref="activeChild"
 			:component-type="componentType"
 			input-type="date"
 			v-model:query="query"
@@ -190,7 +199,7 @@
 </template>
 
 <script>
-const { defineComponent, computed, ref, reactive, watch } = require("vue");
+const { defineComponent, computed, ref, reactive, watch, defineExpose } = require("vue");
 const { CdxTextInput, CdxSelect, CdxLookup, CdxMultiselectLookup, CdxRadio, CdxCheckbox, CdxIcon } = require( "@wikimedia/codex" );
 const RangeFacet = require( "./RangeFacet.vue" );
 const InfoDialog = require( "./InfoDialog.vue" );
@@ -216,7 +225,12 @@ module.exports = defineComponent( {
 	},
 	emits: [ 'run-query' ],
 	setup(props, { emit } ) {
-	
+
+		const activeChild = ref(null);
+		defineExpose({ activeChild });
+		// Tracks (for some inputs) whether input has focus
+		const isFocused = ref(false);
+
 		// Source type
 		// api types profileId and valuesFromProperty
 		const profileId = ref( props.configData.profileid ?? null );
@@ -233,8 +247,9 @@ module.exports = defineComponent( {
 			allowEmpty.value = false;
 		}
 
-		// 'componentType' represents component type on an implementation level
-		// whereas 'inputType' is user-oriented and more abstract
+		// 'componentType' represents component type on an 
+		// implementation level, whereas 'inputType' is 
+		// user-oriented and more abstract.
 		const componentType = ref( "" );
 		switch(props.inputType) {
 			case "select":
@@ -267,32 +282,31 @@ module.exports = defineComponent( {
 			}
 		}
 
-		// Either init requestEntity or requestPropertyValue, with minor delay
 		let delayTimer = 0;
 		/**
-		 * Run API request for 'term'
+		 * Run API request for 'term' and initialise either
+		 * requestEntity or requestPropertyValue, with
+		 * minor delay
 		 * @param {string} term
 		 * @param {string} action see requestEntity() and requestPropertyValue()
 		 */
 		function runRequest(term, action) {
 			if (dataSourceType.value !== "api") {
 				return;
-			} else if (!term) {
-				// reset?
-				// selectList.value = [];
-				// return;
+			} else if (!term || term.trim() == "" ) {
+				//console.log( "term is empty" );
 			}
 			clearTimeout(delayTimer);
 			delayTimer = setTimeout(function() {
 				if (profileId.value !== null) {
-					requestEntity(term, 0)
+					requestEntity(term ?? "", 0)
 					.then( (data) => {
-						handleEntityResponse(data, action);
+						handleEntityResponse(data, action, term);
 					});
 				} else if(valuesFromProperty.value !== null) {
-					requestPropertyValue(term, 0)
+					requestPropertyValue(term ?? "", 0)
 					.then( (data) => {
-						handlePropertyValueResponse(data, action);
+						handlePropertyValueResponse(data, action, term);
 					});
 				}
 			}, 200);
@@ -329,7 +343,7 @@ module.exports = defineComponent( {
 
 		/**
 		 * @param {object} data
-		 * @return {object|null}
+		 * @return {?object}
 		 */
 		function handleEntityResponseForInitialValues(data) {
 			if (data.result == undefined || data.result.length == 0) {
@@ -343,9 +357,18 @@ module.exports = defineComponent( {
 			}
 		}
 
-		function handleEntityResponse(data, action) {
+		/**
+		 * 
+		 * @param {object} data
+		 * @param {?string|undefined} action
+		 * @param {?string|undefined} term
+		 */
+		function handleEntityResponse(data, action, term) {
 			if (data.result == undefined) {
 				return;
+			}
+			if (!term) {
+				ensureMenuExpands();
 			}
 			var newSelectList = data.result.map( (res) => ( {
 				value: res.id,
@@ -371,6 +394,48 @@ module.exports = defineComponent( {
 			}
 			// Suggest more options for radio group
 			signalFurtherResults(data.meta?.nextOffset);
+		}
+
+		/**
+		 * If input is in 'focus' and empty, get an
+		 * initial list of suggestions from the API.
+		 * @todo Consider making this opt-in/opt-out.
+		 */
+		function onFocusInput(event) {
+			isFocused.value = true;
+			if ( dataSourceType.value !== "api" ) {
+				return;
+			}
+			let term = event.target.value;
+			if (term == "" && (componentType.value == "lookup" || componentType.value == "multiselect")) {
+				runRequest();
+			}
+			// runRequest() does not automatically expand the menu
+			// See ensureMenuExpands() in handleEntityResponse() 
+			// and handlePropertyValueResponse().
+		}
+
+		function onBlurInput() {
+			isFocused.value = false;
+		}
+
+		function onClearInput() {
+			//
+		}
+
+		/**
+		 * Make sure the dropdown menu expands 
+		 * programmatically if an API request is made.
+		 * Don't do this for inputs that have lost focus.
+		 */
+		function ensureMenuExpands() {
+			if ( dataSourceType.value !== "api" ) {
+				return;
+			}
+			if ( (componentType.value == "lookup" || componentType.value == "multiselect") && !activeChild.value.expanded && isFocused.value ) {
+				// cf. https://phabricator.wikimedia.org/T390127
+				activeChild.value.expanded = true;
+			}
 		}
 
 		const hasFurtherResults = ref(false);
@@ -425,7 +490,7 @@ module.exports = defineComponent( {
 
 		/**
 		 * @param {object} data
-		 * @return {object|null}
+		 * @return {?object}
 		 */
 		function handlePropertyValueResponseForInitialValues(data) {
 			if (data.result == undefined || data.result.length == 0) {
@@ -439,10 +504,17 @@ module.exports = defineComponent( {
 			}
 		}
 
-		// Handles response from requestPropertyValue
-		function handlePropertyValueResponse(data, action) {
+		/**
+		 * Handles response from requestPropertyValue
+		 * @param {object} data
+		 * @param {string|undefined} action
+		 */
+		function handlePropertyValueResponse(data, action, term) {
 			if (data.result == undefined) {
 				return;
+			}
+			if (!term) {
+				ensureMenuExpands();
 			}
 			var newSelectList = data.result.map( (res) => ( {
 				value: res.id,
@@ -564,9 +636,8 @@ module.exports = defineComponent( {
 		};
 
 		function onMultiselectInput(value) {
-			if(dataSourceType.value == "api") {
+			if( value && dataSourceType.value == "api") {
 				runRequest(value);
-				// 
 			} else if(props.configData?.options !== undefined) {
 				// selectList.value = props.configData.options.filter( ( opt ) => opt.value == value );
 			} else {
@@ -601,6 +672,8 @@ module.exports = defineComponent( {
 
 		return {
 			componentType,
+			activeChild,
+			isFocused,
 			selectList, // Used for select + multiselect
 
 			// dataSourceType?,
@@ -616,6 +689,10 @@ module.exports = defineComponent( {
 			checkboxVals,
 			onMultiselectInput,
 			menuConfig,
+
+			onFocusInput,
+			onClearInput,
+			onBlurInput,
 
 			requestAdditionalRadioOrCheckboxOptions,
 
