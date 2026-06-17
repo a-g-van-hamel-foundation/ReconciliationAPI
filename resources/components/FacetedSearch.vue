@@ -575,35 +575,62 @@ module.exports = defineComponent( {
 		 * @param {object} smwMap containing SMW mapping data such as smwproperty, smwquery
 		 * @param {string|null} filterVal filter value
 		 * @param {integer} inputIndex used for facets with multiple inputs that must be differentiated (range facets)
+		 * @return {string|array}
 		 */
 		function createSubconditionFromFacet(facet, smwMap, filterVal, inputIndex) {
 			if (filterVal == null) {
 				filterVal = "";
 			}
-			var newQ = "";
+			let newQ = "";
 			let substringPattern = smwMap.substringPattern ?? smwMap.smwpropertyMatch ?? null;
 			switch(facet.inputType) {
 				case "select":
 				case "lookup":
 				case "radio":
+					//newQ = "";
 					if (facet.options !== undefined) {
 						var option = facet.options.find((opt) => opt['value'] == filterVal);
-						var newQ = assignToProperty(smwMap.smwproperty, option.value, smwMap.subquery);
-					} else if (typeof facet.mapOptions !== 'undefined') {	
+						newQ = assignToProperty(smwMap.smwproperty, option.value, smwMap.subquery);
+					} else if (typeof facet.mapOptions !== "undefined") {
 						var mapOption = facet.mapOptions.find((opt) => opt['option'] == filterVal);
-						var newQ = mapOption.where;
+						newQ = mapOption.where;
 					} else {
 						// API
-						var newQ = assignToProperty(smwMap.smwproperty, filterVal, smwMap.subquery, facet);
+						newQ = assignToProperty(smwMap.smwproperty, filterVal, smwMap.subquery, facet);
 					}
 				break;
 				case "multiselect":
 				case "checkboxes":
+					newQ = [];
+					let smwpropertyMatchLogic = facet.smwpropertyMatchLogic ?? "AND";
+					if (!Array.isArray(filterVal)) {
+						console.warn("The provided value is not an array");
+						break;
+					}
+
+					// mapOptions - does not support OR
+					if (typeof facet.mapOptions !== 'undefined') {
+						let mappedQueries = [];
+						filterVal.forEach( (v) => {
+							let mapOption = facet.mapOptions.find((opt) => opt['option'] == v);
+							mappedQueries.push(mapOption.where);
+						} );
+						if(smwpropertyMatchLogic == "AND") {
+							newQ = mappedQueries.join( " " );
+							break;
+						} else {
+							console.warn( "mapOptions not supported with OR" );
+							// at this sublevel, concatenation of 
+							// subconditions by OR is not supported 
+							// by #ask syntax
+							break;
+						}
+					}
+
 					if (facet.options !== undefined) {
 						// No need to check I think
 					}
-					let smwpropertyMatchLogic = facet.smwpropertyMatchLogic ?? "AND";
-					var newQ = [];
+					
 					if ( smwpropertyMatchLogic == "OR" ) {
 						var cond = assignToProperty(smwMap.smwproperty, filterVal.join("||"), smwMap.subquery);
 						newQ.push(cond);
@@ -615,21 +642,22 @@ module.exports = defineComponent( {
 					}
 				break;
 				case "text":
+					newQ = "";
 					var substr = sanitiseString(filterVal);
 					if (typeof smwMap.smwproperty !== "undefined") {
 						// @todo - no comprehensive checks yet
-						var newQ = ``;
 						switch(substringPattern ?? "tokenprefix") {
 							case "contains":
 							case "allchars":
 							case "tokenprefix":
-								var newQ = getReplacementString(substr, smwMap.smwproperty, smwMap.subquery, usesTokens, minTokenSize);
+								newQ = getReplacementString(substr, smwMap.smwproperty, smwMap.subquery, usesTokens, minTokenSize);
 							break;
 							case "exact":
-								var newQ = assignToProperty(smwMap.smwproperty, substr, smwMap.subquery);
+								newQ = assignToProperty(smwMap.smwproperty, substr, smwMap.subquery);
 							break;
 						}
 					} else {
+						newQ = ``;
 						// For now assuming datatype 'page', although
 						// 1. SQLStore does allow for props of type 
 						// 'Page' to be enabled for FTS (not default)
