@@ -256,9 +256,9 @@ module.exports = defineComponent( {
 					showLoader.value = false;
 					handleModulesForApiResponse(format);
 				})
-				.fail(function() {
+				.fail( (error) => {
 					showLoader.value = false;
-					console.error("Parsing failed...");
+					console.error("Parsing failed...", error);
 				});
 			} else if(output == "template" && props.configData.template) {
 				// Create full template string to be parsed
@@ -278,9 +278,9 @@ module.exports = defineComponent( {
 						});
 					}
 				})
-				.fail(function() {
+				.fail( (error) => {
 					showLoader.value = false;
-					console.error("Parsing of the template failed...");
+					console.error("Parsing of the template failed...", error);
 				});
 			} else {
 				// Basic. Get results from SMW's ask API
@@ -309,9 +309,9 @@ module.exports = defineComponent( {
 					// smwQueryResultKey.value = getTimestamp();
 					// ...
 				} )
-				.fail(function() {
+				.fail( (error) => {
 					showLoader.value = false;
-					console.error("Query failed...");
+					console.error("Query failed...", error);
 					// smwQueryResults.value = {};
 					smwQueryResults.value = null;
 					smwQueryResultKey.value = getTimestamp();
@@ -619,7 +619,7 @@ module.exports = defineComponent( {
 					if (typeof smwMap.smwproperty !== "undefined") {
 						// @todo - no comprehensive checks yet
 						var newQ = ``;
-						switch(substrPattern ?? "tokenprefix") {
+						switch(substringPattern ?? "tokenprefix") {
 							case "contains":
 							case "allchars":
 							case "tokenprefix":
@@ -754,6 +754,9 @@ module.exports = defineComponent( {
 				resultCount.value = Number(tmp.textContent||tmp.innerText);
 				// enforce..
 				smwQueryResultKey.value = getTimestamp();
+			})
+			.fail( (error) => {
+				console.log(error);
 			});
 		}
 

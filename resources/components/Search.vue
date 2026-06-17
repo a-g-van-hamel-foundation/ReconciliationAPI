@@ -185,6 +185,9 @@ module.exports = defineComponent( {
 					}
 				}
 				searchFooterUrl.value = footerUrlBase.value + `${ encodeURIComponent(value) }`;
+			} )
+			.fail( (error) => {
+				console.log(error);
 			} );
 		}
 
@@ -316,6 +319,11 @@ module.exports = defineComponent( {
 	}
 	.cdx-search-result-title__match {
 		color: #5c7a51;
+	}
+	@media screen and (max-width: 576px) {
+		.cdx-text-input {
+			min-width:200px;
+		}
 	}
 }
 
