@@ -581,6 +581,7 @@ module.exports = defineComponent( {
 				filterVal = "";
 			}
 			var newQ = "";
+			let substringPattern = smwMap.substringPattern ?? smwMap.smwpropertyMatch ?? null;
 			switch(facet.inputType) {
 				case "select":
 				case "lookup":
@@ -618,8 +619,9 @@ module.exports = defineComponent( {
 					if (typeof smwMap.smwproperty !== "undefined") {
 						// @todo - no comprehensive checks yet
 						var newQ = ``;
-						switch(smwMap.smwpropertyMatch ?? "tokenprefix") {
-							// 'contains'?
+						switch(substrPattern ?? "tokenprefix") {
+							case "contains":
+							case "allchars":
 							case "tokenprefix":
 								var newQ = getReplacementString(substr, smwMap.smwproperty, smwMap.subquery, usesTokens, minTokenSize);
 							break;
@@ -628,13 +630,19 @@ module.exports = defineComponent( {
 							break;
 						}
 					} else {
-						// Assuming single-page restriction
-						switch(smwMap.smwpropertyMatch ?? "tokenprefix") {
-							// 'contains'?
+						// For now assuming datatype 'page', although
+						// 1. SQLStore does allow for props of type 
+						// 'Page' to be enabled for FTS (not default)
+						// 2. smwpropertyMatch is a misnomer
+						switch(substringPattern ?? "contains") {
+							case "contains":
+							case "allchars":
 							case "tokenprefix":
-								newQ = `[[~${substr}*]]`;
+								// like:
+								newQ = `[[like:*${substr}*]]`;
 							break;
 							case "exact":
+								// single-page restriction
 								newQ = `[[${substr}]]`;
 							break;
 						}

@@ -100,7 +100,7 @@ Relating to SMW:
 <div>Optionally, a subquery to be used for 'smwproperty', without q tags and with @@@ as placeholder for the selected value.</div>
 </div>
 <div class="recon-data-item">
-<div><code>smwpropertyMatch</code></div>
+<div><code>substringPattern</code> (previously <code>smwpropertyMatch</code>)</div>
 <div>If using inputType=text, you can set it to 'exact' to make the query match exactly.</div>
 </div>
 <div class="recon-data-item">
@@ -138,7 +138,7 @@ Single-page restriction is assumed if you omit <code>smwproperty</code>.
 </pre>
 
 ;exact match
-By default, this input type assumes the property value will be fed to a wildcard match when the query is run. If you strictly need an exact match instead, set "smwpropertyMatch" to "exact", as below.
+By default, this input type assumes the property value will be fed to a wildcard match when the query is run. If you strictly need an exact match instead, set "substringPattern" to "exact", as below.
 
 <pre>
 {
@@ -146,7 +146,7 @@ By default, this input type assumes the property value will be fed to a wildcard
 	"name": "Identifier",
 	"inputType": "text",
 	"smwproperty": "Has identifier number",
-	"smwpropertyMatch": "exact"
+	"substringPattern": "exact"
 }
 </pre>
 
@@ -326,7 +326,7 @@ Just be aware that subqueries are known to be relatively expensive computational
 
 See above.
 
-;(4) with smwpropertyMatch
+;(4) with substringPattern
 
 See the section on the 'text' input type.
 
