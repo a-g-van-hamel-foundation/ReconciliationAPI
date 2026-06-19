@@ -17,8 +17,8 @@
 					:menu-items="selectList || []"
 					@update:input-value="runRequest"
 					@focus="onFocusInput"
-					@clear="onClearInput"
 					@blur="onBlurInput"
+					@clear="onClearInput"
 					:placeholder="configData.placeholder ?? label"
 					:clearable="true"
 					:menu-config="menuConfig"
@@ -261,7 +261,13 @@ module.exports = defineComponent( {
 
 		// Menu list
 		const selectList = ref( [] );
+		const initialSelectList = ref( [] );
 		initSelectList();
+		/**
+		 * Populate menu with initial suggestions
+		 * (selectList and initialSelectList)
+		 * Must run only at initialisation time.
+		 */
 		function initSelectList() {
 			if ((componentType.value == "select" || componentType.value == "radio") && allowEmpty.value) {
 				// Start with dummy value
@@ -274,10 +280,12 @@ module.exports = defineComponent( {
 			if (props.configData.options !== undefined) {
 				props.configData.options.forEach( (opt) => {
 					selectList.value.push( { value: opt['value'], label: opt['label'] } );
+					initialSelectList.value = selectList.value;
 				} );
 			} else if (props.configData.mapOptions !== undefined) {
 				props.configData.mapOptions.forEach( (opt) => {
 					selectList.value.push( { value: opt['option'], label: opt['option'] } );
+					initialSelectList.value = selectList.value;
 				} );
 			}
 		}
@@ -293,8 +301,20 @@ module.exports = defineComponent( {
 		function runRequest(term, action) {
 			if (dataSourceType.value !== "api") {
 				return;
-			} else if (!term || term.trim() == "" ) {
-				//console.log( "term is empty" );
+			}
+			if ((!term || term.trim() == "") && initialSelectList.value.length > 0) {
+				// Term empty and we already have an non-empty
+				// initialSelectList? Use that and abandon request
+				selectList.value = initialSelectList.value;
+				clearTimeout(delayTimer);
+				delayTimer = setTimeout(function() {
+					// @todo Improve
+					// A check on activeChild.value.expanded would
+					// come too early. Delay helps but not a
+					// exact solution against race conditions.
+					ensureMenuExpands();
+				}, 200);
+				return;
 			}
 			clearTimeout(delayTimer);
 			delayTimer = setTimeout(function() {
@@ -302,14 +322,23 @@ module.exports = defineComponent( {
 					requestEntity(term ?? "", 0)
 					.then( (data) => {
 						handleEntityResponse(data, action, term);
+						setInitialSelectListForAPIResponse();
 					});
 				} else if(valuesFromProperty.value !== null) {
 					requestPropertyValue(term ?? "", 0)
 					.then( (data) => {
 						handlePropertyValueResponse(data, action, term);
+						setInitialSelectListForAPIResponse();
 					});
 				}
 			}, 200);
+		}
+
+		function setInitialSelectListForAPIResponse() {
+			if ( initialSelectList.value.length === 0 ) {
+				// Should only need to be populated once
+				initialSelectList.value = selectList.value;
+			}
 		}
 
 		/**
@@ -328,7 +357,7 @@ module.exports = defineComponent( {
 				source: "smw",
 				limit: props.configData.resultLimit ?? "25",
 				offset: offset ?? 0,
-				prefix: term
+				prefix: term ?? ""
 			};
 			if (profileId.value !== null) {
 				apiUrlParams["profile"] = profileId.value;
@@ -342,6 +371,7 @@ module.exports = defineComponent( {
 		}
 
 		/**
+		 * Handle response for preset values
 		 * @param {object} data
 		 * @return {?object}
 		 */
@@ -364,11 +394,11 @@ module.exports = defineComponent( {
 		 * @param {?string|undefined} term
 		 */
 		function handleEntityResponse(data, action, term) {
-			if (data.result == undefined) {
-				return;
-			}
 			if (!term) {
 				ensureMenuExpands();
+			}
+			if (data.result == undefined) {
+				return;
 			}
 			var newSelectList = data.result.map( (res) => ( {
 				value: res.id,
@@ -398,8 +428,9 @@ module.exports = defineComponent( {
 
 		/**
 		 * If input is in 'focus' and empty, get an
-		 * initial list of suggestions from the API.
-		 * @todo Consider making this opt-in/opt-out.
+		 * initial list of suggestions from the API
+		 * and populate initialSelectList.
+		 * May trigger menu expansion.
 		 */
 		function onFocusInput(event) {
 			isFocused.value = true;
@@ -407,8 +438,12 @@ module.exports = defineComponent( {
 				return;
 			}
 			let term = event.target.value;
-			if (term == "" && (componentType.value == "lookup" || componentType.value == "multiselect")) {
-				runRequest();
+			if (!term && (componentType.value == "lookup" || componentType.value == "multiselect")) {
+				runRequest("");
+				if ( initialSelectList.value.length > 0 ) {
+					ensureMenuExpands();
+				}
+				// cf. onMultiselectInput()
 			}
 			// runRequest() does not automatically expand the menu
 			// See ensureMenuExpands() in handleEntityResponse() 
@@ -489,6 +524,7 @@ module.exports = defineComponent( {
 		}
 
 		/**
+		 * Handle response for preset values
 		 * @param {object} data
 		 * @return {?object}
 		 */
@@ -510,11 +546,11 @@ module.exports = defineComponent( {
 		 * @param {string|undefined} action
 		 */
 		function handlePropertyValueResponse(data, action, term) {
-			if (data.result == undefined) {
-				return;
-			}
 			if (!term) {
 				ensureMenuExpands();
+			}
+			if (data.result == undefined) {
+				return;
 			}
 			var newSelectList = data.result.map( (res) => ( {
 				value: res.id,
@@ -635,11 +671,19 @@ module.exports = defineComponent( {
 			visibleItemLimit: 5
 		};
 
-		function onMultiselectInput(value) {
-			if( value && dataSourceType.value == "api") {
-				runRequest(value);
-			} else if(props.configData?.options !== undefined) {
-				// selectList.value = props.configData.options.filter( ( opt ) => opt.value == value );
+		/**
+		 * Does not cover 'on focus' events.
+		 */
+		function onMultiselectInput(v) {
+			if(dataSourceType.value == "api") {
+				// cf. onFocusInput()
+				runRequest(v);
+			} else if(dataSourceType.value == "options" && v) {
+				// Autocomplete
+				selectList.value = props.configData.options.filter( (opt) => opt.label.includes(v) );
+			} else if(dataSourceType.value == "options" && !v) {
+				// Show full list again
+				selectList.value = initialSelectList.value;
 			} else {
 				// console.log( "no value" );
 				selectList.value = [];
@@ -674,6 +718,7 @@ module.exports = defineComponent( {
 			componentType,
 			activeChild,
 			isFocused,
+			initialSelectList,
 			selectList, // Used for select + multiselect
 
 			// dataSourceType?,
