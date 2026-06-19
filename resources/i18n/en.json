@@ -7,6 +7,7 @@
 	"recon-faceted-match-all": "Match all selected",
 	"recon-faceted-more": "More&hellip;",
 	"recon-faceted-info-dialog-icon-aria-label": "Click icon to view dialogue box with info about the present facet",
+	"recon-faceted-facet-no-results-text": "No results found",
 	"reconciliationapi-typeahead-norecord": "(No record available)",
 	"recon-search-footer-default-text": "Search the site for pages containing",
 	"recon-search-placeholder-default-text": "Search the website",

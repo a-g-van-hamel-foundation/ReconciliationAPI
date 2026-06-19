@@ -23,7 +23,12 @@
 					:clearable="true"
 					:menu-config="menuConfig"
 					@keyup.enter="onEnter()"
-				></cdx-lookup>
+					@load-more="requestAdditionalMenuItems"
+				>
+					<template #no-results>
+						<small>{{ $i18n('recon-faceted-facet-no-results-text').text() }}</small>
+					</template>
+				</cdx-lookup>
 			</div>
 		</div>
 	</template>
@@ -72,9 +77,13 @@
 					@focus="onFocusInput"
 					@blur="onBlurInput"
 					@keyup.enter="onEnter()"
+					@load-more="requestAdditionalMenuItems"
 					aria-label="Select one or multiple items"
 					:placeholder="configData.placeholder ?? label"
 				>
+					<template #no-results>
+						<small>{{ $i18n('recon-faceted-facet-no-results-text').text() }}</small>
+					</template>
 				</cdx-multiselect-lookup>
 			</div>
 		</div>
@@ -122,10 +131,10 @@
 				</cdx-radio>
 				<!-- CdxButton -->
 				<a v-if="hasFurtherResults"
-					@click="requestAdditionalRadioOrCheckboxOptions"
+					@click="requestAdditionalMenuItems"
 					class="recon-further-results"
 				>
-					<cdx-icon :icon="cdxIconDownTriangle" size="x-small"></cdx-icon> More&hellip;
+					<cdx-icon :icon="cdxIconDownTriangle" size="x-small"></cdx-icon> {{ $i18n('recon-faceted-more').text() }}
 				</a>
 			</div>
 		</div>
@@ -157,7 +166,7 @@
 				</cdx-checkbox>
 				<!-- CdxButton -->
 				<a v-if="hasFurtherResults"
-					@click="requestAdditionalRadioOrCheckboxOptions"
+					@click="requestAdditionalMenuItems"
 					class="recon-further-results"
 				>
 					<cdx-icon :icon="cdxIconDownTriangle" size="x-small"></cdx-icon> {{ $i18n('recon-faceted-more').text() }}
@@ -299,6 +308,7 @@ module.exports = defineComponent( {
 		 * @param {string} action see requestEntity() and requestPropertyValue()
 		 */
 		function runRequest(term, action) {
+			currentSearchTerm.value = term ?? "";
 			if (dataSourceType.value !== "api") {
 				return;
 			}
@@ -423,6 +433,7 @@ module.exports = defineComponent( {
 				}
 			}
 			// Suggest more options for radio group
+			// or lookup
 			signalFurtherResults(data.meta?.nextOffset);
 		}
 
@@ -476,15 +487,24 @@ module.exports = defineComponent( {
 		const hasFurtherResults = ref(false);
 		const nextOffset = ref(0);
 
-		// Currently type 'radio' or 'checkboxes' only
-		function requestAdditionalRadioOrCheckboxOptions() {
+		// request additional menu items from the API
+		// 'radio', 'checkboxes', 'lookup'
+		function requestAdditionalMenuItems() {
+			// Keep empty default for 'radio' and 'checkboxes'
+			let term = "";
+			if (componentType.value == "lookup" || componentType.value == "multiselect") {
+				term = currentSearchTerm.value;
+			}
+			if (!hasFurtherResults.value) {
+				return;
+			}
 			if (profileId.value !== null) {
-				requestEntity("", nextOffset.value)
+				requestEntity(term, nextOffset.value)
 				.then( (data) => {
 					handleEntityResponse(data, "append");
 				});
 			} else if(valuesFromProperty.value !== null) {
-				requestPropertyValue("", nextOffset.value)
+				requestPropertyValue(term, nextOffset.value)
 				.then( (data) => {
 					handlePropertyValueResponse(data, "append");
 				});
@@ -493,7 +513,7 @@ module.exports = defineComponent( {
 
 		// Currently used for radio buttons
 		function signalFurtherResults(nextOffsetFromAPI) {
-			if (componentType.value == "radio" || componentType.value == "checkboxes") {
+			if (componentType.value == "radio" || componentType.value == "checkboxes" || componentType.value == "lookup" || componentType.value == "multiselect") {
 				if (nextOffsetFromAPI > 0) {
 					hasFurtherResults.value = true;
 					nextOffset.value = nextOffsetFromAPI;
@@ -578,6 +598,7 @@ module.exports = defineComponent( {
 			//
 		}
 
+		const currentSearchTerm = ref( "" );
 		// 
 		// type 'multiselect' - init chips
 		// 
@@ -675,6 +696,7 @@ module.exports = defineComponent( {
 		 * Does not cover 'on focus' events.
 		 */
 		function onMultiselectInput(v) {
+			currentSearchTerm.value = v ?? "";
 			if(dataSourceType.value == "api") {
 				// cf. onFocusInput()
 				runRequest(v);
@@ -729,6 +751,7 @@ module.exports = defineComponent( {
 
 			onUpdateSelected,
 
+			currentSearchTerm,
 			selectInput,
 			chips,
 			checkboxVals,
@@ -739,8 +762,7 @@ module.exports = defineComponent( {
 			onClearInput,
 			onBlurInput,
 
-			requestAdditionalRadioOrCheckboxOptions,
-
+			requestAdditionalMenuItems,
 			hasFurtherResults,
 			nextOffset,
 

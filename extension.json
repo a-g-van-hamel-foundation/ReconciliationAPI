@@ -166,7 +166,7 @@
 				"CdxTextInput", "CdxSelect", "CdxLookup", "CdxMultiselectLookup", "CdxIcon", "CdxRadio", "CdxCheckbox", "CdxDialog", "CdxButton"
 			],
 			"messages": [
-				"recon-faceted-result", "recon-faceted-results", "recon-faceted-show-results", "recon-faceted-sort-by", "recon-faceted-match-any", "recon-faceted-match-all", "recon-faceted-more", "recon-faceted-info-dialog-icon-aria-label"
+				"recon-faceted-result", "recon-faceted-results", "recon-faceted-show-results", "recon-faceted-sort-by", "recon-faceted-match-any", "recon-faceted-match-all", "recon-faceted-more", "recon-faceted-info-dialog-icon-aria-label", "recon-faceted-facet-no-results-text"
 			]
 		}
 	},
