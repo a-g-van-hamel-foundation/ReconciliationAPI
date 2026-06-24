@@ -143,12 +143,17 @@ module.exports = defineComponent( {
 			hiddenInputs.value = inputs;
 		}
 
+		const latestRequestTime = ref(null);
+
 		/**
 		 * @param {String} value
 		 * @param {Number} offset
 		 * @param {String} action - "replace" (new results) or "add" (add to results, 'load more')
 		 */
 		function fetchResults(value, offset, action) {
+			let localRequestTime = null;
+			latestRequestTime.value = localRequestTime = Date.now();
+
 			// Convert the JSON-encoded string in the HTML to an object
 			var apiUrlParamsObj = JSON.parse(data.configProps.apiUrlParams);
 			if (!internal) {
@@ -171,6 +176,11 @@ module.exports = defineComponent( {
 
 			actionApi.get(apiUrlParamsObj)
 			.done( function (data) {
+				// Cancel handling of current API request
+				// if a new one was made in the interim
+				if( latestRequestTime.value > localRequestTime ) {
+					return;
+				}
 				if (data.result && data.result.length > 0) {
 					let res = adaptApiResponse(data.result);
 					if (action == "replace") {
@@ -238,7 +248,6 @@ module.exports = defineComponent( {
 			fetchResults(currentSearchTerm.value, searchResults.value.length ?? 0, "add");
 		}
 
-
 		function stripHtml(str) {
 			let tmp = document.createElement("div");
 			tmp.innerHTML = str;
@@ -282,6 +291,7 @@ module.exports = defineComponent( {
 			formAction,
 			hiddenInputs,
 			setHiddenInputs,
+			latestRequestTime,
 			targetUrlBase,
 			footerUrlBase,
 			searchFooterUrl,
