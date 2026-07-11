@@ -29,7 +29,8 @@
 		"Recon\\SMW": "src/SMW/",
 		"Recon\\Config": "src/Config/",
 		"Recon\\ParserFunctions": "src/ParserFunctions/",
-		"Recon\\Special": "src/Special/"
+		"Recon\\Special": "src/Special/",
+		"Recon\\Services": "src/Services/"
 	},
 	"AutoloadClasses": {
 		"ReconHooks": "Recon\\ReconHooks",
@@ -49,6 +50,9 @@
 		"CodeEditorGetPageLanguage": "main",
 		"AdminLinks": "main"
 	},
+	"ServiceWiringFiles": [
+		"/src/Services/ReconServiceWiring.php"
+	],
 	"ResourceModules": {
 		"recon.general.styles": {
 			"localBasePath": "resources",
