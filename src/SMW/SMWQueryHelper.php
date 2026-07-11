@@ -188,8 +188,8 @@ class SMWQueryHelper {
 		if ( $useFTS ) {
 			// FTS with tilde prefix
 			if ( !$isSinglePageRestriction ) {
-				// Does not support alternative substring patterns. May override setting:
-				// @todo - this no longer sets it for SMWQueryBuilder!
+				// Enforce "tokenprefix"
+				// Does not support alternative substring patterns.
 				$substringPattern = "tokenprefix";
 			}
 			//$isNonToken = ( strlen( $substring ) < $this->smwgFulltextSearchMinTokenSize ) ? true : false;

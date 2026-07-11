@@ -15,6 +15,7 @@
 namespace Recon\SMW;
 
 use MediaWiki\MediaWikiServices;
+use Recon\Services\ReconServices;
 use Recon\MW\MWUtils;
 use Recon\SMW\SMWUtils;
 use Recon\SMW\SMWQueryBuilder;
@@ -23,6 +24,9 @@ use Recon\SMW\SMWSuggestPropertyValue;
 class SMWSuggestType {
 
 	private $store;
+	private $smwQueryBuilder = null;
+	private $smwQueryHelper = null;
+
 	private $propertyName = "Class";
 	// maybe set from config
 	private $prioritisedProperties;
@@ -48,8 +52,10 @@ class SMWSuggestType {
 
 	public function __construct() {
 		$this->store = SMWUtils::getSMWStore();
-
+		$this->smwQueryBuilder = new SMWQueryBuilder();
+		$this->smwQueryHelper = ReconServices::getInstance()->getSMWQueryHelper();
 		$config = MediaWikiServices::getInstance()->getMainConfig();
+
 		$this->smwClassProp = $this->meta["ReconAPIClassProp"] = $config->get( "ReconAPIClassProp" );
 		$this->labelProperty = $this->meta["ReconAPILabelProp"] = $config->get( "ReconAPILabelProp" );
 		$this->descriptionProperty = $config->get( "ReconAPIDescriptionProp" );
@@ -82,8 +88,7 @@ class SMWSuggestType {
 		// Offset and limit
 		$this->resultOffset = $offset;
 		$this->resultLimit = $limit;
-		$smwQueryBuilder = new SMWQueryBuilder();
-		$smwQueryBuilder->setOptions( $offset, $limit );
+		$this->smwQueryBuilder->setOptions( $offset, $limit );
 
 		// @todo Work with profiles! 
 		// $this->setProfile( $profileID )
@@ -92,7 +97,9 @@ class SMWSuggestType {
 		$this->substring = $substring;
 		// not currently configurable
 		$this->substringPattern = "stringprefix";
-		$this->substringProcessed = $smwQueryBuilder->getReplacementString(
+		// @todo As in SMWQueryBuilder, allow for 
+		// enforcing "tokenprefix" if appropriate.
+		$this->substringProcessed = $this->smwQueryHelper->getReplacementString(
 			$this->substring,
 			$this->substringPattern,
 			false, // ?
@@ -146,10 +153,10 @@ class SMWSuggestType {
 		$rawQuery = implode( " OR ", $rawQueries );
 
 		// Add properties that point to 'broader' types
-		$smwQueryBuilder->addPrintoutProperties( $printoutProperties );
+		$this->smwQueryBuilder->addPrintoutProperties( $printoutProperties );
 
 		// Run the query
-		$queryRes = $smwQueryBuilder->getResultForQuery( $rawQuery );
+		$queryRes = $this->smwQueryBuilder->getResultForQuery( $rawQuery );
 	
 		// Prepare formatter
 		$smwResultFormatter = new SMWResultFormatter( $queryRes, $this->substring );
@@ -254,10 +261,8 @@ class SMWSuggestType {
 			$suggester = new SMWSuggestPropertyValue();
 			$res = $suggester->run( $this->propertyName, $this->substring );
 		} elseif( $propertyType == "_wpg" ) {
-			$smwQueryBuilder = new SMWQueryBuilder();
-			$smwQueryBuilder->setOptions( $this->resultOffset, $this->resultLimit );
-
-			$res = $smwQueryBuilder->run(
+			$this->smwQueryBuilder->setOptions( $this->resultOffset, $this->resultLimit );
+			$res = $this->smwQueryBuilder->run(
 				$this->substring,
 				"tokenstring",
 				null,
@@ -291,10 +296,9 @@ class SMWSuggestType {
 	 */
 	private function getBroaderClassForPage( $fullpagename ) {
 		//"[[-{$this->propertyName}::+]] [[~*{$this->substring}*]] OR [[-{$this->propertyName}::+]] [[{$this->labelProperty}::~*{$this->substring}*]] "
-		$smwQueryBuilder = new SMWQueryBuilder();
-		$smwQueryBuilder->setOptions( 0, $this->resultLimit );
+		$this->smwQueryBuilder->setOptions( 0, $this->resultLimit );
 		$rawQuery = "[[-{$this->smwBroaderClassProp}::{$fullpagename}]]";
-		$res = $smwQueryBuilder->getAllPagesForQuery( $rawQuery );
+		$res = $this->smwQueryBuilder->getAllPagesForQuery( $rawQuery );
 		return $res;
 	}
 
@@ -303,12 +307,11 @@ class SMWSuggestType {
 	 * @return mixed
 	 */
 	public function getConcept() {
-		$smwQueryBuilder = new SMWQueryBuilder();
-		$smwQueryBuilder->setOptions( $this->resultOffset, $this->resultLimit );
+		$this->smwQueryBuilder->setOptions( $this->resultOffset, $this->resultLimit );
 		// to do set Properties
 		$rawQuery = "{$this->smwQueryForConcepts} [[~*{$this->substring}*]] OR {$this->smwQueryForConcepts} [[{$this->labelProperty}::~*{$this->substring}*]] ";
 
-		$res = $smwQueryBuilder->run(
+		$res = $this->smwQueryBuilder->run(
 			$this->substring,
 			"tokenstring",
 			null,
@@ -333,10 +336,9 @@ class SMWSuggestType {
 	 * @return mixed
 	 */
 	private function getBroaderConcept( $fullpagename ) {
-		$smwQueryBuilder = new SMWQueryBuilder();
-		$smwQueryBuilder->setOptions( 0, $this->resultLimit );
+		$this->smwQueryBuilder->setOptions( 0, $this->resultLimit );
 		$rawQuery = "[[-{$this->smwBroaderConceptProp}::{$fullpagename}]]";
-		$res = $smwQueryBuilder->getAllPagesForQuery( $rawQuery );
+		$res = $this->smwQueryBuilder->getAllPagesForQuery( $rawQuery );
 		return $res;
 	}
 
@@ -357,8 +359,7 @@ class SMWSuggestType {
 		}
 
 		// Run query
-		$smwQueryBuilder = new SMWQueryBuilder();
-		$queryRes = $smwQueryBuilder->getResultForQuery( $rawQuery );
+		$queryRes = $this->smwQueryBuilder->getResultForQuery( $rawQuery );
 
 		// Format results
 		$smwResultFormatter = new SMWResultFormatter( $queryRes, null, true );

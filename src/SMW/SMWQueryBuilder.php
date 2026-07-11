@@ -15,16 +15,20 @@ namespace Recon\SMW;
 use MediaWiki\Title\Title;
 use MediaWiki\MediaWikiServices;
 use SMW\Query\QueryResult;
-use Recon\StringModification\StringModifier;
 use Recon\SMW\SMWUtils;
 use Recon\SMW\SMWQuerySyntaxConverters;
 use Recon\SMW\SMWResultFormatter;
 use Recon\SMW\SMWQueryHelperForFTS;
 use Recon\Config\ReconConfig;
+use Recon\Services\ReconServices;
 
 class SMWQueryBuilder {
 
+	//Classes
+	private $smwQueryHelper;
 	private $smwStore;
+
+	// Settings	
 	private $maxAutocompleteValues;
 	private $substring;
 	// private $substringUTF8;
@@ -67,16 +71,23 @@ class SMWQueryBuilder {
 	// a non-empty string as "prefix", or (b) "always"
 	private $wgReconAPIQueryTrigger;
 
-	public function __construct() {
+	public function __construct( 
+		$smwQueryHelper = null
+	) {
 		$this->smwStore = SMWUtils::getSMWStore();
 		// wrong place
 		if ( !$this->smwStore ) {
 			return;
 		}
-		$this->maxAutocompleteValues = 25; // @todo configure
-
 		$config = MediaWikiServices::getInstance()->getMainConfig();
+		if ( $smwQueryHelper == null ) {
+			$this->smwQueryHelper = ReconServices::getInstance()->getSMWQueryHelper();
+		} else {
+			$this->smwQueryHelper = $smwQueryHelper;
+		}
 
+		// ...
+		$this->maxAutocompleteValues = 25; // @todo configure
 		// SMW config - makeConfig( ... ) does not work here
 		global $smwgEnabledFulltextSearch;
 		// smwgEnabledFulltextSearch
@@ -228,8 +239,9 @@ class SMWQueryBuilder {
 		} elseif( isset( $rawQuery ) ) {
 			// @todo Not implemented yet
 			$smwMethod = "SMW query in URL string";
-			//$this->prepareSubstring( $substring );
-			$this->substringProcessed = $this->getReplacementString(
+			//$this->smqQueryHelper->prepareSubstring( $substring );
+			$this->checkAndMaybeAlterSubstringPattern( false, false );
+			$this->substringProcessed = $this->smwQueryHelper->getReplacementString(
 				$this->substring,
 				$this->substringPattern,
 				false, // ?
@@ -250,7 +262,8 @@ class SMWQueryBuilder {
 			}
 			// A fallback though less than ideal.
 			$isSinglePageRestriction = ( $queryProp === false || $useDisplayTitle === false ) ? true : false;
-			$this->substringProcessed = $this->getReplacementString(
+			$this->checkAndMaybeAlterSubstringPattern( false, $isSinglePageRestriction );
+			$this->substringProcessed = $this->smwQueryHelper->getReplacementString(
 				$this->substring,
 				$this->substringPattern,
 				false,
@@ -414,7 +427,7 @@ class SMWQueryBuilder {
 			$this->resultOrder = $outputPropertyInfo["order"];
 		}
 
-		$rawQuery = $this->constructQueryFromConfigProfile( $q );
+		$rawQuery = $this->smwQueryHelper->constructQueryFromConfigProfile( $q, $this->substring, $this->substringPattern );
 		// $outputPropertyInfo - formatting options @todo
 		return $rawQuery;
 	}
@@ -426,7 +439,7 @@ class SMWQueryBuilder {
 		// @todo - using this pattern for now
 		$this->substringPattern = "allchars";
 		$q = $queryProfile["smwquery"]["statement"];
-		$rawQuery = $this->constructQueryFromConfigProfile( $q );
+		$rawQuery = $this->smwQueryHelper->constructQueryFromConfigProfile( $q, $this->substring, $this->substringPattern );
 		return $rawQuery;
 	}
 
@@ -547,7 +560,8 @@ class SMWQueryBuilder {
 			$rawQueries[] = "[[Concept:{$this->concept}]]";
 		} elseif ( $labelProp !== null ) {
 			// @todo
-			$replacement = $this->getReplacementString(
+			$this->checkAndMaybeAlterSubstringPattern( false, false );
+			$replacement = $this->smwQueryHelper->getReplacementString(
 				$this->substring,
 				$this->substringPattern,
 				false,
@@ -647,131 +661,7 @@ class SMWQueryBuilder {
 	}
 
 	/**
-	 * Prepare substring for query if it must be modified or sanitised
-	 * Caters for different meaning when fulltext search is enabled.
-	 * Changes: Added asterisk to tokens
-	 * Uses ~ not LIKE
-	 * @todo there is overlap between this and constructQueryFromConfigProfile()
-	 * @return string
-	 */
-	public function prepareSubstring( $substring ): mixed {
-		if ( strlen($substring) == 0 ) {
-			// No checks necessary
-			return "";
-		}
-
-		if ( $this->smwgEnabledFulltextSearch ) {
-			// check if the substring occurs between double quotes
-			if( $substring[0] == "\"" && $substring[strlen($substring) - 1] == "\"" ) {
-				return $substring;
-			}
-			// Add boolean operator to each token of the right length
-			// @todo except single page restriction
-			$substringArr = explode( " ", $substring );
-			$newSubstringArr = [];
-			foreach( $substringArr as $token ) {
-				if ( strlen( $token ) >= $this->smwgFulltextSearchMinTokenSize ) {
-					$newSubstringArr[] = "+{$token}*";
-				} else {
-					// Important! Guards against Runtime Exception.
-					$newSubstringArr[] = $token;
-				}
-			}
-			$substring = implode( " ", $newSubstringArr );
-		} else {
-			// @todo !
-			// at least append an asterisk*
-		}
-		return $substring;
-	}
-
-	/**
-	 * Construct a query statement from config data
-	 * @todo sort out overlap with prepareSubstring
-	 * 
-	 * @param mixed $query
-	 * @return array|string
-	 */
-	private function constructQueryFromConfigProfile( mixed $query ) {
-		$rawQuery = "";
-		if ( gettype( $query ) == "string" && $query !== "" ) {
-			// @todo wildcards? - it depends!
-			// @todo can we use this for 6.4 ?
-			$usesLikeSyntax = $this->usesLikeSyntax( $query );			
-			$replacement = $this->getReplacementString(
-				$this->substring,
-				$this->substringPattern,
-				$usesLikeSyntax,
-				$this->isSinglePageRestriction( $query, $usesLikeSyntax )
-			);
-			$rawQuery = str_replace( $this->smwqueryPlaceholder, $replacement, $query );
-		} elseif( gettype( $query ) == "array" ) {
-			// The preferred approach
-			//$subStrings = explode( " ", $this->substring );
-			$newStatements = [];
-			foreach( $query as $statement ) {
-				$base = $statement["from"] ?? "";
-				$condition = $statement["where"] ?? "";
-
-				// Use '6.4' instead! A departure because we are
-				// replacing the 'where' condition wholesale
-				// (no LIKE/MATCH)
-				if ( $this->substringPattern === "exactpagename" ) {
-					$newStatements[] = "$base [[{$this->substring}]]";
-					continue;
-				}
-
-				// @todo Remove substringpattern once camelCase is used consistently
-				$substringPattern = $statement["substringPattern"] ?? $statement["substringpattern"] ?? $this->substringPattern;
-				$conditionsReplaced = [];
-				$substring = $this->substring;
-				if ( isset( $statement["preprocessSubstring"] ) ) {
-					foreach ( $statement["preprocessSubstring"] as $v ) {
-						switch( $v ) {
-							case "flatten":
-								$substring = StringModifier::flattenString( $substring );
-								break;
-						}
-					}
-				}
-
-				// @todo getReplacementString should handle multiple subStrings
-				$usesLikeSyntax = $this->usesLikeSyntax( $condition );
-				$isSinglePageRestriction = $this->isSinglePageRestriction( $condition, $usesLikeSyntax );
-				$replacement = $this->getReplacementString(
-					$substring,
-					$substringPattern,
-					$this->usesLikeSyntax( $condition ),
-					$isSinglePageRestriction
-				);
-				$conditionsReplaced[] = str_replace( $this->smwqueryPlaceholder, $replacement, $condition );
-				/* No, let getReplacementString split the string
-				foreach( $subStrings as $subString ) {
-					// @todo wildcard, for now:
-					$replacement = $this->getReplacementString(
-						$subString,
-						$this->substringPattern,
-						$this->usesLikeSyntax( $condition )
-					);
-					$conditionsReplaced[] = str_replace( $this->smwqueryPlaceholder, $replacement, $condition );
-				}
-				*/
-				$newStatements[] = ( $substring === "" && $this->wgReconAPIQueryTrigger === "always" )
-					? ( $base !== "" ? $base : "[[Creation date::+]]" )
-					: $base . " " . implode( " ", $conditionsReplaced );
-			}
-			$rawQuery = implode( " OR ", $newStatements );
-		}
-		return $rawQuery;
-	}
-
-	/**
-	 * Create replacement string consisting of substring and additional
-	 * syntax sugar.
-	 * 
-	 * @todo Elasticsearch
-	 * 
-	 * @param mixed $substring
+	 * @deprecated Moved to SMWQueryHelper
 	 * @return string
 	 */
 	public function getReplacementString(
@@ -780,105 +670,34 @@ class SMWQueryBuilder {
 		bool $usesLikeSyntax = false,
 		bool $isSinglePageRestriction = false
 	) {
-		$substring = trim( $substring );
-		if ( strlen($substring) == 0 ) {
-			// No checks necessary.
-			return "+";
-		}
-
-		$useFTS = ( $this->smwgEnabledFulltextSearch && !$usesLikeSyntax ) ? true : false;
-		if ( $useFTS ) {
-			// FTS with tilde prefix
-			if ( !$isSinglePageRestriction) {
-				// Does not support alternative substring patterns. May override setting:
-				$this->substringPattern = "tokenprefix";
-			}
-			//$isNonToken = ( strlen( $substring ) < $this->smwgFulltextSearchMinTokenSize ) ? true : false;
-			$smwQueryHelperForFTS = new SMWQueryHelperForFTS();
-			$replacement = $smwQueryHelperForFTS->getReplacementStringForFTS( $substring, $isSinglePageRestriction, $this->substringPattern );
-		} else {
-			// regular SQL
-			// $subStrings = explode( " ", $substring );
-			switch( $substringPattern ) {
-				case "prefix":
-				case "stringprefix":
-				case "tokenprefix":
-					// @todo shouldn't we use prepareSubstring?
-					// [[prop::~Hello worl*]] (without FTS) or [[prop::like:Hello worl*]] (with FTS)						
-					$replacement = "{$substring}*";
-					break;
-				case "allchars":
-					// LIKE only
-					$replacement = "*{$substring}*";
-					break;
-				case "suffix":
-					// currently unused
-					$replacement = "*{$substring}";
-					break;
-				case "exact":
-				case "exactpagename":
-					$replacement = $substring;
-					break;
-				default:
-					$replacement = "{$substring}*";
-			}
-		}
-		return $replacement;
+		// @todo Previously $this->substringPattern could be set to "tokenprefix", not now.
+		return $this->smwQueryHelper->getReplacementString( $substring, $substringPattern, $usesLikeSyntax, $isSinglePageRestriction );
 	}
 
 	/**
-	 * Helper function to check if a tilde (`~`) or `like:` was used
-	 * in front of the placeholder.
-	 * @todo only necessary for FTS, so maybe move to SMWQueryHelperForFTS
+	 * If FTS is enabled, check that syntax uses property
+	 * with tilde (not like). If so, enforce 'tokenprefix'.
+	 * Does NOT consider if substring is non-token material.
+	 * Previously part of getReplacementString()
+	 * 
+	 * @param bool $usesLikeSyntax
+	 * @param bool $isSinglePageRestriction
+	 * @return void
 	 */
-	private function usesLikeSyntax( $str ) {
-		// Find position
-		$placeholderPos = strpos( $str, $this->smwqueryPlaceholder );
-		// False if no placeholder was found
-		if ( $placeholderPos == false ) {
-			return false;
+	private function checkAndMaybeAlterSubstringPattern(
+		bool $usesLikeSyntax,
+		bool $isSinglePageRestriction
+	) {
+		if ( $this->smwgEnabledFulltextSearch && !$usesLikeSyntax && !$isSinglePageRestriction ) {
+			$this->substringPattern = "tokenprefix";
 		}
-		// like:, LIKE:, etc.
-		if ( strtolower( substr( $str, $placeholderPos - 5, 5 ) ) == "like:" ) {
-			return true;
-		}
-		// todo - maybe check a space was inserted?
-		return false;
-	}
-
-	/**
-	 * Checks if single page restriction is used rather than a property.
-	 * e.g. [[~hello*]] not [[Has text::~hello*]]
-	 * @todo Not waterproof: [[ ~hello*]], [[Has text :: ~hello*]]
-	 * @link https://www.semantic-mediawiki.org/wiki/Help:Single_page_restriction
-	 * @param mixed $str
-	 * @return
-	 */
-	private function isSinglePageRestriction( string $substring, bool $usesLikeSyntax ): bool {
-		$operator = $usesLikeSyntax ? "like:" : "~";
-		// preprocess/sanitise eg. ':: ~', '[[ ~'
-		$substring = str_replace(
-			[ ":: $operator", " ::$operator", "[[ " ],
-			[ "::$operator", "::$operator", "[[" ],
-			trim( $substring )
-		);
-		$placeholderPos = strpos( $substring, $this->smwqueryPlaceholder );
-		if ( $usesLikeSyntax ) {
-			$beforeOperator = substr( $substring, $placeholderPos - 7, 2 );
-		} else {
-			$beforeOperator = substr( $substring, $placeholderPos - 3, 2 );
-		}
-		if ( $beforeOperator == "[[" ) {
-			return true;
-		}
-		return false;
 	}
 
 	/**
 	 * Get the property for matching on names/labels
 	 * 
 	 * @param mixed $useDisplayTitle
-	 * @return bool|mixed|string
+	 * @return mixed (incl. bool|string)
 	 */
 	public function getQueryProperty( mixed $useDisplayTitle ) {
 		if ( $useDisplayTitle === false ) {

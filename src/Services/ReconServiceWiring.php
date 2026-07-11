@@ -8,6 +8,7 @@ namespace Recon\Services;
 
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Config\GlobalVarConfig;
+//use Recon\Services\ReconServices;
 use Recon\SMW\SMWQueryBuilder;
 use Recon\SMW\SMWQueryHelper;
 
@@ -16,16 +17,24 @@ use Recon\SMW\SMWQueryHelper;
 return [
 
 	"SMWQueryBuilder" => static function ( MediaWikiServices $services ): SMWQueryBuilder {
-        // @todo
+		// @todo
+
 		$mainConfig = $services->getMainConfig();
 		$smwConfig = new GlobalVarConfig( 'smwg' );
+		$smwQueryHelper = new SMWQueryHelper(
+			$mainConfig,
+			$smwConfig
+		);
 
-		return new SMWQueryBuilder();
+		return new SMWQueryBuilder(
+			$smwQueryHelper
+		);
 	},
 
 	"SMWQueryHelper" => static function ( MediaWikiServices $services ): SMWQueryHelper {
 		$mainConfig = $services->getMainConfig();
 		$smwConfig = new GlobalVarConfig( 'smwg' );
+
 		return new SMWQueryHelper(
 			$mainConfig,
 			$smwConfig
