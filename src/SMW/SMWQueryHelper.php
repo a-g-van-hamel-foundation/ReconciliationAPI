@@ -9,7 +9,8 @@
 namespace Recon\SMW;
 
 use MediaWiki\MediaWikiServices;
-use Recon\SMW\SMWQueryHelperForFTS;
+#use Recon\SMW\SMWQueryHelperForFTS;
+use Recon\Services\ReconServices;
 use Recon\StringModification\StringModifier;
 
 class SMWQueryHelper {
@@ -32,7 +33,7 @@ class SMWQueryHelper {
 		// smw config
 		if ( $smwConfig !== null ) {
 			$this->smwgFulltextSearchMinTokenSize = $smwConfig->get( "FulltextSearchMinTokenSize" );
-			$this->smwgEnabledFulltextSearch =  $smwConfig->get( "EnabledFulltextSearch" );
+			$this->smwgEnabledFulltextSearch = $smwConfig->get( "EnabledFulltextSearch" );
 		} else {
 			global $smwgFulltextSearchMinTokenSize, $smwgEnabledFulltextSearch;
 			$this->smwgFulltextSearchMinTokenSize = $smwgFulltextSearchMinTokenSize;
@@ -49,7 +50,7 @@ class SMWQueryHelper {
 	 * constructQueryFromConfigProfile()
 	 * @return string
 	 */
-	public function prepareSubstring( $substring ): mixed {
+	public function prepareSubstring( string $substring ): string {
 		if ( strlen($substring) == 0 ) {
 			// No checks necessary
 			return "";
@@ -194,7 +195,7 @@ class SMWQueryHelper {
 				$substringPattern = "tokenprefix";
 			}
 			//$isNonToken = ( strlen( $substring ) < $this->smwgFulltextSearchMinTokenSize ) ? true : false;
-			$smwQueryHelperForFTS = new SMWQueryHelperForFTS();
+			$smwQueryHelperForFTS = ReconServices::getInstance()->getSMWQueryHelperForFTS();
 			$replacement = $smwQueryHelperForFTS->getReplacementStringForFTS( $substring, $isSinglePageRestriction, $substringPattern );
 		} else {
 			// regular SQL

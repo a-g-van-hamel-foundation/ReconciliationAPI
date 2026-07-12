@@ -8,10 +8,12 @@ namespace Recon\Services;
 
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Config\GlobalVarConfig;
+use SMW\SQLStore\QueryEngine\FulltextSearchTableFactory;
 //use Recon\Services\ReconServices;
 use Recon\SMW\SMWUtils;
 use Recon\SMW\SMWQueryBuilder;
 use Recon\SMW\SMWQueryHelper;
+use Recon\SMW\SMWQueryHelperForFTS;
 
 // @codeCoverageIgnoreStart
 /** @phpcs-require-sorted-array */
@@ -42,6 +44,17 @@ return [
 
 		return new SMWQueryHelper(
 			$mainConfig,
+			$smwConfig
+		);
+	},
+
+	"SMWQueryHelperForFTS" => static function ( MediaWikiServices $services ): SMWQueryHelperForFTS {
+		$fulltextSearchTableFactory = new FulltextSearchTableFactory();
+		$textSanitizer = $fulltextSearchTableFactory->newTextSanitizer();
+		$smwConfig = new GlobalVarConfig( "smwg" );
+
+		return new SMWQueryHelperForFTS(
+			$textSanitizer,
 			$smwConfig
 		);
 	}

@@ -21,29 +21,42 @@
 
 namespace Recon\SMW;
 
-use Recon\StringModification\StringModifier;
-use Onoi\Tesa\SanitizerFactory;
-use SMW\SQLStore\QueryEngine\Fulltext\TextSanitizer;
+use MediaWiki\Config\GlobalVarConfig;
+use SMW\SQLStore\QueryEngine\FulltextSearchTableFactory;
+#use Recon\StringModification\StringModifier;
 
 class SMWQueryHelperForFTS {
 
+	private $textSanitizer;
+	private $smwConfig = null;
 	private $smwgFulltextSearchMinTokenSize;
 	private $smwgFulltextSearchIndexableDataTypes;
-	private $enabledForTypeText = true;
-	private $enabledForTypeUrl = true;
-	private $enabledForTypePage = false;
+	private bool $enabledForTypeText = true;
+	private bool $enabledForTypeUrl = true;
+	private bool $enabledForTypePage = false;
 	private $smwgFulltextSearchPropertyExemptionList;
 
-	public function __construct() {
-		global $smwgFulltextSearchMinTokenSize;
-		$this->smwgFulltextSearchMinTokenSize = intval( $smwgFulltextSearchMinTokenSize );
-		global $smwgFulltextSearchIndexableDataTypes;
-		$this->smwgFulltextSearchIndexableDataTypes = $smwgFulltextSearchIndexableDataTypes;
-		global $smwgFulltextSearchPropertyExemptionList;		
-		$this->smwgFulltextSearchPropertyExemptionList = $smwgFulltextSearchPropertyExemptionList;
-		$this->enabledForTypeText = ( $smwgFulltextSearchIndexableDataTypes & SMW_FT_BLOB ) ? true : false;
-		$this->enabledForTypeUrl = ( $smwgFulltextSearchIndexableDataTypes & SMW_FT_URI ) ? true : false;
-		$this->enabledForTypePage = ( $smwgFulltextSearchIndexableDataTypes & SMW_FT_WIKIPAGE ) ? true : false;
+	public function __construct(
+		$textSanitizer = null,
+		$smwConfig = null
+	) {
+		// Classes and configs
+		if ( $textSanitizer == null ) {
+			$fulltextSearchTableFactory = new FulltextSearchTableFactory();
+			$this->textSanitizer = $fulltextSearchTableFactory->newTextSanitizer();
+		} else {
+			$this->textSanitizer = $textSanitizer;
+		}
+		$this->smwConfig = $smwConfig ?? new GlobalVarConfig( "smwg" );
+
+		// Config variables
+		$this->smwgFulltextSearchMinTokenSize = intval( $this->smwConfig->get( "FulltextSearchMinTokenSize" ) );
+		$this->smwgFulltextSearchIndexableDataTypes = $this->smwConfig->get( "FulltextSearchIndexableDataTypes" );
+		$this->smwgFulltextSearchPropertyExemptionList = $this->smwConfig->get( "FulltextSearchPropertyExemptionList" );
+
+		$this->enabledForTypeText = ( $this->smwgFulltextSearchIndexableDataTypes & SMW_FT_BLOB ) ? true : false;
+		$this->enabledForTypeUrl = ( $this->smwgFulltextSearchIndexableDataTypes & SMW_FT_URI ) ? true : false;
+		$this->enabledForTypePage = ( $this->smwgFulltextSearchIndexableDataTypes & SMW_FT_WIKIPAGE ) ? true : false;
 	}
 
 	/**
@@ -68,8 +81,6 @@ class SMWQueryHelperForFTS {
 		// Important! Non-tokens can throw RuntimeExceptions
 		// e.g. with MATCH (*) IN BOOLEAN MODE
 		// Return empty string
-		$sanitizerFactory = new SanitizerFactory();
-		$textSanitizer = new TextSanitizer( $sanitizerFactory );
 
 		// Prepare string for division into units, i.e. 
 		// phrases in quotes and tokens
@@ -109,7 +120,7 @@ class SMWQueryHelperForFTS {
 			// @todo support apostrophes like O'B, O'Br => internal error
 			// beware of multi-byte characters
 			//$countableToken = StringModifier::flattenString( trim( $token ) );
-			$countableToken = $textSanitizer->sanitize( $token, false );
+			$countableToken = $this->textSanitizer->sanitize( $token, false );
 
 			if ( $isSinglePageRestriction ) {
 				// e.g. [[~Aa* Ba*]] may be fine but tokenisation is limited.

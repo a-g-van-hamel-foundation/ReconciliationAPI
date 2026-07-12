@@ -8,13 +8,16 @@
 
 namespace Recon\Services;
 
+//use Wikimedia\Services\ServiceContainer;
 use MediaWiki\Config\GlobalVarConfig;
 use MediaWiki\MediaWikiServices;
 use Recon\SMW\SMWQueryBuilder;
 use Recon\SMW\SMWQueryHelper;
+use Recon\SMW\SMWQueryHelperForFTS;
 //use SMW\Query\QueryResult;
 
 class ReconServices {
+	// use NonSerializableTrait;
 
 	public function __construct( private MediaWikiServices $services ) {
 	}
@@ -27,6 +30,12 @@ class ReconServices {
 		}
 		self::$instance = new self( MediaWikiServices::getInstance() );
 		return self::$instance;
+		/*
+		How SMW does it
+		self::$instance = new self( $GLOBALS['smwgServicesFileDir'] );
+		// constructor accepts private $servicesFileDir = ''
+		return self::$instance;
+		*/
 	}
 
 	public static function getInstance2(): self {
@@ -45,6 +54,10 @@ class ReconServices {
 		return self::$instance;
 	}
 
+
+	// MediaWikiServices::getInstance()->getMainConfig();
+	// SMW\Query\QueryResult
+	// 
 	public function getSMWQueryBuilder(): SMWQueryBuilder {
 		return MediaWikiServices::getInstance()->getService( "SMWQueryBuilder" );
 		//return $this->instance->getService( "SMWQueryBuilder" );
@@ -52,6 +65,10 @@ class ReconServices {
 
 	public function getSMWQueryHelper(): SMWQueryHelper {
 		return MediaWikiServices::getInstance()->getService( "SMWQueryHelper" );
+	}
+
+	public function getSMWQueryHelperForFTS(): SMWQueryHelperForFTS {
+		return MediaWikiServices::getInstance()->getService( "SMWQueryHelperForFTS" );
 	}
 
 }
