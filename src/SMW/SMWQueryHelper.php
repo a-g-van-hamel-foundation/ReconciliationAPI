@@ -3,6 +3,7 @@
 /**
  * Utility class for SMW's query syntax.
  * More specialised classes are to be found elsewhere.
+ * To be called with ReconServices::getInstance()->getSMWQueryHelper()
  */
 
 namespace Recon\SMW;

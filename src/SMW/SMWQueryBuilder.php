@@ -5,6 +5,7 @@
  * Build functions: run(), getResultForQuery()
  * Some class setters (setOptions, etc) available for 
  * additional leverage.
+ * To be called with ReconServices::getInstance()->getSMWQueryBuilder()
  * 
  * @link https://www.semantic-mediawiki.org/wiki/Help:Full-text_search
  * @link https://github.com/SemanticMediaWiki/SemanticMediaWiki/blob/master/includes/query/SMW_QueryProcessor.php
@@ -18,7 +19,7 @@ use SMW\Query\QueryResult;
 use Recon\SMW\SMWUtils;
 use Recon\SMW\SMWQuerySyntaxConverters;
 use Recon\SMW\SMWResultFormatter;
-use Recon\SMW\SMWQueryHelperForFTS;
+//use Recon\SMW\SMWQueryHelperForFTS;
 use Recon\Config\ReconConfig;
 use Recon\Services\ReconServices;
 
@@ -42,7 +43,7 @@ class SMWQueryBuilder {
 	private $rawQuery;
 	// @todo maybe make placeholder configurable
 	private $smwqueryPlaceholder = "@@@";
-	private $smwDefaultStore;
+	private $smwgDefaultStore;
 	private $smwgEnabledFulltextSearch;
 	private $smwgFulltextSearchMinTokenSize;
 	private $wgReconAPILabelProp = null;
@@ -71,15 +72,29 @@ class SMWQueryBuilder {
 	// a non-empty string as "prefix", or (b) "always"
 	private $wgReconAPIQueryTrigger;
 
-	public function __construct( 
-		$smwQueryHelper = null
+	public function __construct(
+		$smwStore = null,
+		$smwQueryHelper = null,
+		$mainConfig = null,
+		$smwConfig = null
 	) {
-		$this->smwStore = SMWUtils::getSMWStore();
-		// wrong place
+		// Classes and fallbacks
+		$this->smwStore = $smwStore ?? SMWUtils::getSMWStore();
 		if ( !$this->smwStore ) {
+			// @todo wrong place?
 			return;
 		}
-		$config = MediaWikiServices::getInstance()->getMainConfig();
+		$config = $mainConfig ?? MediaWikiServices::getInstance()->getMainConfig();
+		if ( $smwConfig == null ) {
+			global $smwgDefaultStore, $smwgEnabledFulltextSearch, $smwgFulltextSearchMinTokenSize;
+			$this->smwgDefaultStore = $smwgDefaultStore;
+			$this->smwgEnabledFulltextSearch = $smwgEnabledFulltextSearch;
+			$this->smwgFulltextSearchMinTokenSize = $smwgFulltextSearchMinTokenSize;
+		} else {
+			$this->smwgDefaultStore = $smwConfig->get( "DefaultStore" );
+			$this->smwgEnabledFulltextSearch = $smwConfig->get( "EnabledFulltextSearch" );
+			$this->smwgFulltextSearchMinTokenSize = $smwConfig->get( "FulltextSearchMinTokenSize" );
+		}
 		if ( $smwQueryHelper == null ) {
 			$this->smwQueryHelper = ReconServices::getInstance()->getSMWQueryHelper();
 		} else {
@@ -89,13 +104,7 @@ class SMWQueryBuilder {
 		// ...
 		$this->maxAutocompleteValues = 25; // @todo configure
 		// SMW config - makeConfig( ... ) does not work here
-		global $smwgEnabledFulltextSearch;
-		// smwgEnabledFulltextSearch
-		$this->smwgEnabledFulltextSearch = $smwgEnabledFulltextSearch;
-		global $smwgFulltextSearchMinTokenSize;
-		$this->smwgFulltextSearchMinTokenSize = $smwgFulltextSearchMinTokenSize;
-		global $smwgDefaultStore;
-		$this->smwDefaultStore = $smwgDefaultStore;
+
 		$this->setOptions( 0, 25 );
 
 		// Get default properties from config.		
@@ -315,7 +324,7 @@ class SMWQueryBuilder {
 			"service" => "Suggest entities",
 			"description" => "Suggest entities in response to a Semantic MediaWiki query.",
 			"source" => "smw",
-			"smwDefaultStore" => $this->smwDefaultStore,
+			"smwgDefaultStore" => $this->smwgDefaultStore,
 			"smwgEnabledFulltextSearch" => $this->smwgEnabledFulltextSearch ? 1 : 0,
 			"smwgFulltextSearchMinTokenSize" => $this->smwgFulltextSearchMinTokenSize ?? false,
 			"smwMethod" => $smwMethod,
@@ -358,7 +367,7 @@ class SMWQueryBuilder {
 	 * @param SMW\Query\QueryResult|null $queryRes
 	 * @return array
 	 */
-	public function formatQueryResult( $queryRes ): array {
+	public function formatQueryResult( ?QueryResult $queryRes ): array {
 		if ( $queryRes !== null ) {
 			$smwResultFormatter = new SMWResultFormatter( $queryRes, $this->substring, $this->hideNamespacePrefix );
 			$smwResultFormatter->setPrintoutProperties(
