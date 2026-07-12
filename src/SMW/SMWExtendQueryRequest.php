@@ -12,12 +12,11 @@
 namespace Recon\SMW;
 
 use MediaWiki\MediaWikiServices;
-use FormatJson;
-use Recon\ReconUtils;
+use MediaWiki\Json\FormatJson;
+use SMW\Query\QueryResult;
 use Recon\MW\MWUtils;
-use Recon\SMW\SMWQueryBuilder;
+use Recon\Services\ReconServices;
 use Recon\SMW\SMWUtils;
-use \SMWQueryProcessor;
 
 class SMWExtendQueryRequest {
 
@@ -64,7 +63,7 @@ class SMWExtendQueryRequest {
 			];
 			$this->addPrintoutPropertiesToRawQuery( $rawQueryArr, $reqProperties );
 			$smwQueryObj = SMWUtils::createSMWQueryObjFromRawQuery( $rawQueryArr );
-			$smwQueryBuilder = new SMWQueryBuilder();
+			$smwQueryBuilder = ReconServices::getInstance()->getSMWQueryBuilder();
 			$queryRes = $smwQueryBuilder->getResultFromQueryObject( $smwQueryObj );			
 			$rows[$id] = $this->formatPageResults( $queryRes, $id );
 		}
@@ -116,15 +115,12 @@ class SMWExtendQueryRequest {
 	 * @param mixed $id
 	 * @return array
 	 */
-	private function formatPageResults( $queryResult, $id ) {
-		if ( $queryResult->getErrors() !== [] ) {
+	private function formatPageResults( QueryResult $queryResult, $id ) {
+		if ( count( $queryResult->getErrors() ) !== 0 ) {
 			return [];
 		}
 		$props = [];
 		$queryResultArr = $queryResult->toArray();
-		//print_r( "<pre>" );
-		//print_r( $queryResultArr );
-		//print_r( "</pre>" );
 
 		$printouts = $queryResultArr["results"][$id]["printouts"];
 		$pageValues = [];
@@ -207,7 +203,7 @@ class SMWExtendQueryRequest {
 			"?{$this->wgReconAPIThumbnailProp}"
 		];
 		$smwQueryObj = SMWUtils::createSMWQueryObjFromRawQuery( $rawQueryArr, false );
-		$smwQueryBuilder = new SMWQueryBuilder();
+		$smwQueryBuilder = ReconServices::getInstance()->getSMWQueryBuilder();
 		$queryRes = $smwQueryBuilder->getResultFromQueryObject( $smwQueryObj );
 
 		// error check..

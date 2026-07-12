@@ -2,6 +2,7 @@
 
 /**
  * SMW implementation of the Data Extension Property Proposal service.
+ * 
  * Returns properties for a given 'type' identifier.
  * @link https://www.w3.org/community/reports/reconciliation/CG-FINAL-specs-0.2-20230410/#data-extension-property-proposals
  */
@@ -11,8 +12,8 @@ namespace Recon\SMW;
 use MediaWiki\MediaWikiServices;
 use Recon\ReconUtils;
 use Recon\MW\MWUtils;
-use Recon\SMW\SMWQueryBuilder;
-use \SMWQueryProcessor;
+use Recon\Services\ReconServices;
+use SMW\Query\QueryResult;
 
 class SMWExtendPropertyProposal {
 
@@ -47,7 +48,7 @@ class SMWExtendPropertyProposal {
 		}
 
 		// Set up query builder and create SMWQuery object
-		$smwQueryBuilder = new SMWQueryBuilder();
+		$smwQueryBuilder = ReconServices::getInstance()->getSMWQueryBuilder();
 		$smwQueryBuilder->addPrintoutProperties( [ $this->classPropertiesProp ] );
 		// assuming default offset and limit for now
 		$queryObj = $this->createSMWQueryObj( $rawAskQuery, $this->classPropertiesProp, false );
@@ -100,10 +101,10 @@ class SMWExtendPropertyProposal {
 
 	/**
 	 * Format results
-	 * @param \SMW\Query\QueryResult $queryResult
+	 * @param SMW\Query\QueryResult $queryResult
 	 * @return array
 	 */
-	private function formatResults( $queryResult ) {
+	private function formatResults( QueryResult $queryResult ) {
 		if ( $queryResult->getErrors() !== [] ) {
 			return [];
 		}
@@ -122,7 +123,7 @@ class SMWExtendPropertyProposal {
 		return $props;
 	}
 
-	private function getPropertyNameFromPrintout( $printout ) {
+	private function getPropertyNameFromPrintout( array $printout ) {
 		$res = [];
 		foreach (  $printout as $printoutItem ) {
 			if ( isset( $printoutItem["fulltext"] ) ) {
