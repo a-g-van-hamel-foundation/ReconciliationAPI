@@ -6,9 +6,9 @@
 
 namespace Recon\SMW;
 
-use \ApiResult;
-use \Title;
-use \SMW\Query\QueryResult;
+use MediaWiki\Api\ApiResult;
+use MediaWiki\Title\Title;
+use SMW\Query\QueryResult;
 use Recon\ReconUtils;
 use Recon\MW\MWUtils;
 use Recon\MW\MWNamespaceUtils;
@@ -48,8 +48,8 @@ class SMWResultFormatter {
 
 	public function __construct(
 		QueryResult $queryResult,
-		$substring = null,
-		$hideNamespacePrefix = false
+		?string $substring = null,
+		bool $hideNamespacePrefix = false
 	) {
 		$this->queryResult = $queryResult;
 		$this->substring = $substring;
@@ -116,7 +116,11 @@ class SMWResultFormatter {
 		}
 	}
 
-	public function setOptions( $outputFormat = null, $hideNamespacePrefix = null, $stripTags = null ) {
+	public function setOptions(
+		$outputFormat = null,
+		$hideNamespacePrefix = null,
+		$stripTags = null
+	) {
 		if ( $hideNamespacePrefix !== null ) {
 			$this->hideNamespacePrefix = $hideNamespacePrefix;
 		}
@@ -131,38 +135,11 @@ class SMWResultFormatter {
 	}
 
 	/**
-	 * @deprecated use setPrintoutProperties
-	 * @return void
-	 */
-	public function setPrintoutPropertyForLabel( $labelProperty, $stripTags = false ) {
-		$this->labelProperty = $labelProperty;
-		$this->stripLabel = $stripTags;
-	}
-
-	/**
-	 * @deprecated use setPrintoutProperties
-	 * @return void
-	 */
-	public function setPrintoutPropertyForDescription( $descriptionProperty, $stripTags = false, $maxChars = 50 ) {
-		$this->descriptionProperty = $descriptionProperty;
-		$this->stripDescription = $stripTags;
-	}
-
-	/**
-	 * @deprecated use setPrintoutProperties
-	 * @return void
-	 */
-	public function setPrintoutPropertyForImage( $imageProperty ) {
-		// @todo check if property is valid
-		$this->imageProperty = ( $imageProperty !== null ) ? $imageProperty : null;
-	}
-
-	/**
 	 * Format the query result given parameters set.
 	 * @return array|null
 	 */
-	public function doFormat() {
-		if ( $this->queryResult->getErrors() !== [] ) {
+	public function doFormat(): ?array {
+		if ( count( $this->queryResult->getErrors() ) !== 0 ) {
 			// Fail silently for now
 			return [];
 		}
@@ -172,10 +149,10 @@ class SMWResultFormatter {
 
 	/**
 	 * Get unformatted result as an array
-	 * @return mixed
+	 * @return array
 	 */
-	public function getRawResult() {
-		if ( $this->queryResult->getErrors() !== [] ) {
+	public function getRawResult(): array {
+		if ( count( $this->queryResult->getErrors() ) !== 0 ) {
 			return [];
 		}
 		return $this->queryResult->toArray();
@@ -330,11 +307,11 @@ class SMWResultFormatter {
 	/**
 	 * Helper function for formatResults()
 	 * 
-	 * @param mixed $k
-	 * @param mixed $printout
+	 * @param string|null $k
+	 * @param array $printout
 	 * @return array
 	 */
-	private function getBroaderTypesForFormattedResult( $key, $printout ) {
+	private function getBroaderTypesForFormattedResult( ?string $key, array $printout ): array {
 		if ( $key == null ) {
 			return [];
 		}

@@ -13,7 +13,7 @@ class SMWQuerySyntaxConverters {
 	 * @param array $types
 	 * @return string
 	 */
-	public static function translatePropValPairsToSMWSyntax( array $pairs ) {
+	public static function translatePropValPairsToSMWSyntax( array $pairs ): string {
 		$qStrings = [];
 		foreach( $pairs as $pair ) {
 			// @todo check if $pair["pid"] and $pair["v"] are set
@@ -46,7 +46,7 @@ class SMWQuerySyntaxConverters {
 					$propertyName = ( $nameComponents[0] == "Property" ) ? $nameComponents[1] : $pair["pid"];
 					$qStr = "[[{$propertyName}::{$pair["v"]}]]";
 			}
-			print_r( $qStr );
+			// print_r( $qStr );
 			$qStrings[] = $qStr;
 		}
 		return implode( " ", $qStrings );
@@ -59,7 +59,7 @@ class SMWQuerySyntaxConverters {
 	 * @param array $types
 	 * @return string
 	 */
-	public static function translateTypesToSMWSyntax( array $types ) {
+	public static function translateTypesToSMWSyntax( array $types ): string {
 		$qStrings = [];
 		foreach( $types as $type ) {
 			$nameComponents = explode( ":", $type );

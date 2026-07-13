@@ -13,18 +13,13 @@
 
 namespace Recon\SMW;
 
-//use \SMW\StoreFactory;
-use \SMW\StringCondition;
+use Recon\Services\ReconServices;
 use Recon\ReconUtils;
-use Recon\StringModification\StringModifier;
-use Recon\SMW\SMWQueryBuilder;
 use Recon\SMW\SMWQuerySyntaxConverters;
-//use Recon\SMW\SMWResultFormatter;
 
 class SMWSuggestEntity {
 
-	private $store;
-	private $stringCondition;
+	private $smwQueryBuilder;
 	private $smwgEnabledFulltextSearch;
 	private $resultOffset = 0;
 	private $resultLimit = 25;
@@ -35,7 +30,7 @@ class SMWSuggestEntity {
 	private $queryProfile;
 
 	public function __construct() {
-		$this->stringCondition = StringCondition::COND_PRE;
+		$this->smwQueryBuilder = ReconServices::getInstance()->getSMWQueryBuilder();
 		global $smwgEnabledFulltextSearch;
 		$this->smwgEnabledFulltextSearch = $smwgEnabledFulltextSearch;
 	}
@@ -50,10 +45,10 @@ class SMWSuggestEntity {
 		$offset = 0,
 		$limit = 25,
 		$formatForPageForms = 0
-	) {
+	): void {
 		$this->resultOffset = $offset;
 		$this->resultLimit = $limit;
-		$this->formatForPageForms = ( $formatForPageForms === 1 ) ? true : false;
+		$this->formatForPageForms = $formatForPageForms === 1;
 	}
 
 	/**
@@ -80,31 +75,38 @@ class SMWSuggestEntity {
 	 * @return array
 	 */
 	public function run(
-		$substring,
-		$substringPattern = null,
+		string $substring,
+		?string $substringPattern = null,
 		$concept = null,
 		mixed $useDisplayTitle = null,
 		$profileID = null,
-		$types = [],
-		$properties = []
+		array $types = [],
+		array $properties = []
 	) {
+		$substring = trim( $substring );
 		// Query for exact matches. Unfortunately, we need to run 
 		// it separately from the main one
-		$exactMatches = $this->runQueryForExactMatch( $substring, $useDisplayTitle, $profileID, $types, $properties, $concept );
+		$exactMatches = $this->runQueryForExactMatch(
+			$substring,
+			$useDisplayTitle,
+			$profileID,
+			$types,
+			$properties,
+			$concept
+		);
 
 		// Prepare SMWQueryBuilder
-		$smwQueryBuilder = new SMWQueryBuilder();
-		$smwQueryBuilder->setOptions(
+		$this->smwQueryBuilder->setOptions(
 			$this->resultOffset,
 			$this->resultLimit
 		);
 		if ( isset( $this->queryProfile ) ) {
-			$smwQueryBuilder->setQueryProfile( $this->queryProfile );
+			$this->smwQueryBuilder->setQueryProfile( $this->queryProfile );
 		}
 		$this->substringPattern = $substringPattern ?? "tokenprefix";
 
 		// And run SMWQueryBuilder to fetch results
-		$qRes = $smwQueryBuilder->run(
+		$qRes = $this->smwQueryBuilder->run(
 			$substring,
 			$this->substringPattern,
 			$concept,
@@ -151,10 +153,11 @@ class SMWSuggestEntity {
 
 	/**
 	 * Add exact match to start and return new array
+	 * 
 	 * @param array $qResults - corresponds to qRes["result"]
 	 * @param array $exactMatches
 	 */
-	private function mergeExactMatchIntoQueryResult( $qResults, $exactMatches ) {
+	private function mergeExactMatchIntoQueryResult( array $qResults, array $exactMatches ): array {
 		if ( count($exactMatches) === 0 ) {
 			return $qResults;
 		}
@@ -190,21 +193,21 @@ class SMWSuggestEntity {
 	 * Support 6.4: "supplying an entity identifier as prefix 
 	 * should return this entity in the suggest response"
 	 * Query also returns redirect targets.
+	 * 
 	 * @return array
 	 */
 	private function runQueryForExactMatch(
-		$substring,
-		$useDisplayTitle,
+		string $substring,
+		?bool $useDisplayTitle,
 		$profileID,
 		$types,
 		$properties,
 		$concept = null
 	): array {
-		if( trim($substring) === "" ) {
+		if( $substring === "" ) {
 			return [];
 		}
-		$smwQueryBuilder = new SMWQueryBuilder();
-		$smwQueryBuilder->setOptions(
+		$this->smwQueryBuilder->setOptions(
 			0,
 			$this->resultLimit,
 			$substring,
@@ -216,9 +219,9 @@ class SMWSuggestEntity {
 		// Set class props and create raw query for SMW
 		if( isset( $profileID ) ) {
 			// substring unknown
-			$rawQuery = $smwQueryBuilder->setProfileAndGetRawQuery( $profileID );
+			$rawQuery = $this->smwQueryBuilder->setProfileAndGetRawQuery( $profileID );
 		} elseif( $concept !== null && isset( $concept ) ) {
-			$rawQuery = $smwQueryBuilder->getRawQueryForConcept( $concept );
+			$rawQuery = $this->smwQueryBuilder->getRawQueryForConcept( $concept );
 		} else {
 			// Create raw query condition
 			$rawTypeQuery = SMWQuerySyntaxConverters::translateTypesToSMWSyntax( $types );
@@ -244,25 +247,8 @@ class SMWSuggestEntity {
 		}
 
 		// Run the query
-		$queryRes = $smwQueryBuilder->getResultForQuery( $rawQuery );
-		return $smwQueryBuilder->formatQueryResult( $queryRes );
-	}
-
-	/**
-	 * @deprecated Deprecated?
-	 * @param mixed $pages
-	 * @param mixed $stripTags
-	 * @return array{id: mixed, label: mixed[]}
-	 */
-	private static function rearrangeValuesWithPageAndLabel( $pages, $stripTags = false ) {
-		$res = [];
-		foreach( $pages as $k => $v ) {
-			$res[] = [
-				"id" => $k,
-				"label" => $stripTags ? StringModifier::stripTags( $v ) : $v
-			];
-		}
-		return $res;
+		$queryRes = $this->smwQueryBuilder->getResultForQuery( $rawQuery );
+		return $this->smwQueryBuilder->formatQueryResult( $queryRes );
 	}
 
 }
