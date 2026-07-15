@@ -15,28 +15,31 @@
 
 namespace Recon\SMW;
 
-use Title;
-use SMW\SQLStore\SQLStore;
+use MediaWiki\Title\Title;
+#use SMW\SQLStore\SQLStore;
 use SMW\StoreFactory;
 use SMW\Services\ServicesFactory;
 use SMW\DataValueFactory;
 use SMW\DataValues\TypesValue;
-use SMW\DataValues\ValueFormatters\DataValueFormatter;
+#use SMW\DataValues\ValueFormatters\DataValueFormatter;
+use SMW\QueryFactory;
 use SMW\RequestOptions;
 use SMW\StringCondition;
 use SMW\DIProperty;
 use Recon\MW\MWUtils;
-use Recon\SMW\SMWMappingUtils;
+#use Recon\SMW\SMWMappingUtils;
 use Recon\StringModification\StringModifier;
 use Recon\Localisation\ReconLocalisation;
 
 class SMWSuggestProperty {
 
+	private $servicesFactory;
 	private $store;
+
 	private $requestOptions;
 	private $profile = null;
 	private $settings;
-	private $stringCondition;
+	private $stringCondition = StringCondition::COND_PRE;
 	private $substring;
 	private $resultLimit = 25;
 	private $resultBatchCount;
@@ -45,14 +48,23 @@ class SMWSuggestProperty {
 	// @todo
 	private $languageCode = "en";
 
-	public function __construct( $stringCondition = "prefix" ) {
+	public function __construct() {
 		// @todo only if SMW is installed
-		$this->store = StoreFactory::getStore();
-		$this->requestOptions = new RequestOptions();
-		$this->settings = ServicesFactory::getInstance()->getSettings();
+		$this->servicesFactory = ServicesFactory::getInstance();
+		//$this->store = StoreFactory::getStore();
+		$this->store = $this->servicesFactory->getStore();
+		$this->requestOptions = $this->servicesFactory->getQueryFactory()->newRequestOptions();
+		$this->settings = $this->servicesFactory->getSettings();
+	}
+
+	public function setOptions(
+		$stringCondition = "prefix"
+	) {
 		switch( $stringCondition ) {
 			case "mid":
 				$this->$stringCondition = StringCondition::COND_MID;
+				break;
+			case "allchars":
 			default:
 				$this->$stringCondition = StringCondition::COND_PRE;
 		}
@@ -141,7 +153,7 @@ class SMWSuggestProperty {
 		//$diWikiPage = $property->getDiWikiPage();
 		$diWikiPage = $property->getCanonicalDiWikiPage();
 
-		$propLookup = ServicesFactory::getInstance()->getPropertySpecificationLookup();
+		$propLookup = $this->servicesFactory->getPropertySpecificationLookup();
 		$propDescription = $propLookup->getPropertyDescriptionByLanguageCode( $property, $this->languageCode );
 
 		if ( $property->isUserDefined() ) {
