@@ -13,6 +13,7 @@ use MediaWiki\Content\Renderer\ContentParseParams;
 use MediaWiki\Content\JsonContentHandler;
 use MediaWiki\Title\Title;
 use MediaWiki\Context\RequestContext;
+use MediaWiki\Context\DerivativeContext;
 use Recon\Config\ReconJsonContent;
 use Recon\Validation\ReconValidator;
 use Recon\ReconUtils;
@@ -120,7 +121,8 @@ class ReconJsonContentHandler extends JsonContentHandler {
 		}
 
 		if ( $profileType === "ReconciliationProfile" ) {
-			$outputPage = RequestContext::getMain()->getOutput();
+			$requestContext = new DerivativeContext( RequestContext::getMain() );
+			$outputPage = $requestContext->getOutput();
 			$wikiWidget = $this->createWidget( $pageID, $jsonObj );
 			$outputPage->addWikiTextAsContent( $wikiWidget );
 		}
