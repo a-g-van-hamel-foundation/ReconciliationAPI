@@ -20,7 +20,7 @@ use Recon\ReconUtils;
 class ReconJsonContentHandler extends JsonContentHandler {
 
 	public function __construct(
-		$modelId = 'reconjson', // alt. CONTENT_MODEL_IIIF_JSON
+		$modelId = "reconjson", // alt. CONTENT_MODEL_IIIF_JSON
 		$formats = [ CONTENT_FORMAT_JSON ]
 	) {
 		parent::__construct( $modelId, $formats );
@@ -79,7 +79,6 @@ class ReconJsonContentHandler extends JsonContentHandler {
 		&$parserOutput
 	): void {
 		'@phan-var ReconJsonContent $content';
-		$outputPage = RequestContext::getMain()->getOutput();
 		$title = Title::castFromPageReference( $cpoParams->getPage() );
 		$pageID = $title->getId();
 		// Default:
@@ -105,28 +104,29 @@ class ReconJsonContentHandler extends JsonContentHandler {
 				// Use tabular representation
 				$jsonContent = $content->rootValueTable( $content->getData()->getValue() );
 				// Custom additions to the wiki page
-				$header = $this->buildHeader( $title, $outputPage );
+				$header = $this->buildHeader( $title );
 				$footer = $profileType === "ReconciliationProfile"
 					? $this->buildFooter( $title, $validationMsg )
 					: "";
 
-				$parserOutput->setText( $header . $jsonContent . $footer );
+				$parserOutput->setRawText( $header . $jsonContent . $footer );
 			} else {
 				$error = wfMessage( 'invalid-json-data' )->parse();
-				$parserOutput->setText( $error );
+				$parserOutput->setRawText( $error );
 			}
 			$parserOutput->addModuleStyles( [ 'mediawiki.content.json' ] );
 		} else {
-			$parserOutput->setText( null );
+			$parserOutput->setRawText( null );
 		}
 
 		if ( $profileType === "ReconciliationProfile" ) {
+			$outputPage = RequestContext::getMain()->getOutput();
 			$wikiWidget = $this->createWidget( $pageID, $jsonObj );
 			$outputPage->addWikiTextAsContent( $wikiWidget );
 		}
 	}
 
-	private function buildHeader( Title $title, $outputPage ) {
+	private function buildHeader( Title $title ) {
 		$pageId = $title->getId();
 		$pageName = $title->getFullText();
 		$urlName = urlencode( $pageName );
