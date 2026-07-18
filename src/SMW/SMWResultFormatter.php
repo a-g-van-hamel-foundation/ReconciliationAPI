@@ -6,14 +6,16 @@
 
 namespace Recon\SMW;
 
+use MediaWiki\MediaWikiServices;
 use MediaWiki\Api\ApiResult;
 use MediaWiki\Title\Title;
 use SMW\Query\QueryResult;
 use Recon\ReconUtils;
+use Recon\StringModification\StringModifier;
 use Recon\MW\MWUtils;
 use Recon\MW\MWNamespaceUtils;
-use Recon\StringModification\StringModifier;
 use Recon\MW\ExtPageImages;
+use Recon\SMW\SMWUtils;
 use Recon\API\APIReconQueryHandler;
 
 class SMWResultFormatter {
@@ -46,6 +48,8 @@ class SMWResultFormatter {
 	private $hideNamespacePrefix;
 	private $stripTags;
 
+	private $siteLanguageCode = "en";
+
 	public function __construct(
 		QueryResult $queryResult,
 		?string $substring = null,
@@ -60,6 +64,8 @@ class SMWResultFormatter {
 		$this->localCategoryName = MWUtils::getNamespaceNameFromIndex( NS_CATEGORY );
 		// @todo make configurable
 		$this->localClassName = "Class";
+
+		$this->siteLanguageCode = MediaWikiServices::getInstance()->getContentLanguage()->getHtmlCode();
 	}
 
 	/**
@@ -161,7 +167,8 @@ class SMWResultFormatter {
 	/**
 	 * Format a query result.
 	 * 
-	 * @param array $queryResult
+	 * @param array $queryResult Array created from QueryResult
+	 * 
 	 * @return array
 	 */
 	private function formatResults( array $queryResult ) {
@@ -176,7 +183,8 @@ class SMWResultFormatter {
 			$printouts = $subject["printouts"] ?? [];
 
 			// defaults
-			$description = $thumb = false;
+			$description = null;
+			$thumb = false;
 			$types = $categories = $broaderTypes = [];
 
 			foreach ( $printouts as $k => $printout ) {
@@ -184,15 +192,16 @@ class SMWResultFormatter {
 					// class property may be null
 					continue;
 				}
+				$datatypeId = SMWUtils::getDataTypeIdFromPrintRequests( $k, $queryResult["printrequests"] );
 				switch( $k ) {
 					case $this->labelProperty;
-						// @todo possibly preprocess
-						$label = $printout[0] ?? $displayTitle;
+						// @todo possibly preprocess?
+						$label = SMWUtils::getPropertyValueLabelFromPrintout( $printout, $datatypeId, true, $this->siteLanguageCode ) ?? $displayTitle;
 						$label = $this->stripLabel ? StringModifier::stripTags( $label ) : $label;
 					break;
 					case $this->descriptionProperty;
-						$description = $printout[0] ?? false;
-						if ( $description !== false ) {
+						$description = SMWUtils::getPropertyValueLabelFromPrintout( $printout, $datatypeId, true, $this->siteLanguageCode );
+						if ( $description !== null ) {
 							$description = $this->stripDescription ? StringModifier::stripTags( $description ) : $description;
 						}
 					break;
@@ -277,7 +286,7 @@ class SMWResultFormatter {
 			if ( $this->outputFormat == "type" ) {
 				$resItem["broader"] = $broaderTypes;
 			} else {
-				if ( $description !== false ) {
+				if ( $description !== null ) {
 					$resItem["description"] = $description;
 				}
 				if ( $thumb !== false ) {

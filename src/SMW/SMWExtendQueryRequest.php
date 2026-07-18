@@ -1,11 +1,19 @@
 <?php
 
 /**
- * SMW implementation of the Data Extension Query Request service.
- * @link https://www.w3.org/community/reports/reconciliation/CG-FINAL-specs-0.2-20230410/#data-extension-property-proposals
+ * SMW implementation of responses to the Data Extension Query
+ * Request service.
+ * @link https://www.w3.org/community/reports/reconciliation/CG-FINAL-specs-0.2-20230410/#data-extension-responses
+ * @link https://www.w3.org/community/reports/reconciliation/CG-FINAL-specs-0.2-20230410/#data-extension-query-requests (API)
  * 
- * @todo Make clear how we name properties. 
- * @todo Consider other property settings (for dates, numbers, monolingual text). See
+ * @todo Make clear how we name properties.
+ * 
+ * Datatypes currently supported: Text, Monolingual Text, Number,
+ * Page (=entity), URL, Date (timestamp).
+ * The v0.2 specs offer no recommendations on date formatting,
+ * though considerations are found in the draft for v2.0.
+ * ISO 8601 or RFC 3339 can be considered as an alternative.
+ * @todo Consider other data types.
  * @link https://www.semantic-mediawiki.org/wiki/Help:Displaying_information 
  */
 
@@ -23,12 +31,15 @@ class SMWExtendQueryRequest {
 	private $wgReconAPILabelProp;
 	private $wgReconAPIDescriptionProp;
 	private $wgReconAPIThumbnailProp;
+	private $siteLanguageCode = "en";
 
 	public function __construct() {
 		$config = MediaWikiServices::getInstance()->getMainConfig();
 		$this->wgReconAPILabelProp = $config->get( "ReconAPILabelProp" );
 		$this->wgReconAPIDescriptionProp = $config->get( "ReconAPIDescriptionProp" );
 		$this->wgReconAPIThumbnailProp = $config->get( "ReconAPIThumbnailProp" );
+
+		$this->siteLanguageCode = MediaWikiServices::getInstance()->getContentLanguage()->getHtmlCode();
 	}
 
 	public function run( $queryStr ) {
@@ -64,7 +75,7 @@ class SMWExtendQueryRequest {
 			$this->addPrintoutPropertiesToRawQuery( $rawQueryArr, $reqProperties );
 			$smwQueryObj = SMWUtils::createSMWQueryObjFromRawQuery( $rawQueryArr );
 			$smwQueryBuilder = ReconServices::getInstance()->getSMWQueryBuilder();
-			$queryRes = $smwQueryBuilder->getResultFromQueryObject( $smwQueryObj );			
+			$queryRes = $smwQueryBuilder->getResultFromQueryObject( $smwQueryObj );
 			$rows[$id] = $this->formatPageResults( $queryRes, $id );
 		}
 		return [
@@ -80,7 +91,10 @@ class SMWExtendQueryRequest {
 	 * @param array $propItems - properties ("id") and optional "settings"
 	 * @return
 	 */
-	private function addPrintoutPropertiesToRawQuery( array &$rawQueryArr, $propItems = [] ) {
+	private function addPrintoutPropertiesToRawQuery(
+		array &$rawQueryArr,
+		array $propItems = []
+	) {
 		foreach( $propItems as $propItem ) {
 			if ( !isset( $propItem["id"] ) ) {
 				continue;
@@ -90,11 +104,7 @@ class SMWExtendQueryRequest {
 			$rawQueryArr[] = "?$printoutProp";
 			// Because some data types come with special requirements
 			$propDataType = SMWUtils::getDataTypeOfProperty( $printoutProp );
-			if ( $propDataType == "_mlt_rec" ) {
-				// @todo improve support for Monolingual text
-				// based on content language (@en, @de, etc.)
-				$rawQueryArr[] = "+index=1";
-			}
+
 			if ( isset( $propItem["settings"]["limit"] ) ) {
 				$limit = $propItem["settings"]["limit"];
 				if ( $limit !== 0 ) {
@@ -105,7 +115,7 @@ class SMWExtendQueryRequest {
 				// asc, desc
 				$rawQueryArr[] = "+order={$propItem["settings"]["order"]}";
 			}
-			// maybe other settings in the future
+			// Maybe other settings in the future
 		}
 	}
 
@@ -119,28 +129,55 @@ class SMWExtendQueryRequest {
 		if ( count( $queryResult->getErrors() ) !== 0 ) {
 			return [];
 		}
-		$props = [];
-		$queryResultArr = $queryResult->toArray();
 
+		$queryResultArr = $queryResult->toArray();
 		$printouts = $queryResultArr["results"][$id]["printouts"];
+
 		$pageValues = [];
+		$defaultVal = null;
 		foreach( $printouts as $prop => $vals ) {
-			$dataType = $this->getDataTypeIDFromPrintRequests( $prop, $queryResultArr["printrequests"] );
-			// $v can be of different datatypes
-			// $pageValues[$prop] = ....
+			$dataType = SMWUtils::getDataTypeIdFromPrintRequests( $prop, $queryResultArr["printrequests"] );
 			$formattedVals = [];
-			foreach( $vals as $val ) {
+			foreach( $vals as $index => $val ) {
 				switch( $dataType ) {
 					case "_wpg":
 						$formattedVals[] = $this->getResultForPage( $val["fulltext"], $val["displaytitle"] );
 					break;
+					case "_mlt_rec":
+						// Monolingual Text
+						if ( gettype($val) === "string" ) {
+							// Output if +index=1 filter is used
+							$formattedVals[] = [ "str" => $val ];
+						} elseif( gettype($val) === "array" && isset($val["Language code"]) ) {
+							if ( $index == 0 ) {
+								// To be used if we have no match
+								// for $this->siteLanguageCode
+								$defaultVal = $val["Text"]["item"][0];
+							}
+							if ( $val["Language code"]["item"][0] === $this->siteLanguageCode ) {
+								$formattedVals[] = [ "str" => $val["Text"]["item"][0] ];
+							}
+						}
+					break;
+					case "_dat":
+						$formattedVals[] = [ "str" => $val["timestamp"] ];
+					break;
+					case "_num":
+						// @todo Enforce string?
+						$formattedVals[] = [ "str" => intval($val) ];
+					break;
 					case "_txt":
+					case "_keyw":
+					case "_uri":
 					default:
-					$formattedVals[] = [
-						"str" => $val
-					];
+						$formattedVals[] = [ "str" => $val ];
 				}
 			}
+			if ( $dataType == "_mlt_rec" && count($formattedVals) == 0 && isset($defaultVal) ) {
+				// See note above
+				$formattedVals[] = [ "str" => $defaultVal ];
+			}
+
 			if ( $prop == "Category" ) {
 				// Special handling for MW Categories
 				$pageValues["category"] = $formattedVals;
@@ -149,21 +186,6 @@ class SMWExtendQueryRequest {
 			}
 		}
 		return $pageValues;
-	}
-
-	/**
-	 * Fetch the data type id of a property from print requests
-	 * e.g. _wgp, _txt, _str, etc
-	 * @param mixed $prop
-	 * @param array $printRequests
-	 */
-	private function getDataTypeIDFromPrintRequests( $prop, array $printRequests ) {
-		foreach( $printRequests as $req ) {
-			if ( $req["label"] == $prop ) {
-				return $req["typeid"];
-			}
-		}
-		return null;
 	}
 
 	/**

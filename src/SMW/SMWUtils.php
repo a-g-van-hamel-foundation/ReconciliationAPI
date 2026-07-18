@@ -109,7 +109,7 @@ class SMWUtils {
     }
 
 	/**
-	 * cf. newPropertyValueByItem(
+	 * cf. newPropertyValueByItem()
 	 * @param mixed $propertyName
 	 * @param mixed $store
 	 * @return mixed
@@ -139,6 +139,17 @@ class SMWUtils {
 	public static function getDataTypeOfProperty( $propertyName ) {
 		$propertyDV = DataValueFactory::getInstance()->newPropertyValueByLabel( $propertyName );
 		return $propertyDV->getPropertyTypeID();
+	}
+
+	/**
+	 * Get key (not ID) of property,
+	 * whether user-defined or 'special'
+	 * @param mixed $propertyName name without page prefix
+	 */
+	public static function getPropertyKey( string $propertyName ) {
+		$propertyDV = DataValueFactory::getInstance()->newPropertyValueByLabel( $propertyName );
+		$propertyDI = $propertyDV->getDataItem();
+		return $propertyDI->getKey();
 	}
 
 	/**
@@ -360,6 +371,92 @@ class SMWUtils {
 			$printouts
 		);
 		return $queryObj;
+	}
+
+	/**
+	 * Fetch the data type id of a property from 
+	 * QueryResult's print requests,
+	 * e.g. _wgp, _txt, etc.
+	 * @param mixed $propertyName Property name
+	 * @param array $printRequests "printrequests" section
+	 */
+	public static function getDataTypeIdFromPrintRequests(
+		string $propertyName,
+		array $printRequests
+	) {
+		$propertyKey = self::getPropertyKey( $propertyName );
+		foreach( $printRequests as $req ) {
+			// Because printout props can be relabelled,
+			// do not rely on req["label"]
+			if ( isset($req["key"]) && $req["key"] == $propertyKey ) {
+				return $req["typeid"];
+			}
+			// 'Category' comes without key and can be safely ignored
+		}
+		return null;
+	}
+
+	/**
+	 * Extract value(s) or page label(s) from a query result's
+	 * printout, specifically intended to fetch label-type strings.
+	 * Supports Text, Keyword, Monolingual Text and Page datatypes.
+	 * In the case of 'Page' (though presumably rare), a display 
+	 * title or pagename is used.
+	 * 
+	 * @param array|null $printout
+	 * @param string $datatypeId ID of property's data type
+	 * @param string|null|bool $default Default value to return if nothing was found
+	 * @param string $languageCode IETF language tag (BCP47) for Monolingual Text - https://www.semantic-mediawiki.org/wiki/Help:Special_property_Language_code
+	 * @param bool $getSingleValue Whether to return only the first value from a multi-valued property (unused for Monolingual Text).
+	 * 
+	 * @return string|array|null Returns null if no value could be retrieved. Returns a string if getSingleValue=true. Returns an array if getSingleValue=false.
+	 */
+	public static function getPropertyValueLabelFromPrintout(
+		?array $printout,
+		?string $datatypeId,
+		bool $getSingleValue = true,
+		string $languageCode = "en"
+	): mixed {
+		if ( $printout === null || count( $printout ) === 0 ) {
+			return null;
+		}
+
+		if ( ( $datatypeId === "_txt" || $datatypeId === "_keyw" ) && gettype( $printout[0] ) === "string" ) {
+			// Text or Keyword
+			return $getSingleValue ? $printout[0] : $printout;
+		} elseif ( $datatypeId == "_mlt_rec" && gettype( $printout[0] ) === "string" ) {
+			// Monolingual Text - simple output with +index=1 filter
+			return $printout[0];
+		} elseif ( $datatypeId == "_mlt_rec" && gettype( $printout[0] ) === "array" ) {
+			// Monolingual Text - regular
+			$res = $default = null;
+			foreach( $printout as $index => $item ) {
+				if ( $index == 0 && isset( $item["Text"] ) ) {
+					// Redefine default
+					$default = $item["Text"]["item"][0];
+				}
+				if ( isset( $item["Language code"] ) && $item["Language code"]["item"][0] === $languageCode ) {
+					$res = $item["Text"]["item"][0];
+				}
+			}
+			return $res ?? $default;
+		} elseif ( $datatypeId == "_wpg" ) {
+			// Page
+			$items = $getSingleValue ? [ $printout[0] ] : $printout;
+			$vals = [];
+			foreach( $items as $item ) {
+				if ( isset( $item["displaytitle"] ) && $printout[0]["displaytitle"] !== "" ) {
+					$vals[] = $item["displaytitle"];
+				} else {
+					$vals[] = $item["fulltext"];
+				}
+			}
+			if ( count ($vals ) === 0 ) {
+				return null;
+			}
+			return $getSingleValue ? $vals[0] : $vals;
+		}
+		return null;
 	}
 
 	/**
