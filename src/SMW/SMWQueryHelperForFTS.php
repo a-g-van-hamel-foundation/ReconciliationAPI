@@ -54,9 +54,15 @@ class SMWQueryHelperForFTS {
 		$this->smwgFulltextSearchIndexableDataTypes = $this->smwConfig->get( "FulltextSearchIndexableDataTypes" );
 		$this->smwgFulltextSearchPropertyExemptionList = $this->smwConfig->get( "FulltextSearchPropertyExemptionList" );
 
-		$this->enabledForTypeText = ( $this->smwgFulltextSearchIndexableDataTypes & SMW_FT_BLOB ) ? true : false;
-		$this->enabledForTypeUrl = ( $this->smwgFulltextSearchIndexableDataTypes & SMW_FT_URI ) ? true : false;
-		$this->enabledForTypePage = ( $this->smwgFulltextSearchIndexableDataTypes & SMW_FT_WIKIPAGE ) ? true : false;
+		if ( version_compare( SMW_VERSION, '7.0.0', '>' ) ) {
+			$this->enabledForTypeText = in_array( "blob", $this->smwgFulltextSearchIndexableDataTypes );
+			$this->enabledForTypeUrl = in_array( "uri", $this->smwgFulltextSearchIndexableDataTypes );
+			$this->enabledForTypePage = in_array( "wikipage", $this->smwgFulltextSearchIndexableDataTypes );
+		} else {
+			$this->enabledForTypeText = ( $this->smwgFulltextSearchIndexableDataTypes & SMW_FT_BLOB ) ? true : false;
+			$this->enabledForTypeUrl = ( $this->smwgFulltextSearchIndexableDataTypes & SMW_FT_URI ) ? true : false;
+			$this->enabledForTypePage = ( $this->smwgFulltextSearchIndexableDataTypes & SMW_FT_WIKIPAGE ) ? true : false;
+		}
 	}
 
 	/**
