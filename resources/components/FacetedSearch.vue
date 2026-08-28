@@ -1020,7 +1020,7 @@ module.exports = defineComponent( {
 		function sanitiseString(substr) {
 			return substr
 				.replaceAll(/[^a-z0-9áéíóúñü \.,_-]/gim, "")
-				.replaceAll( /\*|\+|-/g, "" )
+				.replaceAll( /\*|\+/g, "" )
 				.trim();
 		}
 
