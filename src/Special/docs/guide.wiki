@@ -52,3 +52,19 @@ If you DO want to include those pages, you need to decide where to send users wh
 
 * MediaWiki’s built-in solution is to direct all requests to <code>Special:Search</code>, with the page name appended to the 'search' parameter. Special:Search is the page familiar to wiki users that allows for further site searches to be made. If the page exists (and the standard behaviour is not suppressed through <code>&fulltext=1</code> in the URL), the user is automatically redirected. Unfortunately, the usefulness of Special:Search may be limited.
 * Another solution is to set up a custom wiki page for search results and set it as a target page. For more information, see [[Special:ReconciliationAPI/special-redirect |<code>Special:ReconRedirect</code>]].
+
+== Form extensions ==
+
+=== Can I use the API in a Page Forms input using tokens or combobox? ===
+
+You can use the <code>recon-suggest-entity</code> API. The setup requires two steps:
+# In your local settings file, add one or multiple API URLs to <code>$wgPageFormsAutocompletionURLs</code>. Crucially, add <code>pfautocomplete=1</code> to the URL so that the JSON output is provided in the format expected by Page Forms. Example:
+#:<pre>$wgPageFormsAutocompletionURLs['myPersonLookup'] = 'https://my-random-wiki.com/api.php?action=recon-suggest-entity&profile=242349&format=json&pfautocomplete=1&substr=<substr>';</pre>
+# In your form definition, add an input field with the <code>values from url</code> options set to the identifier of the required URL. Example:
+#:<pre>{{{field|Addressee |input type=tokens |values from url=myPersonLookup |list |delimiter=; }}}</pre>
+
+(CODECS works with a version of Page Forms that comes with options for mapping values to labels and for adding descriptions. These features are not present in the official version of the extension.)
+
+=== Can I use the API in a FlexForm input? ===
+
+Not at present.
