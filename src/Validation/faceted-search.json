@@ -74,6 +74,12 @@
 						"type": "string",
 						"description": "Optionally, a subquery to be used for 'smwproperty', without q tags and with `@@@` as placeholder for the selected value."
 					},
+					"smwpropertyMatchLogic": {
+						"type": "string",
+						"description": "Either AND (default) or OR. Used for multi-valued facets such as 'multiselect' and 'checkboxes'.",
+						"default": "AND",
+						"enum": [ "AND", "OR" ]
+					},
 					"conditions": {
 						"type": "object",
 						"description": "Optional additional query conditions to be applied to the base query when this facet is used. The conditions are specified as a JSON object, where the keys are the names of the query variables and the values are the corresponding query conditions. The conditions can be used to filter the results based on the selected facet values. The conditions can be used to filter the results based on the selected",
@@ -139,6 +145,20 @@
 								}
 							}
 						}
+					},
+					"resultLimit": {
+						"type": "string",
+						"description": "Optionally, the maximum number of possible values (default: 25) that can be shown in a facet if data is retrieved over the API. This can be useful, for instance, if you need to accommodate more items in a 'radio' button group or 'checkboxes' group.",
+						"default": "25"
+					},
+					"allowEmpty": {
+						"type": "boolean",
+						"description": "Used for 'radio' and 'select' inputs. Whether to prepend an empty option ('true' by default). Set to 'false' to disable it.",
+						"default": true
+					},
+					"info": {
+						"type": "string",
+						"description": "Additional comment, in wikitext markup, to clarify the use of a given facet, what to expect and what not to expect. The comment will be made visible when a user clicks the info icon that appears to the right of the facet's label."
 					}
 				},
 				"dependentRequired": {

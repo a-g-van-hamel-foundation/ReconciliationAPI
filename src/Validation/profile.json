@@ -69,7 +69,10 @@
 									"preprocessSubstring": {
 										"type": "array",
 										"description": "SMW only. The only option currently allowed is `flatten`: this applies case and accent folding and removes punctuation, which can be helpful if you have similarly optimised a semantic property for fuzzy phrase matching in LIKE statements and need to preprocess the substring to a ‘dumbed down’ version.",
-										"enum": [ "flatten" ]
+										"items": {
+											"type": "string",
+											"enum": [ "flatten" ]
+										}
 									}
 								}
 							}
