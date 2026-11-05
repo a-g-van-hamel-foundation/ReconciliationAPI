@@ -1,4 +1,5 @@
 <p class="recon-summary">Remember that <code>#recon-faceted-search</code> comes with a mandatory <code>profile</code> parameter? The parser function requires a configuration profile in JSON in which you have defined the base query that should always apply, the facets you want to use, a list of properties to print to the query result and maybe some sort options. </p>
+<p>[[Special:ReconciliationAPI/schemas/facetedsearch|See here for the full JSON schema]].</p>
 
 == Set up the page ==
 This profile, like the reconciliation profile, is best saved as a wiki page in the <code>Recon</code> namespace. Try to be consistent when naming your profile pages (e.g. <code>Recon:FacetedSearch/Recipes</code>, <code>Recon:FacetedSearch/Events</code>, etc.). 

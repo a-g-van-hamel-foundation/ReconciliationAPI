@@ -1,13 +1,13 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://json-schema.org/draft/2020-12/schema",
-	"title": "Reconciliaion API profile validation",
-	"description": "An attempt (work in progress) at a schema that can be used to validate a profile.",
+	"title": "Reconciliation API profile validation",
+	"description": "Schema that can be used to validate the basic configuration of a schema with type `ReconciliationProfile`.",
 	"type": [ "object" ],
 	"properties": {
 		"type": {
 			"type": "string",
-			"description": "To be set to 'Profile'."
+			"description": "Should be set to 'ReconciliationProfile'."
 		},
 		"name": {
 			"type": "string",
@@ -15,7 +15,8 @@
 		},
 		"source": {
 			"type": "string",
-			"description": "mw (MediaWiki or smw (Semantic MediaWiki)."
+			"description": "mw (MediaWiki) or smw (Semantic MediaWiki).",
+			"enum": [ "mw", "smw" ]
 		},
 		"suggestEntity": {
 			"type": [ "object", "null" ],
@@ -23,84 +24,116 @@
 			"properties": {
 				"mwquery": {
 					"type": [ "object", "null" ],
+					"description": "Query parameters for the Suggest Entity service with MediaWiki core.",
 					"properties": {
 						"namespaces": {
-							"type": [ "array", "null" ]
+							"type": [ "array", "null" ],
+							"description": "An array of MediaWiki namespaces to be searched. For the main namespace, write `Main`."
 						},
 						"categories": {
-							"type": [ "array", "null" ]
+							"type": [ "array", "null" ],
+							"description": "An array of MediaWiki categories to be searched."
 						},
 						"substringPattern": {
-							"type": "string"
+							"type": "string",
+							"description": "The pattern used to match the query string against the entity names.",
+							"enum": [ "stringprefix", "tokenprefix", "allchars", "contains" ]
 						}
 					}
 				},
 				"smwquery": {
 					"type": [ "object", "null" ],
-					"description": "...",
+					"description": "Query parameters for the Suggest Entity service with Semantic MediaWiki.",
 					"properties": {
 						"statement": {
 							"type": [ "array", "null" ],
+							"description": "Configuration and components of the query statement for SMW. You are free to use multiple statements, which will be strung together with the OR operator.",
 							"minItems": 0,
 							"items": {
 								"type": [ "object", "null" ],
+								"description": "components of the query statement",
 								"properties": {
 									"from": {
+										"description": "The base query condition, without variables.",
 										"type": "string"
 									},
 									"where": {
+										"description": "The pattern matching condition of the query. After the operator, a tilde (`~`) or `like:`, use `@@@` as a placeholder for the user provided substring (or whatever the `placeholder` parameter is set to). Do NOT add asterisk wildcards and `+/-` boolean operators: they will be automatically applied according to the substring pattern and search engine settings that you use.",
 										"type": "string"
 									},
 									"substringPattern": {
-										"type": "string"
+										"type": "string",
+										"description": "The pattern used to match the query string against the entity names.",
+										"enum": [ "stringprefix", "tokenprefix", "allchars", "contains" ]
 									},
 									"preprocessSubstring": {
 										"type": "array",
-										"description": "SMW only. Only `flatten` is currently allowed."
+										"description": "SMW only. The only option currently allowed is `flatten`: this applies case and accent folding and removes punctuation, which can be helpful if you have similarly optimised a semantic property for fuzzy phrase matching in LIKE statements and need to preprocess the substring to a ‘dumbed down’ version.",
+										"enum": [ "flatten" ]
 									}
 								}
 							}
+						},
+						"placeholder": {
+							"type": "string",
+							"default": "@@@"
+						},
+						"comment": {
+							"type": "string",
+							"description": "Comment for internal use, which will be ignored by the API."
 						}
 					},
 					"output": {
 						"type": [ "object", "null" ],
+						"description": "Configuration for the result output of the Suggest Entity service, such as the name/label, description and image of the entity as well as sort/order options. Used for both SMW and MW core.",
 						"properties": {
 							"name": {
 								"type": [ "object", "null" ],
+								"description": "Configuration for the entity's name or label.",
 								"properties": {
 									"smwproperty": {
-										"type": "string"
+										"type": [ "string", "boolean" ],
+										"description": "Name of the semantic property used to provide the entity's name or label. If set, takes precedence over `useDisplayTitle` and `hideNamespacePrefix`. If it is not set, the entity's name will be taken from the page name and the `useDisplayTitle` and `hideNamespacePrefix` settings apply. If you need to enforce the exclusive use of pagenames rather than properties, set smwproperty to `false`."
 									},
 									"mwproperty": {
-										"type": "string"
-									},
-									"hideNamespacePrefix": {
-										"type": "boolean"
+										"type": "string",
+										"description": "Currently not used but reserved for future use to provide the entity's name through native MediaWiki functionality."
 									},
 									"useDisplayTitle": {
 										"type": "boolean",
-										"description": "MW core."
+										"description": "Whether to use the display title of the page, relying on native MediaWiki functionality.",
+										"default": true
+									},
+									"hideNamespacePrefix": {
+										"type": "boolean",
+										"description": "In the absence of a display title, whether to hide the namespace prefix from the pagenames.",
+										"default": true
 									}
 								}
 							},
 							"description": {
 								"type": "string",
+								"description": "Configuration for the entity's description.",
 								"properties": {
 									"smwproperty": {
-										"type": "string"
+										"type": "string",
+										"description": "Optionally, name of the semantic property used to provide the entity's description."
 									}
 								}
 							},
 							"image": {
 								"type": [ "object", "null" ],
+								"description": "Configuration for associating an entity with an image, typically a thumbnail.",
 								"properties": {
 									"smwproperty": {
-										"type": "string"
+										"type": "string",
+										"description": "Name of the semantic property that holds the image filename. If omitted, the default property set in `$wgReconAPIThumbnailProp` will be used."
+									},
+									"extension": {
+										"type": "string",
+										"description": "May be set to `PageImages` to fetch the image thumbnail through the PageImages extension",
+										"enum": [ "PageImages" ]
 									}
-								},
-								"extension": {
-									"type": "string",
-									"description": "May be set to `PageImages` to fetch the image thumbnail through the PageImages extension"
 								}
 							},
 							"public": {
@@ -109,6 +142,15 @@
 									"smwproperty": {},
 									"smwtype": {}
 								}
+							},
+							"sort": {
+								"type": "string",
+								"description": "Name of the semantic property that is used to sort the results. Maps to the `sort` parameter of an SMW query. If not set, the results are sorted by the entity's name."
+							},
+							"order": {
+								"type": "string",
+								"description": "Sort order of the results. Maps to the `order` parameter of an SMW query. If not set, the results are sorted in ascending order.",
+								"enum": [ "", "asc", "desc", "ascending", "descending" ]
 							}
 						}
 					}
@@ -117,14 +159,15 @@
 		},
 		"defaultTypes": {
 			"type": [ "array", "null" ],
-			"description": "An array of types that are considered 'good generic choices for reconciliation'."
+			"description": "An array of types that are considered “good generic choices for reconciliation”."
 		},
 		"redirect": {
 			"type": [ "object", "null" ],
+			"description": "Configuration for the redirect service, which is used to redirect users to a specific page if no direct match is found.",
 			"properties": {
 				"queryPage": {
 					"type": "string",
-					"description": "Name of the query page to which users should be sent if no direct match was found."
+					"description": "Name of the query page to which users should be sent if no direct match is found."
 				},
 				"query": {
 					"type": [ "object", "null" ],
@@ -146,6 +189,12 @@
 							"description": "Values that indicate a page is inaccessible."
 						}
 					}
+				},
+				"updateUrl": {
+					"type": "string",
+					"description": "The URL component to which the query data should be added: either `search` (default, can be omitted) for the URL search/query string or `fragment` for the URL fragment identifier.",
+					"default": "search",
+					"enum": [ "search", "fragment" ]
 				}
 			}
 		}

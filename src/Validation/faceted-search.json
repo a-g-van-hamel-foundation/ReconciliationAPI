@@ -1,0 +1,183 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://json-schema.org/draft/2020-12/schema",
+	"title": "Faceted Search schema validation",
+	"description": "Schema that can be used to validate the basic configuration of a Faceted Search schema with type `FacetedSearch`.",
+	"type": [ "object" ],
+	"properties": {
+		"type": {
+			"type": "string",
+			"description": "Should be set to 'FacetedSearch'.",
+			"enum": [ "FacetedSearch" ]
+		},
+		"name": {
+			"type": "string",
+			"description": "Name of the schema."
+		},
+		"source": {
+			"type": "string",
+			"description": "mw (MediaWiki) or smw (Semantic MediaWiki).",
+			"enum": [ "mw", "smw" ]
+		},
+		"baseQuery": {
+			"type": [ "string", "object" ],
+			"description": "The base part of the query statement, without variables, that should always apply: it may be executed to retrieve the initial set of results before any facets are applied or it may be extended with facet-specific conditions. The simplest option is to set a single base query as a string. For advanced use cases, you can also set multiple base queries as strings and key them to unique identifiers, which can be referenced later to extend each base query separately. These individual statements will be automatically strung together with the OR operator.",
+			"additionalProperties": {
+				"type": "string",
+				"description": "String representing a base part of a query condition. Each key is available for reference in the 'conditions' section."
+			}
+		},
+		"facets": {
+			"items": {
+				"type": "object",
+				"description": "Configuration for a single facet, such as the name of the facet, the semantic property used to generate the facet values, and the type of facet (e.g., checkbox, radio button, range slider).",
+				"required": [ "inputType" ],
+				"properties": {
+					"label": {
+						"type": "string",
+						"description": "Visible label to be associated with this facet."
+					},
+					"name": {
+						"type": "string",
+						"description": "Unique name of the facet."
+					},
+					"name1": {
+						"type": "string",
+						"description": "Unique name of the first input field in a dual input facet. Mandatory if 'numberrange' or 'daterange' is used."
+					},
+					"name2": {
+						"type": "string",
+						"description": "Unique name of the second input field in a dual input facet. Mandatory if 'numberrange' or 'daterange' is used."
+					},
+					"placeholder": {
+						"type": "string",
+						"description": "Placeholder text."
+					},
+					"placeholder1": {
+						"type": "string",
+						"description": "Placeholder text for the first input field in a dual input facet."
+					},
+					"placeholder2": {
+						"type": "string",
+						"description": "Placeholder text for the second input field in a dual input facet."
+					},
+					"inputType": {
+						"type": "string",
+						"description": "Type of input to be used for this facet. Mandatory.",
+						"enum": [ "text", "select", "multiselect", "radio", "checkboxes", "numberrange", "daterange" ]
+					},
+					"smwproperty": {
+						"type": "string",
+						"description": "Name of the semantic property to be used (with user-provided values) within the query condition. Inverse properties and property chains are supported. Not to be confused with `valuesFromProperty`, which is used to return values for the facet."
+					},
+					"subquery": {
+						"type": "string",
+						"description": "Optionally, a subquery to be used for 'smwproperty', without q tags and with `@@@` as placeholder for the selected value."
+					},
+					"conditions": {
+						"type": "object",
+						"description": "Optional additional query conditions to be applied to the base query when this facet is used. The conditions are specified as a JSON object, where the keys are the names of the query variables and the values are the corresponding query conditions. The conditions can be used to filter the results based on the selected facet values. The conditions can be used to filter the results based on the selected",
+						"additionalProperties": {
+							"type": "object",
+							"description": "Query condition to be applied to the base query that is identified by the corresponding key under the 'baseQueries' section.",
+							"properties": {
+								"smwproperty": {
+									"type": "string",
+									"description": "Semantic property used to generate part of the query statement. Regular properties, inverse properties and property chains are supported."
+								},
+								"subquery": {
+									"type": "string",
+									"description": "Optionally, a subquery to be used for 'smwproperty', without q tags and with `@@@` as placeholder for the selected value."
+								}
+							}
+						}
+					},
+					"profileid": {
+						"type": "string",
+						"description": "Page ID of the reconciliation profile that you want to use for setting up autocomplete suggestions from the API (`recon-suggest-entity`)."
+					},
+					"valuesFromProperty": {
+						"type": "string",
+						"description": "Name of the semantic property used to return values for the facet. If you are familiar with Page Forms, this is similar to its `values from property` feature. Not to be confused with `smwproperty`, which is used to generate the query condition."
+					},
+					"substringPattern": {
+						"type": "string",
+						"description": "The pattern used to match the query string against the facet values.",
+						"enum": [ "stringprefix", "tokenprefix", "allchars", "contains" ]
+					},
+					"options": {
+						"type": "array",
+						"description": "An array of objects that map specific facet values to a predefined set of custom data. Can be used only if `inputType` is set to 'select' or 'multiselect'.",
+						"items": {
+							"type": "object",
+							"properties": {
+								"value": {
+									"type": "string",
+									"description": "The value of the facet option."
+								},
+								"label": {
+									"type": "string",
+									"description": "The label of the facet option."
+								}
+							}
+						}
+					},
+					"mapOptions": {
+						"type": "array",
+						"description": "Array of objects, each of which directly maps a selectable option to a piece of the query condition in a semantic query. Can be used if `inputType` is set to 'select' or 'multiselect'.",
+						"items": {
+							"type": "object",
+							"description": "",
+							"properties": {
+								"option": {
+									"type": "string",
+									"description": "The label and identifier of the selectable option."
+								},
+								"where": {
+									"type": "string",
+									"description": "The corresponding semantic query condition for the selectable item."
+								}
+							}
+						}
+					}
+				},
+				"dependentRequired": {
+					"subquery": [ "smwproperty" ],
+					"placeholder1": [ "name1"],
+					"placeholder2": [ "name2" ]
+				}
+			}
+		},
+		"printout": {
+			"type": "object",
+			"description": "Printout options for the query",
+			"properties": {
+				"properties": {
+					"type": "array",
+					"description": "An array of printout statements for properties to be returned in the query results. Maps directly to parameters beginning with `?` in the SMW query syntax.",
+					"items": {
+						"type": "string"
+					}
+				}
+			}
+		},
+		"sort": {
+			"type": "array",
+			"description": "Sort options for the query results. The first option listed determines the default sort order.",
+			"items": {
+				"type": "object",
+				"description": "Sort option.",
+				"properties": {
+					"value": {
+						"type": "string",
+						"description": "The property to be used for sorting the results. Maps to the `sort` parameter of an SMW query."
+					},
+					"label": {
+						"type": "string",
+						"description": "The corresponding label visible to users."
+					}
+				}
+			}
+		}
+	}
+}

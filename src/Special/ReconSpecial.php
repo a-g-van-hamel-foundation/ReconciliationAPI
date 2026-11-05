@@ -48,15 +48,34 @@ class ReconSpecial extends SpecialPage {
 		return "";
 	}
 
+	private function getSchemaContents( $fileName ) {
+		$source = $this->extensionPath . "/src/Validation/$fileName";
+		if ( file_exists( $source ) ) {
+			$contents = file_get_contents( $source );
+			if ( $contents !== null ) {
+				return $contents ?? "";
+			}
+		}
+		return "";
+	}
+
 	private function getPageContentAndSetTitle( string|null $subPage, &$output ) {
 		$tocItems = $this->getTOC();
 		$res = "";
 
+		// Special cases
 		if ( $subPage === "localsettings" ) {
-			// special case
 			$additionalContent = $this->getWikiFileContents( "localsettings.wiki" );
 			$output->setPageTitle( $tocItems[$subPage]["pagetitle"] );
 			return $this->getSiteConfigSettings( $additionalContent );
+		} else if( $subPage === "schemas/profile" ) {
+			$output->setPageTitle( "Schemas: ReconciliationProfile" );
+			$content = $this->getSchemaContents( "profile.json" );
+			return "<pre>" . $content . "</pre>";
+		} else if( $subPage === "schemas/facetedsearch" ) {
+			$output->setPageTitle( "Schemas: FacetedSearch" );
+			$content = $this->getSchemaContents( "faceted-search.json" );
+			return "<pre>" . $content . "</pre>";
 		}
 
 		// Default to main

@@ -1,4 +1,5 @@
 <p class="recon-summary">Do you require dedicated API query profiles for different use cases? You can achieve this by creating and managing JSON schemas in the wiki. Profiles are stored as pages in the <code>Recon</code> namespace and they are used when referenced, by page ID, in the query string of API modules.</p>
+<p>[[Special:ReconciliationAPI/schemas/profile|See here for the full JSON schema]].</p>
 
 == In a nutshell ==
 ;How a profile is managed:
@@ -207,7 +208,7 @@ A bare-bones installation of MediaWiki does not allow for many options to influe
 [...]
 
 === suggestType ===
-[...]
+Not yet implemented.
 
 == Redirect service ==
 For the redirect service that can be configured through a profile, [[Special:ReconciliationAPI/special-redirect|see this page]].
